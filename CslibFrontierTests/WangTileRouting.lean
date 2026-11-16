@@ -89,3 +89,72 @@ example : ¬ Forces (uniformScaffold .active) := by
   have he : I.seed = zeroTile := List.mem_singleton.mp hm
   have ht := congrArg WangTile.top he
   simp [I, zeroTile] at ht
+
+private def wireTile (x y : ℤ) : WangTile :=
+  ⟨((y + 1) % 2).toNat, (y % 2).toNat, (x % 2).toNat, ((x + 1) % 2).toNat⟩
+
+private def wireScaffold : RoutedScaffold where
+  tiles := [⟨1, 0, 0, 1⟩, ⟨1, 0, 1, 0⟩, ⟨0, 1, 0, 1⟩, ⟨0, 1, 1, 0⟩]
+  role t := if t.bottom = 0 then
+    if t.left = 0 then .corner else .horizontal
+    else if t.left = 0 then .vertical else .inactive
+  role_primrec := Primrec.ite (Primrec.eq.comp primrec_bottom (Primrec.const 0))
+    (Primrec.ite (Primrec.eq.comp primrec_left (Primrec.const 0))
+      (Primrec.const RouteRole.corner) (Primrec.const RouteRole.horizontal))
+    (Primrec.ite (Primrec.eq.comp primrec_left (Primrec.const 0))
+      (Primrec.const RouteRole.vertical) (Primrec.const RouteRole.inactive))
+
+private def wirePlane : Plane wireScaffold.tiles where
+  tile := wireTile
+  mem x y := by
+    simp only [wireScaffold, wireTile, List.mem_cons, WangTile.mk.injEq]
+    omega
+  horizontal := fun _ _ => rfl
+  vertical := fun _ _ => rfl
+
+private def spacedGrid (n : ℕ) : RoutedGrid wireScaffold wirePlane n where
+  column i := 2 * (i.val : ℤ)
+  row j := 2 * (j.val : ℤ)
+  column_strictMono := fun i j h => by
+    change 2 * (i.val : ℤ) < 2 * (j.val : ℤ)
+    have : i.val < j.val := h
+    omega
+  row_strictMono := fun i j h => by
+    change 2 * (i.val : ℤ) < 2 * (j.val : ℤ)
+    have : i.val < j.val := h
+    omega
+  crossing := fun i j => Or.inr (by simp [wireScaffold, wirePlane, wireTile])
+  corner := rfl
+  horizontal i j x h₁ h₂ := by
+    have hx : x = 2 * (i.val : ℤ) + 1 := by
+      simp only [Fin.val_castSucc, Fin.val_succ] at h₁ h₂
+      omega
+    simp [wireScaffold, wirePlane, wireTile, hx, Int.add_emod]
+  vertical i j y h₁ h₂ := by
+    have hy : y = 2 * (j.val : ℤ) + 1 := by
+      simp only [Fin.val_castSucc, Fin.val_succ] at h₁ h₂
+      omega
+    simp [wireScaffold, wirePlane, wireTile, hy, Int.add_emod]
+
+private def wirePayload : RoutedPlane wireScaffold ⟨[⟨0, 0, 0, 0⟩], ⟨0, 0, 0, 0⟩⟩ where
+  base := wirePlane
+  payload := fun _ _ => ⟨0, 0, 0, 0⟩
+  allowed x y := by
+    apply mem_routedPayloads.mpr
+    simp only [wireScaffold, wirePlane, wireTile]
+    have complete : (⟨0, 0, 0, 0⟩ : WangTile) ∈ completePayloads [⟨0, 0, 0, 0⟩] :=
+      mem_completePayloads_of_mem List.mem_cons_self
+    split_ifs <;> simp_all
+  horizontal := fun _ _ => rfl
+  vertical := fun _ _ => rfl
+
+/-- Every adjacent pair of crossings has an actual intervening wire in each axis. -/
+example :
+    (spacedGrid 1).column 0 < 1 ∧ 1 < (spacedGrid 1).column 1 ∧
+    wireScaffold.role (wirePlane.tile 1 0) = .horizontal ∧
+    (spacedGrid 1).row 0 < 1 ∧ 1 < (spacedGrid 1).row 1 ∧
+    wireScaffold.role (wirePlane.tile 0 1) = .vertical := by decide +kernel
+
+/-- Extraction crosses nonempty intervals of wires and retains the prescribed seed. -/
+example (n : ℕ) : Nonempty (SeededSquare ⟨[⟨0, 0, 0, 0⟩], ⟨0, 0, 0, 0⟩⟩ n) :=
+  ⟨(spacedGrid n).seededSquare wirePayload⟩

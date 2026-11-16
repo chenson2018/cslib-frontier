@@ -49,78 +49,6 @@ namespace Cslib.WangTile.Robinson
 
 namespace Quarters
 
-private def parentAt (block : Fin 13) (offset : Fin 8) : Index :=
-  ⟨8 * block.val + offset.val, by omega⟩
-
-private def ParentCodesUnique (block : Fin 13) : Prop :=
-  ∀ (offset : Fin 8) (other : Index),
-    Robinson.tile (components (parentAt block offset)) = Robinson.tile (components other) →
-      parentAt block offset = other
-
-private theorem parentCodesUnique0 : ParentCodesUnique 0 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique1 : ParentCodesUnique 1 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique2 : ParentCodesUnique 2 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique3 : ParentCodesUnique 3 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique4 : ParentCodesUnique 4 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique5 : ParentCodesUnique 5 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique6 : ParentCodesUnique 6 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique7 : ParentCodesUnique 7 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique8 : ParentCodesUnique 8 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique9 : ParentCodesUnique 9 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique10 : ParentCodesUnique 10 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique11 : ParentCodesUnique 11 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-private theorem parentCodesUnique12 : ParentCodesUnique 12 := by
-  simp only [ParentCodesUnique, Robinson.tile, WangTile.mk.injEq]
-  decide
-
-private theorem parentCodesUnique (b : Fin 13) : ParentCodesUnique b := by
-  fin_cases b
-  · exact parentCodesUnique0
-  · exact parentCodesUnique1
-  · exact parentCodesUnique2
-  · exact parentCodesUnique3
-  · exact parentCodesUnique4
-  · exact parentCodesUnique5
-  · exact parentCodesUnique6
-  · exact parentCodesUnique7
-  · exact parentCodesUnique8
-  · exact parentCodesUnique9
-  · exact parentCodesUnique10
-  · exact parentCodesUnique11
-  · exact parentCodesUnique12
-
-private theorem parentTile_injective :
-    Function.Injective (fun i : Index => Robinson.tile (components i)) := by
-  intro i j h
-  let b : Fin 13 := ⟨i.val / 8, by omega⟩
-  let k : Fin 8 := ⟨i.val % 8, Nat.mod_lt _ (by decide)⟩
-  have hi : parentAt b k = i := Fin.ext (by dsimp [parentAt, b, k]; omega)
-  exact hi.symm.trans (parentCodesUnique b k j (by simpa only [hi] using h))
-
 /-- Quarter edge codes retain the corrected parent index and quadrant. -/
 theorem quarterTile_injective : Function.Injective quarterTile := by
   rintro ⟨i, q⟩ ⟨j, r⟩ h
@@ -128,7 +56,7 @@ theorem quarterTile_injective : Function.Injective quarterTile := by
     simp_all [quarterTile, TileSubdivision.subdivideTileAt,
       TileSubdivision.horizontalEdgeColor, TileSubdivision.verticalEdgeColor,
       TileSubdivision.internalHorizontalColor, TileSubdivision.internalVerticalColor,
-      Nat.pair_eq_pair, parentTile_injective.eq_iff]
+      Nat.pair_eq_pair, tile_components_injective.eq_iff]
 
 /-- A matching plane of quarter sites, before regrouping into corrected parent tiles. -/
 structure Plane where
@@ -216,7 +144,7 @@ private theorem internal_horizontal {a b : QuarterIndex}
   have h := (TileSubdivision.horizontal_iff (Robinson.tile (components a.index))
     (Robinson.tile (components b.index)) a.quadrant b.quadrant).mp hmatch
   cases ha : a.quadrant <;> cases hb : b.quadrant <;>
-    simp_all [Quadrant.xBit, parentTile_injective.eq_iff]
+    simp_all [Quadrant.xBit, tile_components_injective.eq_iff]
 
 private theorem internal_vertical {a b : QuarterIndex}
     (hphase : a.quadrant.yBit = false)
@@ -224,7 +152,7 @@ private theorem internal_vertical {a b : QuarterIndex}
   have h := (TileSubdivision.vertical_iff (Robinson.tile (components a.index))
     (Robinson.tile (components b.index)) a.quadrant b.quadrant).mp hmatch
   cases ha : a.quadrant <;> cases hb : b.quadrant <;>
-    simp_all [Quadrant.yBit, parentTile_injective.eq_iff]
+    simp_all [Quadrant.yBit, tile_components_injective.eq_iff]
 
 private theorem block_spec (P : Plane) {x y : ℤ}
     (hphase : (P.quarter x y).quadrant = .southwest) :

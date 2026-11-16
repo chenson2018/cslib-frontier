@@ -39,7 +39,8 @@ and its `PointedCarrierAddressing` and `PointedPlane` modules. The construction 
 the seed-removal argument in [JeandelVanier2020], §3.3, pp. 26–29, after [Robinson1971].
 The roles separate crossings from intervening wire cells, and the two obligations isolate the
 arbitrarily large seeded-square and pointed-plane construction steps; no concrete scaffold
-obligations are assumed proved here.
+obligations are assumed proved here. For the corrected Robinson scaffold, the later Forcing
+and Realization modules must establish these obligations.
 -/
 
 public section
@@ -143,7 +144,8 @@ private theorem mem_completePayloads {τ : List WangTile} {p : WangTile} :
   cases p
   simp [completePayloads]
 
-private theorem mem_completePayloads_of_mem {τ : List WangTile} {p : WangTile}
+/-- Every input tile belongs to the palette completed under independent edge choices. -/
+theorem mem_completePayloads_of_mem {τ : List WangTile} {p : WangTile}
     (hp : p ∈ τ) : p ∈ completePayloads τ := by
   rw [mem_completePayloads]
   have edges (c : ℕ) (hc : c ∈ [p.top, p.bottom, p.left, p.right]) : c ∈ palette τ :=

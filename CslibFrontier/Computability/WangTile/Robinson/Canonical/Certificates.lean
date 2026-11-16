@@ -46,6 +46,11 @@ compress these finite certificates without changing their semantic obligations.
 -/
 
 public section
+
+-- These finite certificates normalize the same tables. Serial elaboration avoids retaining
+-- several large normalization tasks at once, while keeping the default proof limits.
+set_option Elab.async false
+
 namespace Cslib.WangTile.Robinson.Canonical
 
 open Quarters QuarterGeometry RedShadeGraphRefinement
@@ -329,7 +334,7 @@ structure ShadeBlock where
   northwest : RedShades.State
   /-- Northeast quarter. -/
   northeast : RedShades.State
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 /-- Read a quarter; zero selects west/south and a nonzero offset east/north. -/
 @[expose] def ShadeBlock.at (block : ShadeBlock) (x y : ℕ) : RedShades.State :=
@@ -351,7 +356,7 @@ structure ShadeBlock where
 structure Node where
   /-- Position in the closed source enumeration, rather than its external numeric node ID. -/
   code : Fin 312
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 end
 
 /-- The underlying corrected Robinson tile index. -/
@@ -1088,9 +1093,12 @@ private theorem seam_chunks (chunk : Fin 13) : seamChunk chunk.val = true := by
   · exact seam_11
   · exact seam_12
 
-private theorem seam_checked (node : Node) : seamCheck node = true := by
+private theorem checked_from_chunks (check : Node → Bool)
+    (chunks : ∀ chunk : Fin 13, (List.range 24).all (fun offset =>
+      check ⟨⟨(24 * chunk.val + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩) = true)
+    (node : Node) : check node = true := by
   let chunk : Fin 13 := ⟨node.code.val / 24, by omega⟩
-  have checked := List.all_eq_true.mp (seam_chunks chunk) (node.code.val % 24)
+  have checked := List.all_eq_true.mp (chunks chunk) (node.code.val % 24)
     (List.mem_range.mpr (Nat.mod_lt _ (by decide)))
   have reconstructed :
       (⟨⟨(24 * chunk.val + node.code.val % 24) % 312,
@@ -1102,6 +1110,9 @@ private theorem seam_checked (node : Node) : seamCheck node = true := by
       dsimp only [chunk]
       omega
   simpa only [reconstructed] using checked
+
+private theorem seam_checked (node : Node) : seamCheck node = true :=
+  checked_from_chunks seamCheck seam_chunks node
 
 
 private theorem cached_correct (node : Node) : cachedSeams node = actualSeams node :=
@@ -1137,20 +1148,8 @@ private theorem pair_checked (left right : Node) : pairCheck left right = true :
         rw [(vCompatible_cached left right).mp h]
       _ = _ := (hr.2.2.2.1 x).symm
 
-private theorem node_checked (node : Node) : nodeCheck node = true := by
-  let chunk : Fin 13 := ⟨node.code.val / 24, by omega⟩
-  have checked := List.all_eq_true.mp (node_chunks chunk) (node.code.val % 24)
-    (List.mem_range.mpr (Nat.mod_lt _ (by decide)))
-  have reconstructed :
-      (⟨⟨(24 * chunk.val + node.code.val % 24) % 312,
-        Nat.mod_lt _ (by decide)⟩⟩ : Node) = node := by
-    cases node with
-    | mk code =>
-      apply congrArg Node.mk
-      apply Fin.ext
-      dsimp only [chunk]
-      omega
-  simpa only [reconstructed] using checked
+private theorem node_checked (node : Node) : nodeCheck node = true :=
+  checked_from_chunks nodeCheck node_chunks node
 
 /-- Every quarter of a selected node satisfies the actual local shade rule. -/
 theorem Node.block_allowed (node : Node) (x y : Fin 2) :
