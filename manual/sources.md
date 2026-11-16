@@ -209,16 +209,6 @@ Claude Berge. *Two Theorems in Graph Theory*. Proceedings of the National Academ
 
 Claude Berge. *Sur le couplage maximum d'un graphe*. Comptes Rendus Hebdomadaires des Séances de l'Académie des Sciences 247, 258–259, 1958. Bibliographic data from secondary bibliographies; the note was not inspected, and no theorem number is claimed. The manual attributes to it the Tutte–Berge formula, following [schrijver17](#schrijver17), Section 5.1.
 
-<a id="berger1966"></a>
-## berger1966
-
-Robert Berger. *The Undecidability of the Domino Problem*. Memoirs of the American
-Mathematical Society 66, 1966. [Publisher record](https://doi.org/10.1090/memo/0066).
-Bibliographic metadata checked on 2026-11-16 against the publisher record and its Crossref
-deposit. The book's full text was inaccessible in this pass: internal locator not verified.
-The formalization uses the later Robinson–Ollinger route described under
-[Jeandel–Vanier](#jeandelvanier2020), ported from the pinned lean-wang revision there.
-
 <a id="bermanhartmanis75"></a>
 ## bermanhartmanis75
 
@@ -1082,14 +1072,15 @@ Nodes are reindexed in source-list order; semantic seam certificates and indexed
 border-refinement witnesses replace repeated searches through the source tables.
 Canonical patches assign nearest-border obstruction signals to matching decorated
 substitutions and establish that the resulting finite scaffold tiles the plane.
-Carrier/Borders, Carrier/Addresses, Carrier/Corners and Realization further adapt the pinned
+Carrier/Borders, Carrier/Addresses, Carrier/Corners and Realization port the pinned
 revision's ShadedCarrierHierarchy, ShadedCarrierBorderHierarchy, ShadedCarrierBorderGeometry,
 ShadedCarrierBorderIntervals, ShadedCarrierSquareGeometry, ShadedCarrierHierarchyAddressing,
 ShadedCarrierConcreteRoles and ShadedCarrierCornerAddressing. Recursive owner frames identify
 the canonical carriers, their integer addresses satisfy wire equations, and every corner has
 address zero. Thus the concrete scaffold realizes every pointed payload plane, as in
-ShadedCarrierCornerAddressing.lean:435–440. This is the backward seed-removal direction;
-concrete forcing and domino undecidability remain separate obligations.
+ShadedCarrierCornerAddressing.lean:435–440. The named border halo and `AddressedSquare`
+replace the source's raw halo lists and `SquareAddressing`; the carrier arithmetic and
+centered-marker induction closely follow the source.
 The backward authoring worker also read Theorem 10 on manuscript p. 29 and the proof-route
 attribution in §3.4, pp. 29–30, plus [Robinson's primary paper](https://lipn.univ-paris13.fr/~fernique/qc/robinson.pdf),
 §7, printed pp. 201–205, on 2026-11-16.
