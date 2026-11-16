@@ -195,26 +195,6 @@ private theorem crossing_ne {g : ℕ → ℕ → Index} {s : ℕ → ℕ → Sha
   intro eq
   exact (valid.rules x y).crossing_opposite horizontal vertical (by rw [first, second, eq])
 
-private theorem iterateRefine_add (m n : ℕ) (g : ℕ → ℕ → Index) :
-    iterateRefine m (iterateRefine n g) = iterateRefine (m + n) g := by
-  induction m with
-  | zero => simp only [iterateRefine, Nat.zero_add]
-  | succ m ih => simp only [iterateRefine, Nat.succ_add, ih]
-
-private theorem local_refine {g h : ℕ → ℕ → Index} (eq : g 0 0 = h 0 0) (depth : ℕ) :
-    ∀ x y, x < 2 ^ depth → y < 2 ^ depth →
-      iterateRefine depth g x y = iterateRefine depth h x y := by
-  induction depth with
-  | zero =>
-    intro x y hx hy
-    have : x = 0 ∧ y = 0 := by simpa only [pow_zero, Nat.lt_one_iff] using And.intro hx hy
-    simpa only [iterateRefine, this.1, this.2] using eq
-  | succ depth ih =>
-    intro x y hx hy
-    simp only [pow_succ] at hx hy
-    simp only [iterateRefine, refineIndexGrid]
-    rw [ih (x / 2) (y / 2) (by omega) (by omega)]
-
 private theorem cycle_congr {g h : ℕ → ℕ → Index} {w e b t : ℕ}
     (c : CycleOn g w e b t) (eq : ∀ x y, x ≤ e → y ≤ t → g x y = h x y) :
     CycleOn h w e b t where
@@ -232,7 +212,7 @@ private theorem cycle_congr {g h : ℕ → ℕ → Index} {w e b t : ℕ}
 private theorem root_cycle (g : ℕ → ℕ → Index) :
     CycleOn (iterateRefine 2 g) 1 3 1 3 :=
   cycle_congr (fixed_cycle (g 0 0)) (fun x y hx hy =>
-    local_refine (g := fun _ _ => g 0 0) (h := g) rfl 2 x y (by omega) (by omega))
+    iterateRefine_eq_of_root_eq (g := fun _ _ => g 0 0) (h := g) rfl 2 x y (by omega) (by omega))
 
 private theorem large_cycle (g : ℕ → ℕ → Index) (level : ℕ) :
     CycleOn (iterateRefine (level + 2) g)
@@ -275,24 +255,6 @@ private theorem has_light_cycle (g : ℕ → ℕ → Index)
 end Cslib.WangTile.Robinson
 
 namespace Cslib.WangTile.Robinson
-private theorem Tower.refined_patch {base : Plane} (t : Tower base) (depth : ℕ) :
-    ∀ (level : ℕ) (a b : ℤ), ∃ u v : ℤ,
-      (fun x y : ℕ => (t.plane level).index (u + x) (v + y)) =
-        iterateRefine depth (fun x y : ℕ => (t.plane (level + depth)).index (a + x) (b + y)) := by
-  induction depth with
-  | zero => exact fun level a b => ⟨a, b, rfl⟩
-  | succ depth ih =>
-    intro level a b
-    obtain ⟨u, v, h⟩ := ih (level + 1) a b
-    refine ⟨(t.offsetX level).val + 2 * u, (t.offsetY level).val + 2 * v, ?_⟩
-    funext x y
-    have index := congrFun (congrFun h (x / 2)) (y / 2)
-    simp only [Nat.add_assoc, Nat.add_comm 1 depth] at index
-    simp only [iterateRefine, refineIndexGrid, ← index]
-    rw [t.children]
-    dsimp only
-    congr 1 <;> omega
-
 private theorem exists_refined_zero (base : Plane) (depth : ℕ) :
     ∃ (g : ℕ → ℕ → Index) (u v : ℤ), g 0 0 = 0 ∧
       (fun x y : ℕ => base.index (u + x) (v + y)) = iterateRefine depth g := by
@@ -907,7 +869,7 @@ private theorem canonical_local (level : ℕ) (root : Node) (coarse : ℕ → �
     (hy : y < 4 ^ level) :
     supertileIndexGrid level root x y = iterateRefine (2 * level) coarse x y := by
   rw [canonical_index]
-  apply local_refine rootEq.symm
+  apply iterateRefine_eq_of_root_eq rootEq.symm
   · simpa only [pow_mul, show (2 : ℕ) ^ 2 = 4 by decide] using hx
   · simpa only [pow_mul, show (2 : ℕ) ^ 2 = 4 by decide] using hy
 
@@ -1506,7 +1468,7 @@ private theorem phase_base (flipped : Bool) (coarse : ℕ → ℕ → Index)
     rw [show baseGrid (x / 2) (y / 2) = phaseGrid flipped 0 coarse (x / 2) (y / 2) from
       by
         simpa only [baseGrid, phaseGrid, Nat.zero_add] using
-          local_refine (g := coarseGrid 0) (h := coarse) rootEq.symm
+          iterateRefine_eq_of_root_eq (g := coarseGrid 0) (h := coarse) rootEq.symm
             (2 * level) (x / 2) (y / 2)
             (by simpa [pow_mul] using (show x / 2 < 4 ^ level by omega))
             (by simpa [pow_mul] using (show y / 2 < 4 ^ level by omega))]
@@ -1786,7 +1748,7 @@ private theorem phase_marker (flipped : Bool) (depth : ℕ)
       (2 * phaseScale flipped depth) = 0 := by
     cases flipped
     · have start : iterateRefine 4 coarse 4 4 = 0 :=
-        (local_refine (h := fun _ _ => 0) rootEq 4 4 4 (by decide) (by decide)).trans
+        (iterateRefine_eq_of_root_eq (h := fun _ _ => 0) rootEq 4 4 4 (by decide) (by decide)).trans
           marker_checks.1
       change iterateRefine (2 * (depth + 2)) coarse (2 * (2 * 4 ^ depth))
         (2 * (2 * 4 ^ depth)) = 0
@@ -1796,7 +1758,7 @@ private theorem phase_marker (flipped : Bool) (depth : ℕ)
     · have hd := positive rfl
       obtain ⟨extra, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega : depth ≠ 0)
       have start : iterateRefine 4 coarse 8 8 = 0 :=
-        (local_refine (h := fun _ _ => 0) rootEq 4 8 8 (by decide) (by decide)).trans
+        (iterateRefine_eq_of_root_eq (h := fun _ _ => 0) rootEq 4 8 8 (by decide) (by decide)).trans
           marker_checks.2.1
       change iterateRefine (2 * (extra + 1 + 1)) coarse
         (2 * (1 * 4 ^ (extra + 1))) (2 * (1 * 4 ^ (extra + 1))) = 0
