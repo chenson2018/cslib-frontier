@@ -11,6 +11,7 @@ public import CslibFrontier.Computability.RelationAlgebra.Tiling.TilingOfWinning
 public import CslibFrontier.Computability.RelationAlgebra.Tiling.WinningOfTiling
 public import CslibFrontier.Foundations.RelationAlgebra.AtomTable
 public import CslibFrontier.Foundations.RelationAlgebra.Finite
+public import Mathlib.Computability.Reduce
 
 /-!
 # From tilings to representability of finite relation algebras
