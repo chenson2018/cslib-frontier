@@ -1559,7 +1559,7 @@ private theorem berlekampStep_invariant (g : List Bool)
         intro h1
         have hsub : hp = 1 := sub_eq_zero.mp h1
         have := congrArg (coeff · 0) hsub
-        simp only [hh0, coeff_one_zero] at this
+        simp only [hh0, AddMonoidAlgebra.coeff_one_zero] at this
         exact zero_ne_one this
       have hp1_deg_lt : (hp - 1).natDegree < l.length := by
         calc (hp - 1).natDegree
