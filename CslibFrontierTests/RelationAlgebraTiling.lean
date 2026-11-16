@@ -12,8 +12,8 @@ public import CslibFrontier.Computability.RelationAlgebra.Tiling.Reduction
 /-! # The relation algebra of a tile list: checked instances
 
 The frame and the table of `RA(τ)` on small lists of tiles: the rules that make tile edges match,
-the agreement of the arithmetic on atom numbers with the frame, and a list of tiles that is a
-no-instance on both sides of the reduction by the direction that is proved. -/
+the agreement of the arithmetic on atom numbers with the frame, and lists of tiles that are
+instances of the reduction. -/
 
 @[expose] public section
 
@@ -98,12 +98,17 @@ example : ∀ r ∈ sample, ∀ s ∈ sample, ∀ t ∈ sample,
     (CycleCode tiles r.code s.code t.code ↔ (r, s, t) ∈ (tilingFrame tiles).cycles) := by
   decide
 
-/-! ### The tiling problem and the proved direction of the reduction -/
+/-! ### The tiling problem and the reduction -/
 
 example : freshTile tiles = ⟨4, 4, 4, 4⟩ := rfl
 
 /-- The empty list is a yes-instance of the tiling problem. -/
 example : EveryTileOccurs [] := by simp [EveryTileOccurs]
+
+/-- Through the reduction, the table of the algebra of the special tile alone satisfies the
+predicate of the representation problem. -/
+example : (tilingTable [freshTile []]).IsRepresentable :=
+  (everyTileOccurs_iff_isRepresentable []).mp (by simp [EveryTileOccurs])
 
 /-- A tile that tiles the plane by itself. -/
 example : EveryTileOccurs [⟨0, 0, 0, 0⟩] := fun t ht =>

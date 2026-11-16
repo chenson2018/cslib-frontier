@@ -10,6 +10,7 @@ module
 public import CslibFrontier.Computability.RelationAlgebra.Tiling.TilingOfWinning
 public import CslibFrontier.Computability.RelationAlgebra.Tiling.WinningOfTiling
 public import CslibFrontier.Foundations.RelationAlgebra.AtomTable
+public import CslibFrontier.Foundations.RelationAlgebra.Finite
 
 /-!
 # From tilings to representability of finite relation algebras
@@ -25,10 +26,6 @@ structure presents the frame `tilingFrame`, with its atoms numbered. When `RA(τ
 associative its table presents no atom structure, and such a list is a no-instance on both sides,
 as in the source, where a non-associative `RA(τ)` is treated as a no-instance.
 
-**This file depends on `hasWinningStrategy_tilingFrame`, Theorem 4 of the source, whose proof is
-not written yet**: `everyTileOccurs_iff_isRepresentable` and
-`everyTileOccurs_manyOneReducible_isRepresentable` rest on it. The other results do not.
-
 ## Main definitions
 
 * `Cslib.RelationAlgebra.tilingTable`: the table of `RA(τ)` for a list of tiles.
@@ -39,6 +36,8 @@ not written yet**: `everyTileOccurs_iff_isRepresentable` and
   structure with a representable complex algebra if and only if ∃ has a winning strategy in the
   game on `tilingFrame`. This uses Theorem 1 and Lemma 7 of the source.
 * `Cslib.RelationAlgebra.computable_tilingTable_cons_freshTile`: the reduction is computable.
+* `Cslib.RelationAlgebra.everyTileOccurs_iff_isRepresentable`: the reduction is correct, by
+  Theorems 3 and 4 of the source.
 * `Cslib.RelationAlgebra.everyTileOccurs_manyOneReducible_isRepresentable`: the tiling problem
   many-one reduces to the representation problem for tables. This is a reduction; it does not
   say that either problem is undecidable.
@@ -222,7 +221,7 @@ triples of atoms that satisfy `Tiling.CycleCode`, in lexicographic order. -/
     conv := atoms.map convCode
     id := [0, 1, 2]
     cycles := (atoms.flatMap fun a => atoms.flatMap fun b => atoms.map fun c => (a, b, c)).filter
-      fun x => CycleCode L x.1 x.2.1 x.2.2 }
+      fun (a, b, c) => CycleCode L a b c }
 
 variable {L : List WangTile}
 
@@ -385,11 +384,10 @@ theorem computable_tilingTable_cons_freshTile :
 
 /-- Every tile of `τ` is at the origin of a tiling of the plane by `τ` if and only if the table
 of `RA(τ⁺)` presents an atom structure whose complex algebra is representable, where `τ⁺` is `τ`
-with a fresh special tile in front: the correctness of the reduction of [HirschHodkinson2001],
-by Theorems 1, 3 and 4 and Lemma 7.
-
-**This rests on `hasWinningStrategy_tilingFrame`, Theorem 4, which is not yet proved.** The
-direction from right to left does not use it. -/
+with a fresh special tile in front: the correctness of the reduction of [HirschHodkinson2001].
+From left to right it is Theorem 4 with Lemma 7 and Theorem 1, and from right to left Theorems 1
+and 3. Theorem 4 uses that the special tile matches itself; that its colour is on no other tile
+makes the two tiling problems, for `τ` and for `τ⁺`, agree. -/
 theorem everyTileOccurs_iff_isRepresentable (τ : List WangTile) :
     EveryTileOccurs τ ↔ (tilingTable (freshTile τ :: τ)).IsRepresentable := by
   rw [isRepresentable_tilingTable_iff, ← everyTileOccurs_cons_freshTile_iff,
@@ -397,10 +395,10 @@ theorem everyTileOccurs_iff_isRepresentable (τ : List WangTile) :
   exact ⟨hasWinningStrategy_tilingFrame (Nat.succ_pos _) rfl rfl,
     everyIndexOccurs_of_hasWinningStrategy⟩
 
-/-- The tiling problem of [HirschHodkinson2001], Section 3, many-one reduces to the
-representation problem for finite relation algebras given by tables.
-
-**This rests on `hasWinningStrategy_tilingFrame`, Theorem 4, which is not yet proved.** -/
+/-- The tiling problem of [HirschHodkinson2001], Section 3, whether every tile of a finite list is
+at the origin of a tiling of the plane by the list, many-one reduces to the representation problem
+for finite relation algebras given by tables. This is the reduction of the source; that either
+problem is undecidable is not stated here. -/
 theorem everyTileOccurs_manyOneReducible_isRepresentable :
     EveryTileOccurs ≤₀ AtomTable.IsRepresentable :=
   ⟨_, computable_tilingTable_cons_freshTile, everyTileOccurs_iff_isRepresentable⟩

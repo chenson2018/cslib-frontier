@@ -226,30 +226,6 @@ theorem cycle_iff {L : List WangTile} {r s t : Atom (Fin L.length)} :
 instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Cycle L r s t) :=
   decidable_of_iff' _ cycle_iff
 
-variable {L : List WangTile} {r s t : Atom (Fin L.length)}
-
-/-- The consistent triangles are closed under the Peircean transform `(r, s, t) ↦ (s, t˘, r˘)`.
-With `Cycle.cycle_left` it generates the six transforms. -/
-theorem Cycle.rotate (h : Cycle L r s t) : Cycle L s t.conv r.conv where
-  tgt_eq_src := h.tgt_eq_tgt
-  src_eq_src := h.tgt_eq_src.symm
-  tgt_eq_tgt := by simpa [Atom.tgt] using h.src_eq_src.symm
-  eq_of_isUnit_left hs := congrArg conv (h.eq_of_isUnit_right hs).symm
-  eq_of_isUnit_right ht := (h.eq_conv_of_isUnit (isUnit_conv.mp ht)).symm
-  eq_conv_of_isUnit hr := congrArg conv (h.eq_of_isUnit_left (isUnit_conv.mp hr))
-  not_forbidden h' := h.not_forbidden (by simp only [Forbidden, conv_conv] at h' ⊢; tauto)
-
-/-- The consistent triangles are closed under the Peircean transform `(r, s, t) ↦ (r˘, t, s)`,
-the law `AtomStructure.cycle_left` of an atom structure. -/
-theorem Cycle.cycle_left (h : Cycle L r s t) : Cycle L r.conv t s where
-  tgt_eq_src := by simpa [Atom.tgt] using h.src_eq_src
-  src_eq_src := h.tgt_eq_src
-  tgt_eq_tgt := h.tgt_eq_tgt.symm
-  eq_of_isUnit_left hr := (h.eq_of_isUnit_left (isUnit_conv.mp hr)).symm
-  eq_of_isUnit_right ht := by rw [h.eq_conv_of_isUnit ht]
-  eq_conv_of_isUnit hs := by rw [conv_conv, h.eq_of_isUnit_right hs]
-  not_forbidden h' := h.not_forbidden (by simp only [Forbidden, conv_conv] at h' ⊢; tauto)
-
 end Tiling
 
 open Tiling
@@ -262,10 +238,6 @@ def tilingFrame (L : List WangTile) : AtomFrame (Atom (Fin L.length)) where
   conv := Atom.conv
   id := {a | a.IsUnit}
   cycles := {(r, s, t) | Cycle L r s t}
-
-@[simp]
-theorem mem_cycles_tilingFrame {L : List WangTile} {r s t : Atom (Fin L.length)} :
-    (r, s, t) ∈ (tilingFrame L).cycles ↔ Cycle L r s t := .rfl
 
 instance (L : List WangTile) : DecidablePred (· ∈ (tilingFrame L).cycles) := fun (r, s, t) =>
   inferInstanceAs (Decidable (Cycle L r s t))

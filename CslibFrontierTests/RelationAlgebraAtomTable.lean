@@ -8,6 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Foundations.RelationAlgebra.AtomTable
+public import CslibFrontier.Foundations.RelationAlgebra.Finite
 public import Cslib.Foundations.RelationAlgebra.Group
 public import Mathlib.Algebra.Group.TypeTags.Finite
 public import Mathlib.Data.Fin.VecNotation

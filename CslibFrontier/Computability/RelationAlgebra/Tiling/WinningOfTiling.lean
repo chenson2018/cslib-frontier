@@ -996,6 +996,14 @@ private theorem green_par_unique {s h h' : D} {e e' : Axis} {o o' : Direction} (
   · exact h₁.symm
 
 include hS in
+/-- The triangle of ∀'s move is consistent when read from one of the nodes he picked, through the
+other, to the new node. -/
+private theorem not_rule_par {s h : D} (hs : M.IsPar s) (hh : M.IsPar h) :
+    ¬Rule L (S.lab s h) (M.par h) (M.par s) :=
+  M.tri_free hS (x := some s) (y := some h) (w := none) (.inr (hs.imp (congrArg _) (congrArg _)))
+    (.inr (hh.imp (congrArg _) (congrArg _))) (.inl rfl)
+
+include hS in
 /-- By rule 3, ∀ cannot pick a `0`-node and a node that it sees along `u`, and ask for a green
 edge from the first and a tile other than `T₀` from the second. -/
 private theorem par_tile_eq_zero {h s : D} {d e : Axis} {j : Fin L.length} {o : Direction}
@@ -1009,10 +1017,8 @@ private theorem par_tile_eq_zero {h s : D} {d e : Axis} {j : Fin L.length} {o : 
   have h₃ : e.kind = M.kind := by rw [← M.par_tgt h, hh, Atom.tgt_green_forward]
   obtain rfl := Axis.kind_inj.mp h₁
   obtain rfl : e = d'.other := Axis.kind_inj.mp (h₃.trans h₂.symm)
-  refine M.tri_free hS (x := some s) (y := some h) (w := none)
-    (.inr ((M.isPar_of_isTile (by simp [hs, Atom.IsTile])).imp (congrArg _) (congrArg _)))
-    (.inr ((M.isPar_of_green hh).imp (congrArg _) (congrArg _))) (.inl rfl) ?_
-  change Rule L (S.lab s h) (M.par h) (M.par s)
+  refine M.not_rule_par hS (s := s) (M.isPar_of_isTile (by simp [hs, Atom.IsTile]))
+    (M.isPar_of_green hh) ?_
   rw [hS.typed.eq_conv hu, hh, hs]
   exact rule_u fun h0 => hj (Fin.ext h0)
 
@@ -1029,10 +1035,7 @@ private theorem not_isStep_par {h s : D} {d e : Axis} (hv : S.lab h s = v d .for
   have h₃ : e.kind = M.kind := by rw [← M.par_tgt h, hh, Atom.tgt_green_forward]
   obtain rfl := Axis.kind_inj.mp h₁
   obtain rfl : e = e' := Axis.kind_inj.mp (h₃.trans h₂.symm)
-  refine M.tri_free hS (x := some s) (y := some h) (w := none)
-    (.inr ((M.isPar_of_isStep hs).imp (congrArg _) (congrArg _)))
-    (.inr ((M.isPar_of_green hh).imp (congrArg _) (congrArg _))) (.inl rfl) ?_
-  change Rule L (S.lab s h) (M.par h) (M.par s)
+  refine M.not_rule_par hS (M.isPar_of_isStep hs) (M.isPar_of_green hh) ?_
   rw [hS.typed.eq_conv hv, hh, hs']
   exact rule_v e o
 
