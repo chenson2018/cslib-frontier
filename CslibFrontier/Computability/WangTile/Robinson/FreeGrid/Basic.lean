@@ -482,12 +482,6 @@ private theorem offset_children (depth index : ℕ) :
         pow_succ, hpow]
       omega
 
-private instance (predicate : Node → Prop) [DecidablePred predicate] :
-    Decidable (∀ node : Node, predicate node) :=
-  match (inferInstance : Decidable (∀ code : Fin 312, predicate ⟨code⟩)) with
-  | .isTrue valid => .isTrue (fun node => valid node.code)
-  | .isFalse invalid => .isFalse (fun valid => invalid (fun code => valid ⟨code⟩))
-
 /-- The geometric axis of a free-line scan. -/
 private inductive LineAxis where
   | row
@@ -545,151 +539,54 @@ section
 -- Serialize the finite certificate proofs to keep their combined peak memory bounded.
 set_option Elab.async false
 
-private theorem forall_nodes {predicate : Fin 312 → Prop}
-    (checked0 : ∀ code : Fin 13, predicate (finProdFinEquiv ((0 : Fin 24), code)))
-    (checked1 : ∀ code : Fin 13, predicate (finProdFinEquiv ((1 : Fin 24), code)))
-    (checked2 : ∀ code : Fin 13, predicate (finProdFinEquiv ((2 : Fin 24), code)))
-    (checked3 : ∀ code : Fin 13, predicate (finProdFinEquiv ((3 : Fin 24), code)))
-    (checked4 : ∀ code : Fin 13, predicate (finProdFinEquiv ((4 : Fin 24), code)))
-    (checked5 : ∀ code : Fin 13, predicate (finProdFinEquiv ((5 : Fin 24), code)))
-    (checked6 : ∀ code : Fin 13, predicate (finProdFinEquiv ((6 : Fin 24), code)))
-    (checked7 : ∀ code : Fin 13, predicate (finProdFinEquiv ((7 : Fin 24), code)))
-    (checked8 : ∀ code : Fin 13, predicate (finProdFinEquiv ((8 : Fin 24), code)))
-    (checked9 : ∀ code : Fin 13, predicate (finProdFinEquiv ((9 : Fin 24), code)))
-    (checked10 : ∀ code : Fin 13, predicate (finProdFinEquiv ((10 : Fin 24), code)))
-    (checked11 : ∀ code : Fin 13, predicate (finProdFinEquiv ((11 : Fin 24), code)))
-    (checked12 : ∀ code : Fin 13, predicate (finProdFinEquiv ((12 : Fin 24), code)))
-    (checked13 : ∀ code : Fin 13, predicate (finProdFinEquiv ((13 : Fin 24), code)))
-    (checked14 : ∀ code : Fin 13, predicate (finProdFinEquiv ((14 : Fin 24), code)))
-    (checked15 : ∀ code : Fin 13, predicate (finProdFinEquiv ((15 : Fin 24), code)))
-    (checked16 : ∀ code : Fin 13, predicate (finProdFinEquiv ((16 : Fin 24), code)))
-    (checked17 : ∀ code : Fin 13, predicate (finProdFinEquiv ((17 : Fin 24), code)))
-    (checked18 : ∀ code : Fin 13, predicate (finProdFinEquiv ((18 : Fin 24), code)))
-    (checked19 : ∀ code : Fin 13, predicate (finProdFinEquiv ((19 : Fin 24), code)))
-    (checked20 : ∀ code : Fin 13, predicate (finProdFinEquiv ((20 : Fin 24), code)))
-    (checked21 : ∀ code : Fin 13, predicate (finProdFinEquiv ((21 : Fin 24), code)))
-    (checked22 : ∀ code : Fin 13, predicate (finProdFinEquiv ((22 : Fin 24), code)))
-    (checked23 : ∀ code : Fin 13, predicate (finProdFinEquiv ((23 : Fin 24), code))) :
-    ∀ code : Fin 312, predicate code := by
-  have checked : ∀ block : Fin 24, ∀ code : Fin 13,
-      predicate (finProdFinEquiv (block, code)) :=
-    Fin.cases checked0 (Fin.cases checked1 (Fin.cases checked2 (
-    Fin.cases checked3 (Fin.cases checked4 (Fin.cases checked5 (
-    Fin.cases checked6 (Fin.cases checked7 (Fin.cases checked8 (
-    Fin.cases checked9 (Fin.cases checked10 (Fin.cases checked11 (
-    Fin.cases checked12 (Fin.cases checked13 (Fin.cases checked14 (
-    Fin.cases checked15 (Fin.cases checked16 (Fin.cases checked17 (
-    Fin.cases checked18 (Fin.cases checked19 (Fin.cases checked20 (
-    Fin.cases checked21 (Fin.cases checked22 (Fin.cases checked23 (
-      (fun i => Fin.elim0 i)))))))))))))))))))))))))
-  intro code
-  obtain ⟨⟨block, localCode⟩, rfl⟩ :=
-    (finProdFinEquiv (m := 24) (n := 13)).surjective code
-  exact checked block localCode
-
-private theorem even_checked0 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((0 : Fin 24), code)⟩ := by
+private theorem even_checked0 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((0 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked1 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((1 : Fin 24), code)⟩ := by
+private theorem even_checked1 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((1 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked2 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((2 : Fin 24), code)⟩ := by
+private theorem even_checked2 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((2 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked3 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((3 : Fin 24), code)⟩ := by
+private theorem even_checked3 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((3 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked4 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((4 : Fin 24), code)⟩ := by
+private theorem even_checked4 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((4 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked5 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((5 : Fin 24), code)⟩ := by
+private theorem even_checked5 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((5 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked6 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((6 : Fin 24), code)⟩ := by
+private theorem even_checked6 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((6 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked7 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((7 : Fin 24), code)⟩ := by
+private theorem even_checked7 : ∀ code : Fin 39,
+    EvenRules ⟨finProdFinEquiv ((7 : Fin 8), code)⟩ := by
   decide +kernel
 
-private theorem even_checked8 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((8 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked9 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((9 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked10 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((10 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked11 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((11 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked12 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((12 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked13 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((13 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked14 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((14 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked15 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((15 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked16 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((16 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked17 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((17 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked18 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((18 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked19 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((19 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked20 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((20 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked21 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((21 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked22 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((22 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem even_checked23 : ∀ code : Fin 13,
-    EvenRules ⟨finProdFinEquiv ((23 : Fin 24), code)⟩ := by
-  decide +kernel
-
-private theorem evenRules (node : Node) : EvenRules node :=
-  forall_nodes (predicate := fun code => EvenRules ⟨code⟩)
-    even_checked0 even_checked1 even_checked2 even_checked3 even_checked4 even_checked5
-    even_checked6 even_checked7 even_checked8 even_checked9 even_checked10 even_checked11
-    even_checked12 even_checked13 even_checked14 even_checked15 even_checked16 even_checked17
-    even_checked18 even_checked19 even_checked20 even_checked21 even_checked22 even_checked23
-    node.code
+private theorem evenRules (node : Node) : EvenRules node := by
+  have checked : ∀ batch : Fin 8, ∀ code : Fin 39,
+      EvenRules ⟨finProdFinEquiv (batch, code)⟩ := by
+    intro batch
+    fin_cases batch
+    · exact even_checked0
+    · exact even_checked1
+    · exact even_checked2
+    · exact even_checked3
+    · exact even_checked4
+    · exact even_checked5
+    · exact even_checked6
+    · exact even_checked7
+  obtain ⟨⟨batch, code⟩, h⟩ := (finProdFinEquiv (m := 8) (n := 39)).surjective node.code
+  have valid := checked batch code
+  rwa [h] at valid
 
 private def rowEven : List ℕ :=
   [260, 253, 252, 222, 262, 177, 176, 79, 174, 77, 156, 186, 158, 184, 11, 250, 73, 224]
