@@ -148,7 +148,7 @@ def IsUnit : Atom ι → Prop
   | _ => False
 
 instance : DecidablePred (IsUnit : Atom ι → Prop) := fun a => by
-  cases a <;> unfold IsUnit <;> infer_instance
+  cases a <;> first | exact isTrue trivial | exact isFalse id
 
 @[simp]
 theorem conv_conv (a : Atom ι) : a.conv.conv = a := by cases a <;> simp [conv]
@@ -176,9 +176,16 @@ def Rule (L : List WangTile) :
   | v .two .reverse, green .two .forward, step .two _ => True
   | _, _, _ => False
 
+-- By cases on the atoms, so that `decide` can evaluate the instance in other modules.
 instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Rule L r s t) := by
-  unfold Rule
-  split <;> infer_instance
+  rcases r with _ | _ | ⟨_ | _, _ | _⟩ | ⟨_ | _, _ | _⟩ | ⟨_ | _, _ | _⟩ | _ | ⟨i, _ | _⟩ <;>
+    (try exact isFalse id) <;>
+  rcases s with _ | _ | ⟨_ | _, _ | _⟩ | _ | _ | _ | ⟨j, _ | _⟩ <;> (try exact isFalse id) <;>
+  rcases t with _ | ⟨_ | _ | _, _ | _ | _⟩ | _ | _ | _ | ⟨_ | _, _ | _⟩ | ⟨k, _ | _⟩ <;>
+  first
+    | exact isFalse id
+    | exact isTrue trivial
+    | (dsimp only [Rule]; infer_instance)
 
 /-- A triangle is forbidden when it or one of its five other Peircean transforms is listed in
 `Rule`. -/
