@@ -19,15 +19,15 @@ A bounded walk keeps every intermediate port inside its stated rectangle.
 
 ## Main definitions
 
-* `Quarters.QuarterIndex`: a tile index and its named quadrant.
-* `OrientedRedCycles.CycleOn`: rectangular cycles with their exact inward-facing red lanes.
-* `RedShadeGraph.Path`, `RedShadeGraphBoundedPath.BoundedPath`: parity-labelled red walks.
+* `QuarterIndex`: a tile index and its named quadrant.
+* `CycleOn`: rectangular cycles with their exact inward-facing red lanes.
+* `Path`, `BoundedPath`: parity-labelled red walks.
 
 ## Main results
 
-* `TileSubdivision.horizontal_iff`, `TileSubdivision.vertical_iff`: exact quarter matching.
-* `OrientedRedCycles.CycleOn.refine`: substitution preserves oriented cycles and doubles them.
-* `OrientedRedCycles.fixed_cycle`: every twice-substituted tile contains an oriented cycle.
+* `subdivideTileAt_horizontal_iff`, `subdivideTileAt_vertical_iff`: exact quarter matching.
+* `CycleOn.refine`: substitution preserves oriented cycles and doubles them.
+* `fixed_cycle`: every twice-substituted tile contains an oriented cycle.
 
 ## References
 
@@ -53,7 +53,7 @@ inductive Quadrant where
   | southeast
   | northwest
   | northeast
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
 
 namespace Quadrant
@@ -90,8 +90,6 @@ theorem mem_all (q : Quadrant) : q ∈ all := by
 instance : Fintype Quadrant := Fintype.ofList all mem_all
 
 end Quadrant
-
-namespace TileSubdivision
 
 /-- Horizontal macro-edge colors are split by west/east half. -/
 @[expose] def horizontalEdgeColor (x : Bool) (color : Nat) : Nat :=
@@ -133,7 +131,7 @@ namespace TileSubdivision
         left := internalVerticalColor t true }
 
 /-- Matching quarter edges identify internal parents or matching external macro-edges. -/
-theorem horizontal_iff (left right : WangTile) (q r : Quadrant) :
+theorem subdivideTileAt_horizontal_iff (left right : WangTile) (q r : Quadrant) :
     (subdivideTileAt left q).right = (subdivideTileAt right r).left ↔
       match q, r with
       | .southwest, .southeast | .northwest, .northeast => left = right
@@ -144,7 +142,7 @@ theorem horizontal_iff (left right : WangTile) (q r : Quadrant) :
       Nat.pair_eq_pair]
 
 /-- The vertical counterpart of quarter-edge matching. -/
-theorem vertical_iff (lower upper : WangTile) (q r : Quadrant) :
+theorem subdivideTileAt_vertical_iff (lower upper : WangTile) (q r : Quadrant) :
     (subdivideTileAt lower q).top = (subdivideTileAt upper r).bottom ↔
       match q, r with
       | .southwest, .northwest | .southeast, .northeast => lower = upper
@@ -153,10 +151,6 @@ theorem vertical_iff (lower upper : WangTile) (q r : Quadrant) :
   cases q <;> cases r <;>
     simp [subdivideTileAt, horizontalEdgeColor, internalHorizontalColor,
       Nat.pair_eq_pair]
-
-end TileSubdivision
-
-namespace Quarters
 
 @[expose] public section
 /-- A quarter of one indexed tile of the corrected Robinson alphabet. -/
@@ -170,9 +164,7 @@ end
 
 /-- The ordinary Wang tile encoding a quarter and its internal seams. -/
 @[expose] def quarterTile (site : QuarterIndex) : WangTile :=
-  TileSubdivision.subdivideTileAt (tile (components site.index)) site.quadrant
-
-end Quarters
+  subdivideTileAt (tile (components site.index)) site.quadrant
 
 @[expose] public section
 /-- The four red lane atoms: east vertical, north horizontal, west vertical, south horizontal. -/
@@ -180,8 +172,6 @@ inductive ThickLine where
   | r0 | r1 | r2 | r3
   deriving DecidableEq
 end
-
-namespace QuarterGeometry
 
 /-- Membership of a red lane in a thick component; green lanes are omitted. -/
 @[expose] def containsLine (component : Thick) (line : ThickLine) : Bool :=
@@ -259,10 +249,6 @@ namespace QuarterGeometry
 @[expose] def componentAt (grid : Nat → Nat → Index) (x y : Nat) : Thick :=
   (components (grid (x / 2) (y / 2))).thick
 
-end QuarterGeometry
-
-namespace RedCycles
-
 /-- Thick component of an indexed tile. -/
 abbrev indexThick (index : Index) : Thick := (components index).thick
 
@@ -282,11 +268,6 @@ theorem childBlock_thick_southwest (parent : Index) :
 @[simp] private theorem refineIndexGrid_even_odd (grid : Nat → Nat → Index) (x y : Nat) :
     refineIndexGrid grid (2 * x) (2 * y + 1) = childBlock (grid x y) 0 1 := by
   simpa using refineIndexGrid_child grid x y 0 1
-
-end RedCycles
-
-namespace OrientedRedCycles
-open RedCycles QuarterGeometry
 
 /-- A rectangular red cycle with the four inward-facing lane orientations. -/
 structure CycleOn (grid : Nat → Nat → Index) (west east south north : Nat) : Prop where
@@ -477,11 +458,6 @@ theorem CycleOn.iterateRefine {grid : Nat → Nat → Index} {w e s n : Nat}
     simpa only [Robinson.iterateRefine, pow_succ, Nat.mul_comm, Nat.mul_left_comm,
       Nat.mul_assoc] using ih.refine
 
-end OrientedRedCycles
-
-namespace RedShadeGraph
-open QuarterGeometry
-
 @[expose] public section
 /-- A quarter-tile edge at an absolute coordinate. -/
 inductive Side where
@@ -489,7 +465,7 @@ inductive Side where
   | east
   | south
   | north
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
 
 /-- The four possible port sides form a finite alphabet. -/
@@ -505,7 +481,7 @@ structure Port where
   y : Nat
   /-- The edge of the quarter. -/
   side : Side
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
 
 /-- Whether the unshaded quarter geometry carries a red wire at a port. -/
@@ -583,11 +559,6 @@ theorem Path.symm {grid : Nat → Nat → Index} {first second : Port} {parity :
   | ofLink link => exact .ofLink (.symm link)
   | trans _ _ ih₁ ih₂ => simpa only [Bool.xor_comm] using Path.trans ih₂ ih₁
 
-end RedShadeGraph
-
-namespace RedShadeGraphBoundedPath
-open RedShadeGraph
-
 /-- A port lies in the quarter rectangle with the specified width and height. -/
 @[expose] def PortInBounds (port : Port) (width height : Nat) : Prop :=
   port.x < width ∧ port.y < height
@@ -621,5 +592,4 @@ theorem BoundedPath.path
   | ofLink link _ _ => exact Path.ofLink link
   | trans _ _ firstIH secondIH => exact Path.trans firstIH secondIH
 
-end RedShadeGraphBoundedPath
 end Cslib.WangTile.Robinson

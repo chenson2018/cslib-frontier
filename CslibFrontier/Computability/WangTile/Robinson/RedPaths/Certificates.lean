@@ -21,16 +21,16 @@ part of the logical interface.
 
 ## Main definitions
 
-* `RedShadeGraphRefinement.refinedPort`: side-sensitive port embedding through two substitutions.
-* `RedShadeGraphLocalCoverage.sources`: new-cycle and inherited sources for local coverage.
+* `refinedPort`: side-sensitive port embedding through two substitutions.
+* `sources`: new-cycle and inherited sources for local coverage.
 
 ## Main results
 
-* `RedShadeGraphRefinement.livePortPath`: live old ports reach their refined images
+* `livePortPath`: live old ports reach their refined images
   with even crossing parity.
-* `RedShadeGraphLocalCoverage.exists_boundedPath`: every live fine port is reached
+* `exists_boundedPath`: every live fine port is reached
   from the new cycle or an inherited live old port.
-* `RedShadeGraphRefinement.path_refine`: arbitrary red paths preserve parity through
+* `Path.refine`: arbitrary red paths preserve parity through
   two substitutions.
 
 ## References
@@ -47,9 +47,6 @@ The predecessor compression is original; its finite input derives from that revi
 
 public section
 namespace Cslib.WangTile.Robinson
-open QuarterGeometry RedCycles RedShadeGraph RedShadeGraphBoundedPath
-
-namespace RedShadeGraphRefinement
 
 /-- The two exits of a quarter macrocell needing a connector. -/
 private inductive ExitSide where
@@ -67,13 +64,13 @@ private instance : Fintype ExitSide :=
   iterateRefine 2 (coarseGrid parent)
 
 /-- A live exit of the old southwest quarter block. -/
-@[expose] private def internalPort (side : ExitSide) (offset : Nat) : Port :=
+private def internalPort (side : ExitSide) (offset : Nat) : Port :=
   match side with
   | .east => ⟨1, offset, .east⟩
   | .north => ⟨offset, 1, .north⟩
 
 /-- The corresponding exit on the boundary of the substituted macrocell. -/
-@[expose] private def externalPort (side : ExitSide) (offset : Nat) : Port :=
+private def externalPort (side : ExitSide) (offset : Nat) : Port :=
   match side with
   | .east => ⟨7, offset, .east⟩
   | .north => ⟨offset, 7, .north⟩
@@ -85,10 +82,6 @@ private instance : Fintype ExitSide :=
 /-- The sparse embedded old port, retaining its side. -/
 @[expose] def sparsePort (port : Port) : Port :=
   ⟨sparseCoordinate port.x, sparseCoordinate port.y, port.side⟩
-
-end RedShadeGraphRefinement
-namespace RedShadeGraphLocalCoverage
-open RedShadeGraphRefinement
 
 /-- All ports in the specified quarter rectangle. -/
 @[expose] def portsIn (width height : Nat) : List Port :=
@@ -102,10 +95,7 @@ open RedShadeGraphRefinement
 @[expose] def sources (parent : Index) : List Port :=
   cycleSource :: ((portsIn 2 2).filter (portPresent (coarseGrid parent))).map sparsePort
 
-end RedShadeGraphLocalCoverage
-
 namespace RedPathCertificate
-open RedShadeGraphRefinement RedShadeGraphLocalCoverage
 
 private inductive Kind where
   | horizontalMatch | verticalMatch | horizontal | vertical
@@ -619,7 +609,6 @@ private theorem bounds_of_mem {p : Port} {width height : Nat}
   rcases h with rfl | rfl | rfl | rfl <;> exact ⟨hx, hy⟩
 
 end RedPathCertificate
-namespace RedShadeGraphRefinement
 open RedPathCertificate
 
 /-- Every live old east or north port reaches its macrocell boundary evenly,
@@ -636,9 +625,7 @@ private theorem boundedConnectorPath (parent : Index) (exit : ExitSide)
   obtain ⟨id, hid, h⟩ := List.any_eq_true.mp accepted
   exact connects_sound ((verified parent).1 id hid).1 h
 
-end RedShadeGraphRefinement
-namespace RedShadeGraphLocalCoverage
-open RedShadeGraphRefinement RedPathCertificate
+open RedPathCertificate
 
 /-- Every live port in a two-substitution block has a bounded path from the
 new cycle or an inherited live old port. -/
@@ -669,7 +656,7 @@ theorem base_exists_boundedPath {target : Port}
     have hy : 2 + (target.y - 2) = target.y := by omega
     cases target
     simp only [Port.mk.injEq]
-    exact ⟨hx, hy, rfl⟩
+    exact ⟨hx, hy, trivial⟩
   have h := baseChecked ⟨target.x - 2, by omega⟩ ⟨target.y - 2, by omega⟩ target.side
   rw [targetEq] at h
   exact reaches_sound ((verified 0).1 2 (by decide)).1 (h present)
@@ -682,10 +669,6 @@ theorem source_cases {parent : Index} {source : Port} (h : source ∈ sources pa
   rcases h with h | ⟨old, ⟨mem, live⟩, eq⟩
   · exact Or.inl h
   · exact Or.inr ⟨old, mem, live, eq.symm⟩
-
-end RedShadeGraphLocalCoverage
-
-namespace RedShadeGraphTranslation
 
 /-- Translate a quarter port without changing its side. -/
 @[expose] def translatePort (port : Port) (offsetX offsetY : Nat) : Port :=
@@ -758,10 +741,6 @@ private theorem boundedPath_translate
     exact .ofLink (link_translate hx hy componentsEq link hfirst hsecond)
   | trans _ _ ih₁ ih₂ => exact .trans ih₁ ih₂
 
-end RedShadeGraphTranslation
-namespace RedShadeGraphRefinement
-open RedShadeGraphTranslation
-
 /-- A twice-substituted macrocell depends only on its old parent tile. -/
 theorem componentAt_two_block (grid : Nat → Nat → Index) (bx by₀ x y : Nat)
     (hx : x < 8) (hy : y < 8) :
@@ -810,7 +789,7 @@ private theorem quadrantAt_sparse (x y : Nat) :
   simp [quadrantAt, sparseCoordinate, Nat.add_mod, Nat.mul_mod]
 
 /-- An east/north port is moved to the macrocell boundary when it exits an old tile. -/
-@[expose] private def exitCoordinate (coordinate : Nat) : Nat :=
+@[expose] def exitCoordinate (coordinate : Nat) : Nat :=
   if coordinate % 2 = 1 then 8 * (coordinate / 2) + 7 else sparseCoordinate coordinate
 
 /-- Side-sensitive refinement: west/south stay sparse, east/north reach the block boundary. -/
@@ -910,7 +889,7 @@ private theorem path_of_sparseLink {grid : Nat → Nat → Index} {first second 
       (Path.trans (.ofLink link) (livePortPath grid second hsecond))
 
 /-- Every coarse link refines to a fine path with the same crossing parity. -/
-theorem link_refine {grid : Nat → Nat → Index} {first second : Port} {parity : Bool}
+theorem Link.refine {grid : Nat → Nat → Index} {first second : Port} {parity : Bool}
     (link : Link grid first second parity) :
     Path (iterateRefine 2 grid) (refinedPort first) (refinedPort second) parity := by
   induction link with
@@ -965,13 +944,12 @@ theorem link_refine {grid : Nat → Nat → Index} {first second : Port} {parity
   | symm _ ih => exact ih.symm
 
 /-- Two substitutions preserve the crossing parity of every red path. -/
-theorem path_refine {grid : Nat → Nat → Index} {first second : Port} {parity : Bool}
+theorem Path.refine {grid : Nat → Nat → Index} {first second : Port} {parity : Bool}
     (path : Path grid first second parity) :
     Path (iterateRefine 2 grid) (refinedPort first) (refinedPort second) parity := by
   induction path with
   | refl _ => exact .refl _
-  | ofLink link => exact link_refine link
+  | ofLink link => exact Link.refine link
   | trans _ _ ih₁ ih₂ => exact .trans ih₁ ih₂
 
-end RedShadeGraphRefinement
 end Cslib.WangTile.Robinson

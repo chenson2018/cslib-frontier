@@ -23,13 +23,13 @@ this module does not establish the existence of free rows or columns.
 
 ## Main definitions
 
-* `ShadedPlaneSignalGrid.IsFreeRow` and `IsFreeColumn`: board lines crossed by no selected
+* `IsFreeRow` and `IsFreeColumn`: board lines crossed by no selected
   light boundary.
-* `ShadedObstructionGeometry.Geometry`: the four outward-facing nearest-boundary conditions.
+* `Geometry`: the four outward-facing nearest-boundary conditions.
 
 ## Main results
 
-* `OrientedLightGeometry.CycleShade.geometry`: every uniformly light oriented red board
+* `CycleShade.geometry`: every uniformly light oriented red board
   in a locally allowed matching shade grid satisfies the full nearest-boundary conditions.
 
 ## References
@@ -47,41 +47,29 @@ nearest-boundary conclusion agree with `OrientedLightGeometry.CycleShade.geometr
 public section
 namespace Cslib.WangTile.Robinson
 
-open QuarterGeometry
-
-namespace ShadedPlaneSignalGrid
-
-open RedShadeCycles
-
 /-- No selected light vertical border crosses this strict board row. -/
 @[expose] def IsFreeRow (indexGrid : Nat → Nat → Index)
-    (shadeGrid : Nat → Nat → RedShades.State)
+    (shadeGrid : Nat → Nat → ShadeState)
     (west east row : Nat) : Prop :=
   ∀ quarterX, quarterWest west < quarterX → quarterX < quarterEast east →
-    ShadedSignals.selectedVerticalFor
+    selectedVerticalFor
       (componentAt indexGrid quarterX row) (quadrantAt quarterX row)
       (shadeGrid quarterX row) = none
 
 /-- No selected light horizontal border crosses this strict board column. -/
 @[expose] def IsFreeColumn (indexGrid : Nat → Nat → Index)
-    (shadeGrid : Nat → Nat → RedShades.State)
+    (shadeGrid : Nat → Nat → ShadeState)
     (south north column : Nat) : Prop :=
   ∀ quarterY, quarterSouth south < quarterY → quarterY < quarterNorth north →
-    ShadedSignals.selectedHorizontalFor
+    selectedHorizontalFor
       (componentAt indexGrid column quarterY) (quadrantAt column quarterY)
       (shadeGrid column quarterY) = none
-
-end ShadedPlaneSignalGrid
-
-namespace ShadedObstructionGeometry
-
-open RedShadeCycles ShadedPlaneSignalGrid
 
 /-- Nearest selected borders around each interior free-line crossing point face
 outwards, with every intervening position clear of selected borders. -/
 structure Geometry
     (indexGrid : Nat → Nat → Index)
-    (shadeGrid : Nat → Nat → RedShades.State)
+    (shadeGrid : Nat → Nat → ShadeState)
     (west east south north : Nat) : Prop where
   /-- A free row meets a selected horizontal boundary locally or at its nearest
   outward-facing boundary above or below. -/
@@ -90,23 +78,23 @@ structure Geometry
     quarterSouth south < row → row < quarterNorth north →
     IsFreeRow indexGrid shadeGrid west east row →
     ¬IsFreeColumn indexGrid shadeGrid south north column →
-      ShadedSignals.selectedHorizontalFor
+      selectedHorizontalFor
           (componentAt indexGrid column row) (quadrantAt column row)
           (shadeGrid column row) ≠ none ∨
       (∃ boundary, row < boundary ∧ boundary < quarterNorth north ∧
-        ShadedSignals.selectedHorizontalFor
+        selectedHorizontalFor
           (componentAt indexGrid column boundary) (quadrantAt column boundary)
           (shadeGrid column boundary) = some .north ∧
         ∀ y, row < y → y < boundary →
-          ShadedSignals.selectedHorizontalFor
+          selectedHorizontalFor
             (componentAt indexGrid column y) (quadrantAt column y)
             (shadeGrid column y) = none) ∨
       (∃ boundary, quarterSouth south < boundary ∧ boundary < row ∧
-        ShadedSignals.selectedHorizontalFor
+        selectedHorizontalFor
           (componentAt indexGrid column boundary) (quadrantAt column boundary)
           (shadeGrid column boundary) = some .south ∧
         ∀ y, boundary < y → y < row →
-          ShadedSignals.selectedHorizontalFor
+          selectedHorizontalFor
             (componentAt indexGrid column y) (quadrantAt column y)
             (shadeGrid column y) = none)
   /-- A free column meets a selected vertical boundary locally or at its nearest
@@ -116,73 +104,69 @@ structure Geometry
     quarterSouth south < row → row < quarterNorth north →
     IsFreeColumn indexGrid shadeGrid south north column →
     ¬IsFreeRow indexGrid shadeGrid west east row →
-      ShadedSignals.selectedVerticalFor
+      selectedVerticalFor
           (componentAt indexGrid column row) (quadrantAt column row)
           (shadeGrid column row) ≠ none ∨
       (∃ boundary, column < boundary ∧ boundary < quarterEast east ∧
-        ShadedSignals.selectedVerticalFor
+        selectedVerticalFor
           (componentAt indexGrid boundary row) (quadrantAt boundary row)
           (shadeGrid boundary row) = some .east ∧
         ∀ x, column < x → x < boundary →
-          ShadedSignals.selectedVerticalFor
+          selectedVerticalFor
             (componentAt indexGrid x row) (quadrantAt x row)
             (shadeGrid x row) = none) ∨
       (∃ boundary, quarterWest west < boundary ∧ boundary < column ∧
-        ShadedSignals.selectedVerticalFor
+        selectedVerticalFor
           (componentAt indexGrid boundary row) (quadrantAt boundary row)
           (shadeGrid boundary row) = some .west ∧
         ∀ x, boundary < x → x < column →
-          ShadedSignals.selectedVerticalFor
+          selectedVerticalFor
             (componentAt indexGrid x row) (quadrantAt x row)
           (shadeGrid x row) = none)
 
-end ShadedObstructionGeometry
-
-namespace OrientedLightHeightWeights
-
 /-- Weight of a directed light edge.  `positive` specifies which of the two
 directions gives weight `1`. -/
-private def edgeWeight (value : Option RedShades.Shade) (positive : Bool) : Int :=
+private def edgeWeight (value : Option Shade) (positive : Bool) : Int :=
   if value = some .light then
     if positive then 1 else -1
   else
     0
 
 /-- Horizontal edge immediately to the right of a quarter tile. -/
-private def rightWeight (quadrant : Quadrant) (state : RedShades.State) : Int :=
+private def rightWeight (quadrant : Quadrant) (state : ShadeState) : Int :=
   edgeWeight state.east quadrant.yBit
 
 /-- Horizontal edge immediately to the left of a quarter tile. -/
-private def leftWeight (quadrant : Quadrant) (state : RedShades.State) : Int :=
+private def leftWeight (quadrant : Quadrant) (state : ShadeState) : Int :=
   edgeWeight state.west quadrant.yBit
 
 /-- Vertical edge immediately above a quarter tile, measured as the height
 change from its left face to its right face. -/
-private def upWeight (quadrant : Quadrant) (state : RedShades.State) : Int :=
+private def upWeight (quadrant : Quadrant) (state : ShadeState) : Int :=
   edgeWeight state.north quadrant.xBit
 
 /-- Vertical edge immediately below a quarter tile, measured as the height
 change from its left face to its right face. -/
-private def downWeight (quadrant : Quadrant) (state : RedShades.State) : Int :=
+private def downWeight (quadrant : Quadrant) (state : ShadeState) : Int :=
   edgeWeight state.south quadrant.xBit
 
-private theorem neg_one_le_edgeWeight (value : Option RedShades.Shade)
+private theorem neg_one_le_edgeWeight (value : Option Shade)
     (positive : Bool) : (-1 : Int) ≤ edgeWeight value positive := by
   unfold edgeWeight
   split_ifs <;> omega
 
 private theorem neg_one_le_rightWeight (quadrant : Quadrant)
-    (state : RedShades.State) : (-1 : Int) ≤ rightWeight quadrant state :=
+    (state : ShadeState) : (-1 : Int) ≤ rightWeight quadrant state :=
   neg_one_le_edgeWeight _ _
 
 private theorem neg_one_le_upWeight (quadrant : Quadrant)
-    (state : RedShades.State) : (-1 : Int) ≤ upWeight quadrant state :=
+    (state : ShadeState) : (-1 : Int) ≤ upWeight quadrant state :=
   neg_one_le_edgeWeight _ _
 
 /-- The signed light flow has zero divergence at every allowed quarter tile. -/
 private theorem balance_of_allowed (component : Thick) (quadrant : Quadrant)
-    (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true) :
+    (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true) :
     rightWeight quadrant state - leftWeight quadrant state =
       upWeight quadrant state - downWeight quadrant state := by
   rcases state with ⟨w, e, s, n⟩
@@ -192,62 +176,62 @@ private theorem balance_of_allowed (component : Thick) (quadrant : Quadrant)
 /-- A west-pointing bottom edge and a north-pointing left edge would be a
 right turn, so they cannot meet at an allowed quarter tile. -/
 private theorem not_right_negative_and_up_negative_of_allowed
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true) :
     ¬ (rightWeight quadrant state = -1 ∧ upWeight quadrant state = -1) := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem horizontal_none_weights_zero
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = none) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedHorizontalFor component quadrant state = none) :
     rightWeight quadrant state = 0 ∧ leftWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem vertical_none_weights_zero
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedVerticalFor component quadrant state = none) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedVerticalFor component quadrant state = none) :
     upWeight quadrant state = 0 ∧ downWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem horizontal_south_has_negative_weight
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = some .south) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedHorizontalFor component quadrant state = some .south) :
     rightWeight quadrant state = -1 ∨ leftWeight quadrant state = -1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem horizontal_north_has_positive_weight
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = some .north) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedHorizontalFor component quadrant state = some .north) :
     rightWeight quadrant state = 1 ∨ leftWeight quadrant state = 1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem vertical_west_has_negative_weight
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedVerticalFor component quadrant state = some .west) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedVerticalFor component quadrant state = some .west) :
     upWeight quadrant state = -1 ∨ downWeight quadrant state = -1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
 private theorem vertical_east_has_positive_weight
-    (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
-    (hselected : ShadedSignals.selectedVerticalFor component quadrant state = some .east) :
+    (component : Thick) (quadrant : Quadrant) (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
+    (hselected : selectedVerticalFor component quadrant state = some .east) :
     upWeight quadrant state = 1 ∨ downWeight quadrant state = 1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
@@ -255,8 +239,8 @@ private theorem vertical_east_has_positive_weight
 
 /-- A horizontal light wire leaves no vertical light edge in the same quarter. -/
 private theorem up_zero_of_horizontal_light (component : Thick) (quadrant : Quadrant)
-    (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
+    (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
     (west : state.west = some .light) (east : state.east = some .light) :
     upWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
@@ -265,39 +249,33 @@ private theorem up_zero_of_horizontal_light (component : Thick) (quadrant : Quad
 
 /-- A vertical light wire leaves no horizontal light edge in the same quarter. -/
 private theorem right_zero_of_vertical_light (component : Thick) (quadrant : Quadrant)
-    (state : RedShades.State)
-    (allowed : RedShades.allowedFor component quadrant state = true)
+    (state : ShadeState)
+    (allowed : allowedFor component quadrant state = true)
     (south : state.south = some .light) (north : state.north = some .light) :
     rightWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
 
-end OrientedLightHeightWeights
-
-namespace OrientedLightHeight
-
-open OrientedRedCycles RedShadeCycles RedShadePaths OrientedLightHeightWeights
-
-private def rightWeightAt (stateGrid : Nat → Nat → RedShades.State)
+private def rightWeightAt (stateGrid : Nat → Nat → ShadeState)
     (x y : Nat) : Int :=
   rightWeight (quadrantAt x y) (stateGrid x y)
 
-private def leftWeightAt (stateGrid : Nat → Nat → RedShades.State)
+private def leftWeightAt (stateGrid : Nat → Nat → ShadeState)
     (x y : Nat) : Int :=
   leftWeight (quadrantAt x y) (stateGrid x y)
 
-private def upWeightAt (stateGrid : Nat → Nat → RedShades.State)
+private def upWeightAt (stateGrid : Nat → Nat → ShadeState)
     (x y : Nat) : Int :=
   upWeight (quadrantAt x y) (stateGrid x y)
 
-private def downWeightAt (stateGrid : Nat → Nat → RedShades.State)
+private def downWeightAt (stateGrid : Nat → Nat → ShadeState)
     (x y : Nat) : Int :=
   downWeight (quadrantAt x y) (stateGrid x y)
 
 /-- Height of the face above the horizontal edge at `bottom + offset`, on the
 vertical scan immediately to the right of `column`. -/
-private def faceHeight (stateGrid : Nat → Nat → RedShades.State)
+private def faceHeight (stateGrid : Nat → Nat → ShadeState)
     (column bottom : Nat) : Nat → Int
   | 0 => rightWeightAt stateGrid column bottom
   | offset + 1 =>
@@ -306,7 +284,7 @@ private def faceHeight (stateGrid : Nat → Nat → RedShades.State)
 
 private theorem ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
     {indexGrid : Nat → Nat → Index}
-    {stateGrid : Nat → Nat → RedShades.State}
+    {stateGrid : Nat → Nat → ShadeState}
     (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat) :
     rightWeightAt stateGrid x y = leftWeightAt stateGrid (x + 1) y := by
   unfold rightWeightAt leftWeightAt rightWeight leftWeight
@@ -316,7 +294,7 @@ private theorem ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
 
 private theorem ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
     {indexGrid : Nat → Nat → Index}
-    {stateGrid : Nat → Nat → RedShades.State}
+    {stateGrid : Nat → Nat → ShadeState}
     (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat) :
     upWeightAt stateGrid x y = downWeightAt stateGrid x (y + 1) := by
   unfold upWeightAt downWeightAt upWeight downWeight
@@ -326,14 +304,14 @@ private theorem ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
 
 private theorem ValidShadeGrid.balanceAt
     {indexGrid : Nat → Nat → Index}
-    {stateGrid : Nat → Nat → RedShades.State}
+    {stateGrid : Nat → Nat → ShadeState}
     (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat) :
     rightWeightAt stateGrid x y - leftWeightAt stateGrid x y =
       upWeightAt stateGrid x y - downWeightAt stateGrid x y :=
   balance_of_allowed _ _ _ (valid.allowed x y)
 
 variable {indexGrid : Nat → Nat → Index}
-  {stateGrid : Nat → Nat → RedShades.State}
+  {stateGrid : Nat → Nat → ShadeState}
   {west east south north : Nat}
 
 private theorem CycleShade.south_rightWeightAt
@@ -347,7 +325,8 @@ private theorem CycleShade.south_rightWeightAt
     rcases hwest.eq_or_lt with rfl | hwest
     · exact shaded.southwest
     · exact (shaded.south_at cycle valid hwest heast).2
-  simp [rightWeightAt, rightWeight, edgeWeight, light]
+  rw [rightWeightAt, rightWeight, light, quadrantAt_quarterSouth_yBit]
+  rfl
 
 private theorem CycleShade.south_upWeightAt
     (shaded : CycleShade stateGrid west east south north .light)
@@ -521,20 +500,9 @@ private theorem CycleShade.one_le_faceHeight
                     by simpa [upWeightAt] using hup⟩
   exact all (xOffset + yOffset) xOffset yOffset rfl heast hnorth
 
-end OrientedLightHeight
-
-namespace OrientedLightFreeHeight
-
-open OrientedRedCycles RedShadeCycles RedShadePaths ShadedPlaneSignalGrid
-  OrientedLightHeightWeights OrientedLightHeight
-
-variable {indexGrid : Nat → Nat → Index}
-  {stateGrid : Nat → Nat → RedShades.State}
-  {west east south north : Nat}
-
 private theorem ValidShadeGrid.horizontal_none_weightsAt_zero
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedHorizontalFor
+    (hselected : selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) = none) :
     rightWeightAt stateGrid x y = 0 ∧ leftWeightAt stateGrid x y = 0 := by
   simpa [rightWeightAt, leftWeightAt] using
@@ -542,7 +510,7 @@ private theorem ValidShadeGrid.horizontal_none_weightsAt_zero
 
 private theorem ValidShadeGrid.vertical_none_weightsAt_zero
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedVerticalFor
+    (hselected : selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) = none) :
     upWeightAt stateGrid x y = 0 ∧ downWeightAt stateGrid x y = 0 := by
   simpa [upWeightAt, downWeightAt] using
@@ -560,7 +528,7 @@ private theorem CycleShade.one_le_faceHeight_at
     (hnorth : row < quarterNorth north) :
     (1 : Int) ≤ faceHeight stateGrid column (quarterSouth south)
       (row - quarterSouth south) := by
-  have hheight := OrientedLightHeight.CycleShade.one_le_faceHeight
+  have hheight := CycleShade.one_le_faceHeight
     shaded cycle valid
     (xOffset := column - quarterWest west)
     (yOffset := row - quarterSouth south) (by omega) (by omega)
@@ -592,7 +560,7 @@ private theorem CycleShade.faceHeight_eq_one_of_freeRow
     induction xOffset with
     | zero =>
         intro _
-        have hheight := OrientedLightHeight.CycleShade.faceHeight_west
+        have hheight := CycleShade.faceHeight_west
           shaded cycle valid (offset := rowOffset) (by omega)
         simpa using hheight
     | succ xOffset ih =>
@@ -603,7 +571,7 @@ private theorem CycleShade.faceHeight_eq_one_of_freeRow
           (by simpa [column] using heastOffset)
         have hzero :=
           ValidShadeGrid.vertical_none_weightsAt_zero valid hnone
-        have hdiff := OrientedLightHeight.CycleShade.faceHeight_sub_left
+        have hdiff := CycleShade.faceHeight_sub_left
           shaded cycle valid (column := column) (offset := rowOffset)
           (by simp [column]) (by simpa [column] using heastOffset)
         have hleft : column - 1 = quarterWest west + xOffset := by
@@ -639,7 +607,7 @@ private theorem CycleShade.faceHeight_eq_one_right_of_freeColumn
     induction offset with
     | zero =>
         intro _
-        exact OrientedLightHeight.CycleShade.faceHeight_south
+        exact CycleShade.faceHeight_south
           shaded cycle valid hwest heast
     | succ offset ih =>
         intro hnorthOffset
@@ -676,7 +644,7 @@ private theorem CycleShade.faceHeight_eq_one_left_of_freeColumn
     induction offset with
     | zero =>
         intro _
-        apply OrientedLightHeight.CycleShade.faceHeight_south
+        apply CycleShade.faceHeight_south
           shaded cycle valid
         · omega
         · omega
@@ -689,7 +657,7 @@ private theorem CycleShade.faceHeight_eq_one_left_of_freeColumn
         have hzero :=
           ValidShadeGrid.horizontal_none_weightsAt_zero valid hnone
         have hmatch :=
-          OrientedLightHeight.ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
+          ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
             valid (column - 1) y
         have hcolumn : column - 1 + 1 = column := by omega
         rw [hcolumn, hzero.2] at hmatch
@@ -698,10 +666,6 @@ private theorem CycleShade.faceHeight_eq_one_left_of_freeColumn
         rw [hy, hmatch]
         omega
   exact all rowOffset (by omega)
-
-end OrientedLightFreeHeight
-
-namespace OrientedLightBoundarySearch
 
 /-- A finite run of zero-weight steps leaves an integer potential unchanged. -/
 private theorem potential_eq_of_zero_steps
@@ -1047,20 +1011,9 @@ private theorem boundary_of_unit_height
     · intro scan scanEq
       exact positive scan (boundary - 1) scanEq (by omega) (by omega)
 
-end OrientedLightBoundarySearch
-
-namespace OrientedLightHorizontalGeometry
-
-open OrientedRedCycles RedShadeCycles RedShadePaths ShadedPlaneSignalGrid
-  OrientedLightHeightWeights OrientedLightHeight OrientedLightFreeHeight
-
-variable {indexGrid : Nat → Nat → Index}
-  {stateGrid : Nat → Nat → RedShades.State}
-  {west east south north : Nat}
-
 private theorem ValidShadeGrid.vertical_west_has_negative_weightAt
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedVerticalFor
+    (hselected : selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .west) :
     upWeightAt stateGrid x y = -1 ∨ downWeightAt stateGrid x y = -1 := by
@@ -1070,7 +1023,7 @@ private theorem ValidShadeGrid.vertical_west_has_negative_weightAt
 
 private theorem ValidShadeGrid.vertical_east_has_positive_weightAt
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedVerticalFor
+    (hselected : selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .east) :
     upWeightAt stateGrid x y = 1 ∨ downWeightAt stateGrid x y = 1 := by
@@ -1089,27 +1042,16 @@ private theorem faceHeight_step_right
         (row - quarterSouth south) =
       faceHeight stateGrid (position - 1) (quarterSouth south)
           (row - quarterSouth south) + upWeightAt stateGrid position row := by
-  have difference := OrientedLightHeight.CycleShade.faceHeight_sub_left
+  have difference := CycleShade.faceHeight_sub_left
     shaded cycle valid (column := position)
       (offset := row - quarterSouth south) westPosition eastPosition
   rw [show quarterSouth south + (row - quarterSouth south) = row by omega]
     at difference
   omega
 
-end OrientedLightHorizontalGeometry
-
-namespace OrientedLightVerticalGeometry
-
-open OrientedRedCycles RedShadeCycles RedShadePaths ShadedPlaneSignalGrid
-  OrientedLightHeightWeights OrientedLightHeight OrientedLightFreeHeight
-
-variable {indexGrid : Nat → Nat → Index}
-  {stateGrid : Nat → Nat → RedShades.State}
-  {west east south north : Nat}
-
 private theorem ValidShadeGrid.horizontal_south_has_negative_weightAt
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedHorizontalFor
+    (hselected : selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .south) :
     rightWeightAt stateGrid x y = -1 ∨ leftWeightAt stateGrid x y = -1 := by
@@ -1119,7 +1061,7 @@ private theorem ValidShadeGrid.horizontal_south_has_negative_weightAt
 
 private theorem ValidShadeGrid.horizontal_north_has_positive_weightAt
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
-    (hselected : ShadedSignals.selectedHorizontalFor
+    (hselected : selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .north) :
     rightWeightAt stateGrid x y = 1 ∨ leftWeightAt stateGrid x y = 1 := by
@@ -1140,31 +1082,18 @@ private theorem faceHeight_step_up {scan position : Nat}
   congr 2
   omega
 
-end OrientedLightVerticalGeometry
-
-namespace OrientedLightGeometry
-
-open OrientedRedCycles RedShadeCycles RedShadePaths ShadedPlaneSignalGrid
-  OrientedLightHeightWeights OrientedLightHeight OrientedLightFreeHeight
-  OrientedLightHorizontalGeometry
-  OrientedLightVerticalGeometry
-
-variable {indexGrid : Nat → Nat → Index}
-  {stateGrid : Nat → Nat → RedShades.State}
-  {west east south north : Nat}
-
 /-- A valid light Robinson board has the outward-facing nearest boundaries
 required by the obstruction-signal argument. -/
 theorem CycleShade.geometry
     (shaded : CycleShade stateGrid west east south north .light)
     (cycle : CycleOn indexGrid west east south north)
     (valid : ValidShadeGrid indexGrid stateGrid) :
-    ShadedObstructionGeometry.Geometry
+    Geometry
       indexGrid stateGrid west east south north where
   verticalBoundary := by
     intro column row hwest heast hsouth hnorth free notFree
     let selected := fun y =>
-      ShadedSignals.selectedHorizontalFor
+      selectedHorizontalFor
         (componentAt indexGrid column y) (quadrantAt column y)
         (stateGrid column y)
     have witness : ∃ boundary,
@@ -1173,7 +1102,7 @@ theorem CycleShade.geometry
       simp only [IsFreeColumn] at notFree
       push Not at notFree
       exact notFree
-    apply OrientedLightBoundarySearch.boundary_of_unit_height
+    apply boundary_of_unit_height
       (selected := selected)
       (primary := fun scan y => rightWeightAt stateGrid scan y)
       (secondary := fun scan y => leftWeightAt stateGrid scan y)
@@ -1198,16 +1127,16 @@ theorem CycleShade.geometry
     · intro boundary rejected
       exact ValidShadeGrid.horizontal_north_has_positive_weightAt valid rejected
     · exact fun scan y =>
-        OrientedLightHeight.ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
+        ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
           valid scan y
     · intro scan scanEq
-      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
+      exact CycleShade.faceHeight_eq_one_of_freeRow
         shaded cycle valid (column := scan) (row := row)
         (by rcases scanEq with h | h <;> omega)
         (by rcases scanEq with h | h <;> omega)
         (le_of_lt hsouth) hnorth free
     · intro scan scanEq
-      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
+      exact CycleShade.faceHeight_eq_one_of_freeRow
         shaded cycle valid (column := scan) (row := row)
         (by rcases scanEq with h | h <;> omega)
         (by rcases scanEq with h | h <;> omega)
@@ -1217,14 +1146,14 @@ theorem CycleShade.geometry
     · intro position clear
       exact ValidShadeGrid.horizontal_none_weightsAt_zero valid clear
     · intro scan position scanEq positionSouth positionNorth
-      exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
+      exact CycleShade.one_le_faceHeight_at
         shaded cycle valid
         (by rcases scanEq with h | h <;> omega)
         (by rcases scanEq with h | h <;> omega)
         (row := position) positionSouth positionNorth
   horizontalBoundary := by
     intro column row hwest heast hsouth hnorth free notFree
-    let selected := fun x => ShadedSignals.selectedVerticalFor
+    let selected := fun x => selectedVerticalFor
       (componentAt indexGrid x row) (quadrantAt x row) (stateGrid x row)
     have witness : ∃ boundary,
         quarterWest west < boundary ∧ boundary < quarterEast east ∧
@@ -1232,7 +1161,7 @@ theorem CycleShade.geometry
       simp only [IsFreeRow] at notFree
       push Not at notFree
       exact notFree
-    apply OrientedLightBoundarySearch.boundary_of_unit_height
+    apply boundary_of_unit_height
       (selected := selected)
       (primary := fun scan x => upWeightAt stateGrid x scan)
       (secondary := fun scan x => downWeightAt stateGrid x scan)
@@ -1257,16 +1186,16 @@ theorem CycleShade.geometry
     · intro boundary rejected
       exact ValidShadeGrid.vertical_east_has_positive_weightAt valid rejected
     · exact fun scan x =>
-        OrientedLightHeight.ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
+        ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
           valid x scan
     · intro scan scanEq
-      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_right_of_freeColumn
+      exact CycleShade.faceHeight_eq_one_right_of_freeColumn
         shaded cycle valid (column := column) (row := scan)
         (le_of_lt hwest) heast
         (by rcases scanEq with h | h <;> omega)
         (by rcases scanEq with h | h <;> omega) free
     · intro scan scanEq
-      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_left_of_freeColumn
+      exact CycleShade.faceHeight_eq_one_left_of_freeColumn
         shaded cycle valid (column := column) (row := scan)
         hwest heast
         (by rcases scanEq with h | h <;> omega)
@@ -1277,11 +1206,10 @@ theorem CycleShade.geometry
     · intro position clear
       exact ValidShadeGrid.vertical_none_weightsAt_zero valid clear
     · intro scan position scanEq positionWest positionEast
-      exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
+      exact CycleShade.one_le_faceHeight_at
         shaded cycle valid (column := position) (row := scan)
         positionWest positionEast
         (by rcases scanEq with h | h <;> omega)
         (by rcases scanEq with h | h <;> omega)
 
-end OrientedLightGeometry
 end Cslib.WangTile.Robinson
