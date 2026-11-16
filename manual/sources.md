@@ -1039,6 +1039,21 @@ Sandy Irani. "Two Results on the List Update Problem." *Information Processing L
 
 Svante Janson, Tomasz Łuczak and Andrzej Ruciński. *Random Graphs*. Wiley-Interscience Series in Discrete Mathematics and Optimization, Wiley, 2000. https://doi.org/10.1002/9781118032718 . Bibliographic data from secondary records of the DOI. The chapter locator (Chapter 3, small subgraphs and the threshold `n ^ (-1 / m(H))`) was taken from secondary descriptions; the book was not inspected in this pass, and no theorem number is claimed.
 
+<a id="jeandelvanier2020"></a>
+## jeandelvanier2020
+
+Emmanuel Jeandel and Pascal Vanier. *The Undecidability of the Domino Problem*. In Shigeki
+Akiyama and Pierre Arnoux (eds.), *Substitution and Tiling Dynamics*, Lecture Notes in Mathematics
+2273, 293–357, Springer, 2020. [Publisher record](https://doi.org/10.1007/978-3-030-57666-0_6);
+[authors' manuscript](https://www.lacl.fr/pvanier/rech/cirm.pdf). Read on 2026-11-16 by the
+authoring Codex worker: §3.2, Definition 10, Proposition 8 and Figures 13–16, manuscript
+pp. 23–26. The Robinson modules use the corrected 104-tile variant from
+[lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3aaaef3eac65559352ef94f62ab9c00482),
+at that revision, retaining its authors and Apache-2.0 credit. The formalized endpoint is
+matching substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
+it does not include Proposition 8's aperiodicity conclusion or domino undecidability.
+This source check is authoring evidence, not independent review.
+
 <a id="johnsonlindenstrauss84"></a>
 ## johnsonlindenstrauss84
 
