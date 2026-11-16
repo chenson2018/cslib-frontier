@@ -1019,7 +1019,8 @@ private theorem exitCoordinate_succ (coordinate : Nat) :
   unfold exitCoordinate sparseCoordinate
   split <;> omega
 
-private theorem portPresent_local (grid : Nat → Nat → Index) (port : Port) :
+/-- A port has the same incidence in its own quarter of the corresponding single-tile grid. -/
+theorem portPresent_local (grid : Nat → Nat → Index) (port : Port) :
     portPresent (coarseGrid (grid (port.x / 2) (port.y / 2)))
       ⟨port.x % 2, port.y % 2, port.side⟩ = portPresent grid port := by
   cases port with

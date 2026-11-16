@@ -30,6 +30,8 @@ oriented red cycle carries one shade around its boundary.
 * `RedShadeCycles.CycleShade.south_at` and the other side lemmas propagate that shade along
   the complete boundary.
 * `RedShadeGraph.Path.sound`: path parity determines shade equality or opposition.
+* `RedShadeGraphBoundedPath.BoundedPath.sound`: bounded paths need validity only inside
+  their bounding rectangle.
 * `RedShadeGraph.ValidPortLabeling.validShadeGrid`: consistent port labels give valid shades.
 * `RedShadeGraphCoarsening.valid` and `cycleShade`: coarsening through two substitutions
   preserves matching shade rules and the shade of every oriented cycle.
@@ -802,13 +804,15 @@ open QuarterGeometry RedShadePaths
   | .south => (stateGrid port.x port.y).south
   | .north => (stateGrid port.x port.y).north
 
-/-- Allowed shade states have exactly the red-graph incidence. -/
-theorem value_isSome_eq_portPresent
+/-- A locally allowed shade state has exactly the red-graph incidence at each port. -/
+theorem value_isSome_eq_portPresent_of_allowed
     {grid : Nat → Nat → Index} {shadeGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid grid shadeGrid) (port : Port) :
+    (port : Port)
+    (allowed : RedShades.locallyAllowed
+      ⟨grid (port.x / 2) (port.y / 2), quadrantAt port.x port.y⟩
+      (shadeGrid port.x port.y) = true) :
     (value shadeGrid port).isSome = portPresent grid port := by
   rcases port with ⟨x, y, side⟩
-  have allowed := valid.allowed x y
   simp only [RedShades.locallyAllowed, RedShades.allowedFor, Bool.and_eq_true,
     decide_eq_true_eq] at allowed
   rcases allowed.1.1.1.1.1.1.1 with ⟨⟨⟨hw, he⟩, hs⟩, hn⟩
@@ -817,6 +821,13 @@ theorem value_isSome_eq_portPresent
   · exact he
   · exact hs
   · exact hn
+
+/-- Allowed shade states have exactly the red-graph incidence. -/
+theorem value_isSome_eq_portPresent
+    {grid : Nat → Nat → Index} {shadeGrid : Nat → Nat → RedShades.State}
+    (valid : ValidShadeGrid grid shadeGrid) (port : Port) :
+    (value shadeGrid port).isSome = portPresent grid port :=
+  value_isSome_eq_portPresent_of_allowed port (valid.allowed port.x port.y)
 
 /-- Even parity means equal shades; odd parity means opposite present shades. -/
 @[expose] def Related (parity : Bool) (first second : Option RedShades.Shade) : Prop :=
@@ -869,33 +880,53 @@ private theorem related_true_of_ne_of_present
     apply hne
     exact congrArg some heq)
 
+private theorem Link.sound_on {indexGrid : Nat → Nat → Index}
+    {stateGrid : Nat → Nat → RedShades.State} {region : Nat → Nat → Prop}
+    (allowed : ∀ x y, region x y → RedShades.locallyAllowed
+      ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩ (stateGrid x y) = true)
+    (hmatch : ∀ x y, region x y → region (x + 1) y →
+      (stateGrid x y).east = (stateGrid (x + 1) y).west)
+    (vmatch : ∀ x y, region x y → region x (y + 1) →
+      (stateGrid x y).north = (stateGrid x (y + 1)).south)
+    {first second : Port} {parity : Bool} (link : Link indexGrid first second parity) :
+    region first.x first.y → region second.x second.y →
+      Related parity (value stateGrid first) (value stateGrid second) := by
+  induction link with
+  | horizontalMatch x y => exact hmatch x y
+  | verticalMatch x y => exact vmatch x y
+  | horizontal x y hpath =>
+      exact fun h _ => RedShades.horizontal_eq_of_allowedFor (allowed x y h) hpath
+  | vertical x y hpath =>
+      exact fun h _ => RedShades.vertical_eq_of_allowedFor (allowed x y h) hpath
+  | westNorth x y hwest hnorth =>
+      exact fun h _ => RedShades.west_north_corner_eq_of_allowedFor (allowed x y h) hwest hnorth
+  | westSouth x y hwest hsouth =>
+      exact fun h _ => RedShades.west_south_corner_eq_of_allowedFor (allowed x y h) hwest hsouth
+  | eastNorth x y heast hnorth =>
+      exact fun h _ => RedShades.east_north_corner_eq_of_allowedFor (allowed x y h) heast hnorth
+  | eastSouth x y heast hsouth =>
+      exact fun h _ => RedShades.east_south_corner_eq_of_allowedFor (allowed x y h) heast hsouth
+  | crossing x y hhorizontal hvertical =>
+      intro h _
+      apply related_true_of_ne_of_present
+      · exact RedShades.west_present_of_allowedFor (allowed x y h) (by
+          change hasWest (componentAt indexGrid x y) (quadrantAt x y) = true
+          simp only [hasWest, hhorizontal, Bool.true_or])
+      · exact RedShades.south_present_of_allowedFor (allowed x y h) (by
+          change hasSouth (componentAt indexGrid x y) (quadrantAt x y) = true
+          simp only [hasSouth, hvertical, Bool.true_or])
+      · exact RedShades.crossing_opposite_of_allowedFor (allowed x y h) hhorizontal hvertical
+  | symm link ih => exact fun hfirst hsecond => Related.symm (ih hsecond hfirst)
+
 theorem Link.sound {indexGrid : Nat → Nat → Index}
     {stateGrid : Nat → Nat → RedShades.State}
     (valid : ValidShadeGrid indexGrid stateGrid)
     {first second : Port} {parity : Bool}
     (link : Link indexGrid first second parity) :
-    Related parity (value stateGrid first) (value stateGrid second) := by
-  induction link with
-  | horizontalMatch x y => exact valid.hmatch x y
-  | verticalMatch x y => exact valid.vmatch x y
-  | horizontal x y hpath => exact valid.horizontal_eq x y hpath
-  | vertical x y hpath => exact valid.vertical_eq x y hpath
-  | westNorth x y hwest hnorth =>
-      exact valid.west_north_corner_eq x y hwest hnorth
-  | westSouth x y hwest hsouth =>
-      exact valid.west_south_corner_eq x y hwest hsouth
-  | eastNorth x y heast hnorth =>
-      exact valid.east_north_corner_eq x y heast hnorth
-  | eastSouth x y heast hsouth =>
-      exact RedShades.east_south_corner_eq_of_allowedFor (valid.allowed x y) heast hsouth
-  | crossing x y hhorizontal hvertical =>
-      apply related_true_of_ne_of_present
-      · exact valid.west_present x y (by
-          simp only [hasWest, hhorizontal, Bool.true_or])
-      · exact valid.south_present x y (by
-          simp only [hasSouth, hvertical, Bool.true_or])
-      · exact valid.crossing_opposite x y hhorizontal hvertical
-  | symm link ih => exact Related.symm ih
+    Related parity (value stateGrid first) (value stateGrid second) :=
+  link.sound_on (region := fun _ _ => True)
+    (fun x y _ => valid.allowed x y)
+    (fun x y _ _ => valid.hmatch x y) (fun x y _ _ => valid.vmatch x y) trivial trivial
 
 /-- A parity-consistent assignment to all red-graph ports.  Incidence is part
 of the data because match links exist independently of whether the shared
@@ -999,6 +1030,33 @@ theorem Path.sound {indexGrid : Nat → Nat → Index}
 
 
 end RedShadeGraph
+namespace RedShadeGraphBoundedPath
+
+open RedShadeGraph QuarterGeometry
+
+/-- A bounded red-wire path relates its endpoint shades using only local validity and
+matching within the bounding rectangle. -/
+theorem BoundedPath.sound {indexGrid : Nat → Nat → Index}
+    {stateGrid : Nat → Nat → RedShades.State} {width height : Nat}
+    (allowed : ∀ x y, x < width → y < height → RedShades.locallyAllowed
+      ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩ (stateGrid x y) = true)
+    (hmatch : ∀ x y, x + 1 < width → y < height →
+      (stateGrid x y).east = (stateGrid (x + 1) y).west)
+    (vmatch : ∀ x y, x < width → y + 1 < height →
+      (stateGrid x y).north = (stateGrid x (y + 1)).south)
+    {first second : Port} {parity : Bool}
+    (path : BoundedPath indexGrid width height first second parity) :
+    Related parity (value stateGrid first) (value stateGrid second) := by
+  induction path with
+  | refl port bounds => rfl
+  | ofLink link first second =>
+      exact link.sound_on (region := fun x y => x < width ∧ y < height)
+        (fun x y h => allowed x y h.1 h.2)
+        (fun x y _ h => hmatch x y h.1 h.2)
+        (fun x y _ h => vmatch x y h.1 h.2) first second
+  | trans firstPath secondPath firstIH secondIH => exact Related.trans firstIH secondIH
+
+end RedShadeGraphBoundedPath
 namespace Signals
 open QuarterGeometry
 
