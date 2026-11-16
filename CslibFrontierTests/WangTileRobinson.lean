@@ -4,15 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Henson
 -/
 
+module
 -- upstream: candidate
 
-import CslibFrontier.Computability.WangTile.Robinson.Hierarchy
-import CslibFrontier.Computability.WangTile.Robinson.Recognizability
+public import CslibFrontier.Computability.WangTile.Robinson.Hierarchy
+public import CslibFrontier.Computability.WangTile.Robinson.Recognizability
 import Mathlib.Data.Fin.VecNotation
 
 /-! Ordinary-import clients of the corrected Robinson hierarchy. The concrete four-row patch
 checks that the recognition hypotheses are satisfiable. A matching two-by-two patch with no
 parent guards the essential one-cell context of that theorem. -/
+
+namespace Cslib.Tests.WangTile.Robinson
 
 open Cslib.WangTile
 open Cslib.WangTile.Robinson
@@ -43,10 +46,21 @@ example : ¬ ∃ p : Index,
     childBlock p 0 0 = 33 ∧ childBlock p 1 0 = 14 ∧
       childBlock p 0 1 = 77 ∧ childBlock p 1 1 = 6 := by decide
 
-example : TilesPlane tileSet := tilesPlane_tileSet
+/-- Recurrence applies to a given tiling, preserving its actual tiles pointwise. -/
+public theorem tile103_occurs_in_given_tiling {f : ℤ → ℤ → Cslib.WangTile}
+    (hf : ∀ x y, f x y ∈ tileSet ∧ (f x y).right = (f (x + 1) y).left ∧
+      (f x y).top = (f x (y + 1)).bottom) :
+    ∃ x y, f x y = tile (components 103) := by
+  obtain ⟨p, hp⟩ := exists_plane_eq hf
+  obtain ⟨x, y, hxy⟩ := (tower p).every_tile 0 103
+  rw [(tower p).zero] at hxy
+  exact ⟨x, y, by rw [← hp, hxy]⟩
 
 -- The tower and recurrence apply to a concrete nonempty family of planes.
 example : ∃ p : Plane, ∃ x y : ℤ, p.index x y = 103 := by
-  obtain ⟨p⟩ := tilesPlane_iff_nonempty_plane.mp tilesPlane_tileSet
+  obtain ⟨f, hf⟩ := tilesPlane_tileSet
+  obtain ⟨p, _⟩ := exists_plane_eq hf
   have h := (tower p).every_tile 0 103
   exact ⟨p, by simpa only [(tower p).zero] using h⟩
+
+end Cslib.Tests.WangTile.Robinson

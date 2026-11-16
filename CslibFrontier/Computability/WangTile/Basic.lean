@@ -9,7 +9,6 @@ module
 
 public import CslibFrontier.Init
 public import Mathlib.Computability.Primrec.List
-public import Mathlib.Computability.Reduce
 
 /-!
 # Wang tiles and finite patches
@@ -31,12 +30,14 @@ of the three problems; in particular, the unseeded plane problem remains a separ
 ## References
 
 The prior formalization is [lean-wang, revision 64268a3, Basic](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Basic.lean).
-The field order and plane predicate here are those of cslib-frontier issue #5920.
 -/
 
 public section
 
 namespace Cslib
+
+-- Exposed so that `decide` can evaluate the derived `DecidableEq` instance in client modules.
+@[expose] public section WangTileDef
 
 /-- A Wang tile: a unit square in fixed orientation with a colour on each edge. -/
 structure WangTile where
@@ -50,10 +51,12 @@ structure WangTile where
   right : ℕ
   deriving DecidableEq
 
+end WangTileDef
+
 namespace WangTile
 
 /-- A tile is coded as the tuple `(top, bottom, left, right)`. -/
-def equivProd : WangTile ≃ ℕ × ℕ × ℕ × ℕ where
+@[expose] def equivProd : WangTile ≃ ℕ × ℕ × ℕ × ℕ where
   toFun t := (t.top, t.bottom, t.left, t.right)
   invFun := fun (top, bottom, left, right) => ⟨top, bottom, left, right⟩
   left_inv _ := rfl
@@ -75,7 +78,7 @@ structure SeededInstance where
   seed : WangTile
 
 /-- A seeded instance is coded as `(tiles, seed)`. -/
-def SeededInstance.equivProd : SeededInstance ≃ List WangTile × WangTile where
+@[expose] def SeededInstance.equivProd : SeededInstance ≃ List WangTile × WangTile where
   toFun I := (I.tiles, I.seed)
   invFun := fun (tiles, seed) => ⟨tiles, seed⟩
   left_inv _ := rfl

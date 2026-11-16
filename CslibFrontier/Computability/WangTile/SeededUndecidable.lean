@@ -8,19 +8,25 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.OfTM0
-public import CslibFrontier.Computability.Machines.Turing.SingleTape.TM0Universal
 public import Mathlib.Computability.Halting
+import CslibFrontier.Computability.Machines.Turing.SingleTape.TM0Universal
+import Mathlib.Computability.Reduce
 
 /-!
 # Undecidability of seeded-quadrant Wang tiling
 
 There is no algorithm deciding whether a finite palette tiles the natural-number quadrant with
-a prescribed southwest tile [Robinson1971, §4, pp. 190–192]. The reduction sends a partial
-recursive code to the computation tiles of the fixed universal finite-state `TM0` machine,
-initialized with that code's input.
-The resulting seeded quadrant is tileable precisely when the code does not halt on zero.
-Unlike the source's combined write-and-move instructions, Mathlib's `TM0` writes or moves
-in separate steps; tape folding and input tags give an explicit quadrant construction.
+a prescribed southwest tile. This is Wang's origin-constrained problem for the first quadrant
+as stated in [Robinson1971, §1, p. 178]. Robinson's §4, pp. 190–192 proves the plane variant
+with a prescribed tile used at least once, and remarks on p. 192 that the quadrant argument is
+similar, crediting Wang.
+
+The proof here is after that tableau argument. The reduction fixes a universal finite-state
+`TM0` machine and varies the input forced along the bottom row, instead of varying the machine
+on a blank tape. Tiles record two-row, three-cell windows rather than the source's signal tiles;
+`TM0` writes and moves in separate steps, and its two-sided tape is explicitly folded onto a
+one-sided tape. The resulting seeded quadrant is tileable precisely when the encoded partial
+recursive program does not halt on zero.
 
 This is the **seeded-quadrant** problem. Undecidability of the unseeded integer-plane domino
 problem requires a separate seed-removal construction and remains open here.
@@ -63,11 +69,17 @@ theorem primrec_seededReduction : Primrec seededReduction := by
 theorem tilesQuadrant_seededReduction_iff (c : Nat.Partrec.Code) :
     TilesQuadrant (seededReduction c) ↔ ¬ (c.eval 0).Dom := by
   classical
-  rw [seededReduction, OfTM0.tilesQuadrant_instance_iff, eval_dom_iff,
+  rw [seededReduction, OfTM0.tilesQuadrant_seededInstance_iff, eval_dom_iff,
     Denumerable.ofNat_encode]
 
-/-- **Seeded-quadrant tiling is undecidable** [Robinson1971, §4, pp. 190–192]. This does not
-assert undecidability of the unseeded plane domino problem. -/
+/-- **Seeded-quadrant tiling is undecidable**: Wang's origin-constrained first-quadrant problem
+as stated in [Robinson1971, §1, p. 178]. Robinson's §4, pp. 190–192 gives the full proof for
+the plane with a prescribed tile used at least once; p. 192 remarks that the quadrant case is
+similar and credits Wang. The proof here is after that tableau argument: it fixes a universal
+machine and varies the bottom-row input instead of the machine on a blank tape, uses two-row,
+three-cell window tiles rather than signal tiles, separates `TM0` write and move steps, and folds
+the two-sided tape onto a one-sided tape. This does not assert undecidability of the unseeded
+plane domino problem. -/
 theorem not_computablePred_tilesQuadrant : ¬ ComputablePred TilesQuadrant := by
   intro h
   have hn : ComputablePred (fun c : Nat.Partrec.Code => ¬ (c.eval 0).Dom) :=

@@ -9,6 +9,7 @@ module
 
 public import CslibFrontier.Computability.WangTile.Compactness
 public import CslibFrontier.Computability.WangTile.SeededUndecidable
+import CslibFrontier.Computability.Machines.Turing.SingleTape.TM0Restrict
 
 /-!
 # Wang tilings: checked instances
@@ -21,6 +22,15 @@ one that moves right forever exercise both sides of the TM0 equivalence.
 namespace Cslib.Tests.WangTile
 
 open Cslib.WangTile
+
+-- Ordinary imports expose the documented tuple coding of both records.
+example (t : WangTile) :
+    Encodable.encode t = Encodable.encode (t.top, t.bottom, t.left, t.right) := rfl
+
+example (I : SeededInstance) : Encodable.encode I = Encodable.encode (I.tiles, I.seed) := rfl
+
+example : (⟨0, 0, 0, 0⟩ : WangTile) ∈ [⟨1, 2, 3, 4⟩, ⟨0, 0, 0, 0⟩] ∧
+    (⟨0, 0, 0, 0⟩ : WangTile) ≠ ⟨1, 2, 3, 4⟩ := by decide
 
 example : ¬ TilesPlane [] := by
   rintro ⟨f, hf⟩
@@ -73,14 +83,14 @@ example : TilesQuadrant ⟨[monochrome], monochrome⟩ := by
 public theorem not_tilesQuadrant_haltM (input : List Bool) :
     ¬ TilesQuadrant (OfTM0.seededInstance haltM input) := by
   intro h
-  apply (OfTM0.tilesQuadrant_instance_iff haltM input).mp h
+  apply (OfTM0.tilesQuadrant_seededInstance_iff haltM input).mp h
   apply (Turing.TM0.eval_dom_iff haltM input).mpr
   exact ⟨_, Relation.ReflTransGen.refl, rfl⟩
 
 /-- An infinite right-moving run gives a tiling of the associated seeded quadrant. -/
 public theorem tilesQuadrant_moveM (input : List Bool) :
     TilesQuadrant (OfTM0.seededInstance moveM input) := by
-  apply (OfTM0.tilesQuadrant_instance_iff moveM input).mpr
+  apply (OfTM0.tilesQuadrant_seededInstance_iff moveM input).mpr
   intro h
   obtain ⟨cfg, _, hc⟩ := (Turing.TM0.eval_dom_iff moveM input).mp h
   obtain ⟨q, x, L, R, rfl⟩ := Turing.TM0.exists_cfgOf cfg
@@ -94,7 +104,7 @@ private def crossM : Turing.TM0.Machine Bool (Fin 2) := fun q a =>
 
 example : ¬ TilesQuadrant (OfTM0.seededInstance crossM [true]) := by
   intro h
-  apply (OfTM0.tilesQuadrant_instance_iff crossM [true]).mp h
+  apply (OfTM0.tilesQuadrant_seededInstance_iff crossM [true]).mp h
   apply (Turing.TM0.eval_dom_iff crossM [true]).mpr
   refine ⟨Turing.TM0.cfgOf 1 false [] [true], Relation.ReflTransGen.single ?_, rfl⟩
   change Turing.TM0.step crossM (Turing.TM0.cfgOf 0 true [] []) =
