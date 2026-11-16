@@ -18,19 +18,12 @@ row and column. Conversely, a non-free line crossing a free line receives a none
 from its nearest outward-facing selected boundary. These two facts distinguish payload
 crossings from the intervening horizontal and vertical wires.
 
-## Main definitions
-
-* `ShadedObstructionGeometry.CrossingObstruction`: non-free lines are blocked where they
-  intersect a free line inside the board.
-
 ## Main results
 
-* `ShadedPlaneSignalGrid.CycleShade.clear_at_free_row` and `clear_at_free_column`: free
-  board lines carry no obstruction flow in their direction.
-* `ShadedObstructionGeometry.Geometry.crossingObstruction`: outward boundary geometry
-  forces every non-free crossing direction to be blocked.
 * `FreeGrid.ConsecutiveMarkedFreeGrid.routedGrid`: every consecutive marked free grid
   inside a light board gives the routed grid consumed by generic seed removal.
+
+A nonvacuous plane instance requires the separate canonical patch construction.
 
 ## References
 
@@ -224,7 +217,7 @@ private theorem CycleShade.east_selected
   · exact (shaded.east_at cycle valid.shadeValid hs hn).1
 
 /-- Both horizontal signal edges vanish at each strict interior point of a free board row. -/
-theorem CycleShade.clear_at_free_row
+private theorem CycleShade.clear_at_free_row
     (shaded : CycleShade shadeGrid west east south north .light)
     (cycle : CycleOn indexGrid west east south north)
     (valid : ShadedSignals.ValidGrid indexGrid shadeGrid signalGrid)
@@ -250,7 +243,7 @@ theorem CycleShade.clear_at_free_row
     exact h.2
 
 /-- Both vertical signal edges vanish at each strict interior point of a free board column. -/
-theorem CycleShade.clear_at_free_column
+private theorem CycleShade.clear_at_free_column
     (shaded : CycleShade shadeGrid west east south north .light)
     (cycle : CycleOn indexGrid west east south north)
     (valid : ShadedSignals.ValidGrid indexGrid shadeGrid signalGrid)
@@ -299,7 +292,7 @@ namespace ShadedObstructionGeometry
 open ShadedPlaneSignalGrid
 
 /-- Each non-free direction is obstructed wherever it crosses a free line inside the board. -/
-structure CrossingObstruction (indexGrid : ℕ → ℕ → Index)
+private structure CrossingObstruction (indexGrid : ℕ → ℕ → Index)
     (shadeGrid : ℕ → ℕ → RedShades.State) (signalGrid : ℕ → ℕ → Signals.State)
     (west east south north : ℕ) : Prop where
   /-- A non-free column at a free row has at least one nonempty vertical signal. -/
@@ -318,7 +311,7 @@ structure CrossingObstruction (indexGrid : ℕ → ℕ → Index)
       ¬ ((signalGrid column row).west = .none ∧ (signalGrid column row).east = .none)
 
 /-- Outward-facing nearest selected boundaries force every non-free crossing to be blocked. -/
-theorem Geometry.crossingObstruction
+private theorem Geometry.crossingObstruction
     {indexGrid : ℕ → ℕ → Index} {shadeGrid : ℕ → ℕ → RedShades.State}
     {signalGrid : ℕ → ℕ → Signals.State} {west east south north : ℕ}
     (geometry : Geometry indexGrid shadeGrid west east south north)
