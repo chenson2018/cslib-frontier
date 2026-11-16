@@ -87,7 +87,7 @@ structure AtomicNetwork (F : AtomFrame α) (D : Type*) where
   label_mem_id {d e : D} : label d e ∈ F.id ↔ d = e
   /-- The source's `h(e, d) = h(d, e)˘`. -/
   conv_label (d e : D) : F.conv (label d e) = label e d
-  /-- The source's `h(d, f) ≤ h(d, e) ; h(e, f)`. -/
+  /-- The source's `h(d, f) ≤ h(d, e);h(e, f)`. -/
   label_mem_cycles (d e f : D) : (label d e, label e f, label d f) ∈ F.cycles
 
 namespace AtomicNetwork
