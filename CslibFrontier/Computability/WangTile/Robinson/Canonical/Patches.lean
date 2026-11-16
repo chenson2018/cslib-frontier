@@ -9,6 +9,8 @@ module
 
 public import CslibFrontier.Computability.WangTile.Robinson.Canonical.Certificates
 import CslibFrontier.Computability.WangTile.Compactness
+import Mathlib.Data.List.ChainOfFn
+import Mathlib.Data.List.Interleave
 
 /-!
 # Canonical decorated Robinson patches
@@ -137,6 +139,25 @@ private theorem supertileNodeGrid_compatible (level : Nat) (root : Node) :
         (4 ^ (level + 1)) (4 ^ (level + 1))
       simpa only [pow_succ, Nat.mul_comm] using ih.refine
 
+/-- Adjacent entries in two-entry blocks match either inside one block or across its seam. -/
+private theorem adjacent_pairs {α : Type*} (rel : α → α → Prop)
+    (block : ℕ → ℕ → α) {n x : ℕ}
+    (within : ∀ i, i < n → rel (block i 0) (block i 1))
+    (between : ∀ i, i + 1 < n → rel (block i 1) (block (i + 1) 0))
+    (hx : x + 1 < 2 * n) :
+    rel (block (x / 2) (x % 2)) (block ((x + 1) / 2) ((x + 1) % 2)) := by
+  have interleaved : List.Interleaves rel
+      (List.ofFn fun i : Fin n => block i.val 1)
+      (List.ofFn fun i : Fin n => block i.val 0) :=
+    List.interleaves_ofFn_even.mpr ⟨fun i => within i.val i.isLt, between⟩
+  have chained := (List.interleaves_iff_length_isChain_interleave.mp interleaved).2
+  rw [List.interleave_ofFn_ofFn_even, List.isChain_ofFn] at chained
+  have selected (k : ℕ) :
+      (if k % 2 = 0 then block (k / 2) 0 else block (k / 2) 1) =
+        block (k / 2) (k % 2) := by
+    rcases Nat.mod_two_eq_zero_or_one k with hbit | hbit <;> simp [hbit]
+  simpa only [selected] using chained x hx
+
 /-- Every canonical supertile obeys the shade rules throughout its finite square. -/
 theorem supertile_validShadeRectangle (level : Nat) (root : Node) :
     ShadeValidOn
@@ -151,63 +172,37 @@ theorem supertile_validShadeRectangle (level : Nat) (root : Node) :
     simpa [supertileIndexGrid, supertileShadeGrid,
       quadrantAt, Nat.mod_mod] using allowed
   · intro x y hx hy
-    have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
-    have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
-    have hparentY : y / 2 < 4 ^ level := by omega
-    by_cases hboundary : x % 2 = 1
-    · have hnextDiv : (x + 1) / 2 = x / 2 + 1 := by omega
-      have hnextMod : (x + 1) % 2 = 0 := by omega
-      have hparentX : x / 2 + 1 < 4 ^ level := by omega
-      have compatible := (supertileNodeGrid_compatible level root).hmatch
-        (x / 2) (y / 2) hparentX hparentY
-      have blockMatch := compatible.2
-      simp only [ShadeBlock.hMatches, Bool.and_eq_true,
-        decide_eq_true_eq] at blockMatch
-      have hyCases : y % 2 = 0 ∨ y % 2 = 1 := by omega
-      rcases hyCases with hyzero | hyone
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hboundary, hnextDiv, hnextMod, hyzero] using blockMatch.1
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hboundary, hnextDiv, hnextMod, hyone] using blockMatch.2
-    · have hxzero : x % 2 = 0 := by omega
-      have hnextDiv : (x + 1) / 2 = x / 2 := by omega
-      have hnextMod : (x + 1) % 2 = 1 := by omega
-      have internal := (supertileNodeGrid level root (x / 2) (y / 2)).block_internal
-      have hyCases : y % 2 = 0 ∨ y % 2 = 1 := by omega
-      rcases hyCases with hyzero | hyone
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hxzero, hnextDiv, hnextMod, hyzero] using internal.1
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hxzero, hnextDiv, hnextMod, hyone] using internal.2.1
+    refine adjacent_pairs (fun a b : ShadeState => a.east = b.west)
+      (fun i r => (supertileNodeGrid level root i (y / 2)).block.at r (y % 2))
+      (n := 4 ^ level) ?_ ?_ hx
+    · intro i _
+      have internal := (supertileNodeGrid level root i (y / 2)).block_internal
+      rcases Nat.mod_two_eq_zero_or_one y with hyzero | hyone
+      · simpa [ShadeBlock.at, hyzero] using internal.1
+      · simpa [ShadeBlock.at, hyone] using internal.2.1
+    · intro i hi
+      have blockMatch := ((supertileNodeGrid_compatible level root).hmatch
+        i (y / 2) hi (by omega)).2
+      simp only [ShadeBlock.hMatches, Bool.and_eq_true, decide_eq_true_eq] at blockMatch
+      rcases Nat.mod_two_eq_zero_or_one y with hyzero | hyone
+      · simpa [ShadeBlock.at, hyzero] using blockMatch.1
+      · simpa [ShadeBlock.at, hyone] using blockMatch.2
   · intro x y hx hy
-    have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
-    have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
-    have hparentX : x / 2 < 4 ^ level := by omega
-    by_cases hboundary : y % 2 = 1
-    · have hnextDiv : (y + 1) / 2 = y / 2 + 1 := by omega
-      have hnextMod : (y + 1) % 2 = 0 := by omega
-      have hparentY : y / 2 + 1 < 4 ^ level := by omega
-      have compatible := (supertileNodeGrid_compatible level root).vmatch
-        (x / 2) (y / 2) hparentX hparentY
-      have blockMatch := compatible.2
-      simp only [ShadeBlock.vMatches, Bool.and_eq_true,
-        decide_eq_true_eq] at blockMatch
-      have hxCases : x % 2 = 0 ∨ x % 2 = 1 := by omega
-      rcases hxCases with hxzero | hxone
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hboundary, hnextDiv, hnextMod, hxzero] using blockMatch.1
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hboundary, hnextDiv, hnextMod, hxone] using blockMatch.2
-    · have hyzero : y % 2 = 0 := by omega
-      have hnextDiv : (y + 1) / 2 = y / 2 := by omega
-      have hnextMod : (y + 1) % 2 = 1 := by omega
-      have internal := (supertileNodeGrid level root (x / 2) (y / 2)).block_internal
-      have hxCases : x % 2 = 0 ∨ x % 2 = 1 := by omega
-      rcases hxCases with hxzero | hxone
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hyzero, hnextDiv, hnextMod, hxzero] using internal.2.2.1
-      · simpa [supertileShadeGrid, ShadeBlock.at,
-          hyzero, hnextDiv, hnextMod, hxone] using internal.2.2.2
+    refine adjacent_pairs (fun a b : ShadeState => a.north = b.south)
+      (fun i r => (supertileNodeGrid level root (x / 2) i).block.at (x % 2) r)
+      (n := 4 ^ level) ?_ ?_ hy
+    · intro i _
+      have internal := (supertileNodeGrid level root (x / 2) i).block_internal
+      rcases Nat.mod_two_eq_zero_or_one x with hxzero | hxone
+      · simpa [ShadeBlock.at, hxzero] using internal.2.2.1
+      · simpa [ShadeBlock.at, hxone] using internal.2.2.2
+    · intro i hi
+      have blockMatch := ((supertileNodeGrid_compatible level root).vmatch
+        (x / 2) i (by omega) hi).2
+      simp only [ShadeBlock.vMatches, Bool.and_eq_true, decide_eq_true_eq] at blockMatch
+      rcases Nat.mod_two_eq_zero_or_one x with hxzero | hxone
+      · simpa [ShadeBlock.at, hxzero] using blockMatch.1
+      · simpa [ShadeBlock.at, hxone] using blockMatch.2
 
 /-- Orientation of the last selected border strictly before an edge. -/
 @[expose] def previousInterior (interior : ℕ → Option Bool) : ℕ → Option Bool
@@ -418,57 +413,45 @@ private theorem quarter_hmatch (level : ℕ) (root : Node) (x y : ℕ)
     (hx : x + 1 < side level) (hy : y < side level) :
     (quarterTile (site level root x y).quarter).right =
       (quarterTile (site level root (x + 1) y).quarter).left := by
-  have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
-  have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
-  have hyParent : y / 2 < 4 ^ level := by dsimp [side] at hy; omega
-  change (subdivideTileAt _ _).right =
-    (subdivideTileAt _ _).left
-  rw [subdivideTileAt_horizontal_iff]
-  by_cases hboundary : x % 2 = 1
-  · have hnextDiv : (x + 1) / 2 = x / 2 + 1 := by omega
-    have hnextMod : (x + 1) % 2 = 0 := by omega
-    have hxParent : x / 2 + 1 < 4 ^ level := by dsimp [side] at hx; omega
-    have parentMatch :=
-      ((supertileNodeGrid_compatible level root).hmatch
-        (x / 2) (y / 2) hxParent hyParent).1
-    have hyCases : y % 2 = 0 ∨ y % 2 = 1 := by omega
-    rcases hyCases with hyEq | hyEq <;>
-      simpa [site, quadrantAt, Quadrant.ofBits, supertileIndexGrid, hboundary,
-        hnextDiv, hnextMod, hyEq] using parentMatch
-  · have hxzero : x % 2 = 0 := by omega
-    have hnextDiv : (x + 1) / 2 = x / 2 := by omega
-    have hnextMod : (x + 1) % 2 = 1 := by omega
-    have hyCases : y % 2 = 0 ∨ y % 2 = 1 := by omega
-    rcases hyCases with hyEq | hyEq <;>
-      simp [site, quadrantAt, Quadrant.ofBits, hxzero, hnextDiv, hnextMod, hyEq]
+  let block (i r : ℕ) : QuarterIndex :=
+    ⟨(supertileNodeGrid level root i (y / 2)).parent, quadrantAt r y⟩
+  have within (i : ℕ) (_ : i < 4 ^ level) :
+      (quarterTile (block i 0)).right = (quarterTile (block i 1)).left := by
+    rcases Nat.mod_two_eq_zero_or_one y with hybit | hybit <;>
+      simp [block, quarterTile, quadrantAt, Quadrant.ofBits,
+        subdivideTileAt_horizontal_iff, hybit]
+  have between (i : ℕ) (hi : i + 1 < 4 ^ level) :
+      (quarterTile (block i 1)).right = (quarterTile (block (i + 1) 0)).left := by
+    have matched := ((supertileNodeGrid_compatible level root).hmatch
+      i (y / 2) hi (by dsimp only [side] at hy; omega)).1
+    rcases Nat.mod_two_eq_zero_or_one y with hybit | hybit <;>
+      simpa [block, quarterTile, quadrantAt, Quadrant.ofBits,
+        subdivideTileAt_horizontal_iff, hybit] using matched
+  simpa only [block, site, supertileIndexGrid, quadrantAt, Nat.mod_mod] using
+    adjacent_pairs (fun a b : QuarterIndex => (quarterTile a).right = (quarterTile b).left)
+      block within between (x := x) (by dsimp only [side] at hx; exact hx)
 
 private theorem quarter_vmatch (level : ℕ) (root : Node) (x y : ℕ)
     (hx : x < side level) (hy : y + 1 < side level) :
     (quarterTile (site level root x y).quarter).top =
       (quarterTile (site level root x (y + 1)).quarter).bottom := by
-  have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
-  have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
-  have hxParent : x / 2 < 4 ^ level := by dsimp [side] at hx; omega
-  change (subdivideTileAt _ _).top =
-    (subdivideTileAt _ _).bottom
-  rw [subdivideTileAt_vertical_iff]
-  by_cases hboundary : y % 2 = 1
-  · have hnextDiv : (y + 1) / 2 = y / 2 + 1 := by omega
-    have hnextMod : (y + 1) % 2 = 0 := by omega
-    have hyParent : y / 2 + 1 < 4 ^ level := by dsimp [side] at hy; omega
-    have parentMatch :=
-      ((supertileNodeGrid_compatible level root).vmatch
-        (x / 2) (y / 2) hxParent hyParent).1
-    have hxCases : x % 2 = 0 ∨ x % 2 = 1 := by omega
-    rcases hxCases with hxEq | hxEq <;>
-      simpa [site, quadrantAt, Quadrant.ofBits, supertileIndexGrid, hboundary,
-        hnextDiv, hnextMod, hxEq] using parentMatch
-  · have hyzero : y % 2 = 0 := by omega
-    have hnextDiv : (y + 1) / 2 = y / 2 := by omega
-    have hnextMod : (y + 1) % 2 = 1 := by omega
-    have hxCases : x % 2 = 0 ∨ x % 2 = 1 := by omega
-    rcases hxCases with hxEq | hxEq <;>
-      simp [site, quadrantAt, Quadrant.ofBits, hyzero, hnextDiv, hnextMod, hxEq]
+  let block (i r : ℕ) : QuarterIndex :=
+    ⟨(supertileNodeGrid level root (x / 2) i).parent, quadrantAt x r⟩
+  have within (i : ℕ) (_ : i < 4 ^ level) :
+      (quarterTile (block i 0)).top = (quarterTile (block i 1)).bottom := by
+    rcases Nat.mod_two_eq_zero_or_one x with hxbit | hxbit <;>
+      simp [block, quarterTile, quadrantAt, Quadrant.ofBits,
+        subdivideTileAt_vertical_iff, hxbit]
+  have between (i : ℕ) (hi : i + 1 < 4 ^ level) :
+      (quarterTile (block i 1)).top = (quarterTile (block (i + 1) 0)).bottom := by
+    have matched := ((supertileNodeGrid_compatible level root).vmatch
+      (x / 2) i (by dsimp only [side] at hx; omega) hi).1
+    rcases Nat.mod_two_eq_zero_or_one x with hxbit | hxbit <;>
+      simpa [block, quarterTile, quadrantAt, Quadrant.ofBits,
+        subdivideTileAt_vertical_iff, hxbit] using matched
+  simpa only [block, site, supertileIndexGrid, quadrantAt, Nat.mod_mod] using
+    adjacent_pairs (fun a b : QuarterIndex => (quarterTile a).top = (quarterTile b).bottom)
+      block within between (x := y) (by dsimp only [side] at hy; exact hy)
 
 /-- A canonical three-layer patch of the concrete scaffold, with matching edges and local
 shade/signal allowance proved from the closed decorated substitution. -/
