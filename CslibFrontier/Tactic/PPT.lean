@@ -87,8 +87,8 @@ private meta def pptKnownCall : Aesop.RuleTac :=
 
 /-- Expose named probabilistic certificates as search alternatives. -/
 @[aesop unsafe 99% tactic (rule_sets := [PPT])]
-private meta def pptCertificate : Aesop.RuleTac := fun input =>
-  withReducible <| Cslib.Tactic.applyCertificates ``IsPPTOn input
+private meta def pptCertificate : Aesop.RuleTac :=
+  Cslib.Tactic.applyCertificates ``IsPPTOn
 
 /-- Apply a composition theorem with named explicit or implicit arguments, leaving remaining
 premises as subgoals. -/
@@ -235,7 +235,7 @@ private meta def pptFunProp : TacticM Unit :=
     let target := (← instantiateMVars (← getMainTarget)).consumeMData
     unless target.isAppOfArity ``IsPPTOn 5 do throwError "expected an encoded-input PPT goal"
     if target.getAppArgs[2]!.hasExprMVar then throwError "input encoding is not yet determined"
-    withReducible <| Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
+    Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
 
 /-- Let plain compositional rules finish an oracle PPT goal before splitting binds, while
 delegating top-level conditionals and `OracleComp.iterate` loops directly to their rules. -/
@@ -251,7 +251,7 @@ private meta def oraclePptFunProp : TacticM Unit :=
       throwError "oracle iterations use explicit loop rules"
     if (← Cslib.Tactic.withConditionalBody? program fun _ => pure true).isSome then
       throwError "conditional alternatives precede generic composition"
-    withReducible <| Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
+    Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
 
 attribute [program_certificate]
   Turing.MultiTapeTM.ComputableInPolyTime.isPPTOn
@@ -292,7 +292,7 @@ private meta def applyConditional (predicate rule : Name) : TacticM Unit :=
     let conditional? ← Cslib.Tactic.withConditionalBody? target.getAppArgs.back!
       fun _ => pure true
     unless conditional?.isSome do throwError "expected a conditional program"
-    liftMetaTactic fun goal => withReducible <| goal.applyConst rule
+    liftMetaTactic fun goal => goal.applyConst rule
 
 /-- Closed Boolean branch selection with a plain polynomial-time condition. -/
 @[aesop unsafe 80% tactic (rule_sets := [PPT])]
@@ -325,7 +325,7 @@ private meta def applyIterate (predicate rule : Name) : TacticM Unit :=
       if body.isAppOf ``OracleComp.iterate then return true
       return (← whnfR body).isAppOf ``OracleComp.iterate
     unless iteration do throwError "expected a probabilistic iteration"
-    liftMetaTactic fun goal => withReducible <| goal.applyConst rule
+    liftMetaTactic fun goal => goal.applyConst rule
 
 /-- Retain the nonincreasing-state closed iteration alternative at its original priority. -/
 @[aesop unsafe 80% tactic (rule_sets := [PPT])]
@@ -459,6 +459,14 @@ private meta def oraclePolyTimeEnvironment (env : Environment) : MetaM Environme
   unless matchedUnsafe.size == 1 do throwError "expected one PolyTime fallback simp rule"
   return modifyLocalRuleState ext env fun state => { state with normRules, unsafeRules }
 
+/-- Mark the PPT predicates irreducible in the search's environment copy. When a rule, certificate
+or hypothesis fails to match an `IsPPTOn` or `IsOraclePPTOn` goal on its arguments, unification
+otherwise compares the two machine-realization statements and unfolds their output distributions.
+Every other definition unfolds as before, so encodings and programs still match. -/
+private meta def foldedPredicateEnvironment (env : Environment) : Environment :=
+  modifyLocalRuleState reducibilityExtraExt env fun status =>
+    (status.insert ``IsPPTOn .irreducible).insert ``IsOraclePPTOn .irreducible
+
 /-- Certify a closed or oracle probabilistic program using proved sampling, composition and
 deterministic rules. Goals may be `IsPPTOn`, `IsPPT`, `IsOraclePPTOn` or `IsOraclePPT`.
 
@@ -480,8 +488,9 @@ fields, then search with `[OraclePPT, PPT, PolyTime]` (preserving query syntax) 
   let oracle := hasOraclePPTGoal (← instantiateMVars (← getMainTarget))
   Cslib.Tactic.PolyTime.Internal.withFailureHint "ppt" <|
       Cslib.Tactic.PolyTime.Internal.withPlainRuleCache do
+    let env := foldedPredicateEnvironment (← getEnv)
     if oracle then
-      let env ← oraclePolyTimeEnvironment (← getEnv)
+      let env ← oraclePolyTimeEnvironment env
       withEnv env do
         evalTactic (← `(tactic| solve |
           aesop
@@ -491,9 +500,10 @@ fields, then search with `[OraclePPT, PPT, PolyTime]` (preserving query syntax) 
                 assumptionTransparency := .reducible })
             (rule_sets := [OraclePPT, PPT, PolyTime])))
     else
-      evalTactic (← `(tactic| solve |
-        aesop (config := { terminal := true, assumptionTransparency := .reducible })
-          (rule_sets := [PPT, PolyTime])))
+      withEnv env do
+        evalTactic (← `(tactic| solve |
+          aesop (config := { terminal := true, assumptionTransparency := .reducible })
+            (rule_sets := [PPT, PolyTime])))
 
 end Cslib.Tactic.PPT
 
