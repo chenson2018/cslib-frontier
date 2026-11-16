@@ -31,16 +31,20 @@ A bounded walk keeps every intermediate port inside its stated rectangle.
 
 ## References
 
-The red-wire construction follows [JeandelVanier2020], §§3.2–3.3, Figures 16–18 (manuscript pp. 26–28).
+The red-wire construction follows [JeandelVanier2020], §§3.2–3.3, Figures 16–18
+(manuscript pp. 26–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, modules `Closed104.TileSubdivision`, `QuarterGeometry`,
 `OrientedRedCycles`, `RedShadeGraph` and `RedShadeGraphBoundedPath`.
 The port and crossing parity semantics are unchanged; wire incidence is independent of shades.
+Internal seam colours use this library's `WangTile` code, in top/bottom/left/right order,
+an injective recolouring of the source's north/south/east/west code.
 -/
 
 public section
 namespace Cslib.WangTile.Robinson
 
+-- Expose the generated equality helpers so finite certificates reduce through ordinary imports.
 @[expose] public section
 /-- The four quadrants of a subdivided Wang tile. -/
 inductive Quadrant where
@@ -271,6 +275,11 @@ namespace RedCycles
 /-- Thick component of an indexed tile. -/
 abbrev indexThick (index : Index) : Thick := (components index).thick
 
+/-- The southwest child preserves the complete old thick component. -/
+theorem childBlock_thick_southwest (parent : Index) :
+    indexThick (childBlock parent 0 0) = indexThick parent := by
+  fin_cases parent <;> rfl
+
 /-- Simultaneous substitution of an index grid at the quotient and parity coordinates. -/
 @[expose] def refineIndexGrid (grid : Nat → Nat → Index) (x y : Nat) : Index :=
   childBlock (grid (x / 2) (y / 2))
@@ -334,13 +343,6 @@ structure CycleOn (grid : Nat → Nat → Index) (west east south north : Nat) :
   /-- West-facing vertical lane on the east side. -/
   eastLane : ∀ y, south < y → y < north →
     containsLine (indexThick (grid east y)) .r2 = true
-
-/-- Substitution preserves each old corner in the southwest child. -/
-private theorem corner_child (parent : Index) :
-    ∀ corner ∈ [Thick.a, .b, .c, .d], indexThick parent = corner →
-      indexThick (childBlock parent 0 0) = corner := by
-  revert parent
-  decide
 
 /- Finite audit of exact red-lane preservation under substitution. -/
 private theorem expansionRules (parent : Index) :
@@ -411,6 +413,27 @@ private theorem northwestChild_r2_of_c {parent : Index}
     containsLine (indexThick ((childBlock parent 0 1))) .r2 = true :=
   (expansionRules parent).2.2.2.2.2.2.2 h
 
+/-- The parity split used by both horizontal and vertical lane refinement. -/
+private theorem refinedLane {coarse fine : Nat → Index} {lower upper : Nat}
+    (property : Index → Prop) (oddChild : Index → Index)
+    (even : ∀ x, fine (2 * x) = childBlock (coarse x) 0 0)
+    (odd : ∀ x, fine (2 * x + 1) = oddChild (coarse x))
+    (parent : ∀ x, lower < x → x < upper → property (coarse x))
+    (children : ∀ p, property p → property (childBlock p 0 0) ∧ property (oddChild p))
+    (boundary : property (oddChild (coarse lower))) :
+    ∀ x, 2 * lower < x → x < 2 * upper → property (fine x) := by
+  intro x hl hu
+  have parity : x % 2 = 0 ∨ x % 2 = 1 := by omega
+  rcases parity with heven | hodd
+  · have eq : x = 2 * (x / 2) := by omega
+    rw [eq, even]
+    exact (children _ (parent (x / 2) (by omega) (by omega))).1
+  · have eq : x = 2 * (x / 2) + 1 := by omega
+    rw [eq, odd]
+    by_cases h : x / 2 = lower
+    · simpa only [h] using boundary
+    · exact (children _ (parent (x / 2) (by omega) (by omega))).2
+
 private theorem refinedHorizontalLane
     {grid : Nat → Nat → Index} {west east row : Nat}
     (line : ThickLine)
@@ -424,22 +447,11 @@ private theorem refinedHorizontalLane
       (indexThick ((childBlock (grid west row) 1 0))) line = true) :
     ∀ x, 2 * west < x → x < 2 * east →
       containsLine (indexThick (refineIndexGrid grid x (2 * row))) line = true := by
-  intro x hxWest hxEast
-  let parentX := x / 2
-  have hmod : x % 2 = 0 ∨ x % 2 = 1 := by
-    have hlt := Nat.mod_lt x (by decide : 0 < 2)
-    omega
-  have hdecomp := Nat.mod_add_div x 2
-  rcases hmod with heven | hodd
-  · have hx : x = 2 * parentX := by dsimp [parentX]; omega
-    rw [hx, refineIndexGrid_even_even]
-    exact (children (parentLane parentX (by omega) (by omega))).1
-  · have hx : x = 2 * parentX + 1 := by dsimp [parentX]; omega
-    by_cases atBoundary : parentX = west
-    · rw [hx, refineIndexGrid_odd_even, atBoundary]
-      exact boundary
-    · rw [hx, refineIndexGrid_odd_even]
-      exact (children (parentLane parentX (by omega) (by omega))).2
+  exact refinedLane (fun p => containsLine (indexThick p) line = true)
+    (fun p => childBlock p 1 0)
+    (fun x => refineIndexGrid_even_even grid x row)
+    (fun x => refineIndexGrid_odd_even grid x row)
+    parentLane (fun _ h => children h) boundary
 
 private theorem refinedVerticalLane
     {grid : Nat → Nat → Index} {south north column : Nat}
@@ -454,22 +466,11 @@ private theorem refinedVerticalLane
       (indexThick ((childBlock (grid column south) 0 1))) line = true) :
     ∀ y, 2 * south < y → y < 2 * north →
       containsLine (indexThick (refineIndexGrid grid (2 * column) y)) line = true := by
-  intro y hySouth hyNorth
-  let parentY := y / 2
-  have hmod : y % 2 = 0 ∨ y % 2 = 1 := by
-    have hlt := Nat.mod_lt y (by decide : 0 < 2)
-    omega
-  have hdecomp := Nat.mod_add_div y 2
-  rcases hmod with heven | hodd
-  · have hy : y = 2 * parentY := by dsimp [parentY]; omega
-    rw [hy, refineIndexGrid_even_even]
-    exact (children (parentLane parentY (by omega) (by omega))).1
-  · have hy : y = 2 * parentY + 1 := by dsimp [parentY]; omega
-    by_cases atBoundary : parentY = south
-    · rw [hy, refineIndexGrid_even_odd, atBoundary]
-      exact boundary
-    · rw [hy, refineIndexGrid_even_odd]
-      exact (children (parentLane parentY (by omega) (by omega))).2
+  exact refinedLane (fun p => containsLine (indexThick p) line = true)
+    (fun p => childBlock p 0 1)
+    (fun y => refineIndexGrid_even_even grid column y)
+    (fun y => refineIndexGrid_even_odd grid column y)
+    parentLane (fun _ h => children h) boundary
 
 /-- Substitution doubles an oriented red cycle and preserves all four lanes. -/
 theorem CycleOn.refine {grid : Nat → Nat → Index}
@@ -479,10 +480,10 @@ theorem CycleOn.refine {grid : Nat → Nat → Index}
       (2 * west) (2 * east) (2 * south) (2 * north) where
   west_lt_east := by have := cycle.west_lt_east; omega
   south_lt_north := by have := cycle.south_lt_north; omega
-  southwest := by simpa using corner_child (grid west south) .b (by simp) cycle.southwest
-  southeast := by simpa using corner_child (grid east south) .c (by simp) cycle.southeast
-  northwest := by simpa using corner_child (grid west north) .a (by simp) cycle.northwest
-  northeast := by simpa using corner_child (grid east north) .d (by simp) cycle.northeast
+  southwest := by simpa using (childBlock_thick_southwest (grid west south)).trans cycle.southwest
+  southeast := by simpa using (childBlock_thick_southwest (grid east south)).trans cycle.southeast
+  northwest := by simpa using (childBlock_thick_southwest (grid west north)).trans cycle.northwest
+  northeast := by simpa using (childBlock_thick_southwest (grid east north)).trans cycle.northeast
   southLane := refinedHorizontalLane .r1 cycle.southLane r1_children
     (southeastChild_r1_of_b cycle.southwest)
   northLane := refinedHorizontalLane .r3 cycle.northLane r3_children
@@ -538,9 +539,13 @@ deriving DecidableEq, Repr
 end
 
 @[expose] public section
+/-- A side of a quarter at a nonnegative coordinate. -/
 structure Port where
+  /-- Horizontal quarter coordinate. -/
   x : Nat
+  /-- Vertical quarter coordinate. -/
   y : Nat
+  /-- The edge of the quarter. -/
   side : Side
 deriving DecidableEq, Repr
 end
