@@ -692,9 +692,6 @@ private theorem prevCenter_not_halt_of_mem_machineHistoryTiles {M : OneMachine S
 
 private def Cell.code : Cell S Q → ℕ := Encodable.encode
 
-omit [DecidableEq Q] [DecidableEq S] in
-private theorem Cell.code_injective : Function.Injective (Cell.code (S := S) (Q := Q)) :=
-  Encodable.encode_injective
 private def pairCellColor (a b : Cell S Q) : Nat :=
   Nat.pair a.code b.code
 
@@ -705,7 +702,7 @@ private theorem pairCellColor_eq_iff {a b c d : Cell S Q} :
   rw [Nat.pair_eq_pair]
   constructor
   · rintro ⟨ha, hb⟩
-    exact ⟨Cell.code_injective ha, Cell.code_injective hb⟩
+    exact ⟨Encodable.encode_injective ha, Encodable.encode_injective hb⟩
   · rintro ⟨rfl, rfl⟩
     exact ⟨rfl, rfl⟩
 
@@ -720,8 +717,8 @@ private theorem tripleCellColor_eq_iff {a b c d e f : Cell S Q} :
   rw [Nat.pair_eq_pair, Nat.pair_eq_pair]
   constructor
   · rintro ⟨ha, hb, hc⟩
-    exact ⟨Cell.code_injective ha,
-      Cell.code_injective hb, Cell.code_injective hc⟩
+    exact ⟨Encodable.encode_injective ha,
+      Encodable.encode_injective hb, Encodable.encode_injective hc⟩
   · rintro ⟨rfl, rfl, rfl⟩
     exact ⟨rfl, rfl, rfl⟩
 
