@@ -8,12 +8,14 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Compactness
+public import CslibFrontier.Computability.WangTile.SeededUndecidable
 
 /-!
 # Wang tilings: checked instances
 
 Empty palettes, a monochrome tile, incompatible horizontal edges, and an absent seed exercise
-the actual matching predicates through ordinary module imports.
+the matching predicates through ordinary module imports. A machine that halts immediately and
+one that moves right forever exercise both sides of the TM0 equivalence.
 -/
 
 namespace Cslib.Tests.WangTile
@@ -58,5 +60,45 @@ example : TilesQuadrant ⟨[monochrome], monochrome⟩ := by
     horizontal := by simp [monochrome]
     vertical := by simp [monochrome]
     corner := rfl }⟩
+
+/-! The source machines use a binary alphabet and a single state. -/
+
+/-- A machine with no enabled transition. -/
+@[expose] public def haltM : Turing.TM0.Machine Bool Unit := fun _ _ => none
+
+/-- A machine that moves right forever, including beyond the end of its finite input. -/
+@[expose] public def moveM : Turing.TM0.Machine Bool Unit := fun _ _ => some ((), .move .right)
+
+/-- Immediate halting prevents the associated seeded quadrant from being tiled. -/
+public theorem not_tilesQuadrant_haltM (input : List Bool) :
+    ¬ TilesQuadrant (OfTM0.seededInstance haltM input) := by
+  intro h
+  apply (OfTM0.tilesQuadrant_instance_iff haltM input).mp h
+  apply (Turing.TM0.eval_dom_iff haltM input).mpr
+  exact ⟨_, Relation.ReflTransGen.refl, rfl⟩
+
+/-- An infinite right-moving run gives a tiling of the associated seeded quadrant. -/
+public theorem tilesQuadrant_moveM (input : List Bool) :
+    TilesQuadrant (OfTM0.seededInstance moveM input) := by
+  apply (OfTM0.tilesQuadrant_instance_iff moveM input).mpr
+  intro h
+  obtain ⟨cfg, _, hc⟩ := (Turing.TM0.eval_dom_iff moveM input).mp h
+  obtain ⟨q, x, L, R, rfl⟩ := Turing.TM0.exists_cfgOf cfg
+  rw [Turing.TM0.step_of_eq_right (M := moveM) (q := q) (a := x) (q' := ()) rfl L R] at hc
+  cases hc
+
+/-- Starting on `true`, this machine halts after moving left onto the blank half of the tape.
+Clamping the move at the origin would instead leave it rewriting `true` forever. -/
+private def crossM : Turing.TM0.Machine Bool (Fin 2) := fun q a =>
+  if q = 0 then some (1, .move .left) else if a then some (1, .write true) else none
+
+example : ¬ TilesQuadrant (OfTM0.seededInstance crossM [true]) := by
+  intro h
+  apply (OfTM0.tilesQuadrant_instance_iff crossM [true]).mp h
+  apply (Turing.TM0.eval_dom_iff crossM [true]).mpr
+  refine ⟨Turing.TM0.cfgOf 1 false [] [true], Relation.ReflTransGen.single ?_, rfl⟩
+  change Turing.TM0.step crossM (Turing.TM0.cfgOf 0 true [] []) =
+    some (Turing.TM0.cfgOf 1 false [] [true])
+  exact Turing.TM0.step_of_eq_left (M := crossM) (q := 0) (a := true) (q' := 1) rfl [] []
 
 end Cslib.Tests.WangTile
