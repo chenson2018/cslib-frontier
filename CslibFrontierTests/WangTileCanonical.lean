@@ -28,7 +28,8 @@ private theorem seed_column (x y : ℕ) :
     ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩).2
   simpa [columnInterior, supertileNodeGrid, BorderState.seed] using h.symm
 
-example : scaffold.role ((canonicalPatch 0 seedNode).tile 1 1) = .inactive := by
+example : scaffold.role ((canonicalPatch 0 seedNode).tile
+    ⟨1, by simp [side]⟩ ⟨1, by simp [side]⟩) = .inactive := by
   rw [scaffold_role]
   change ShadedSignals.routeRole (ShadedSignals.tile (site 0 seedNode 1 1)) = _
   rw [ShadedSignals.routeRole_tile]
