@@ -11,7 +11,7 @@ public import CslibFrontier.Computability.WangTile.Robinson.Signals
 import CslibFrontier.Computability.WangTile.Robinson.FreeGrid.Obstruction
 
 /-!
-# Seeded squares in every decorated Robinson tiling
+# Seeded payload squares in combined Robinson tilings
 
 Every plane tiling of the concrete scaffold has arbitrarily large routed grids. The generic
 routing theorem extracts a seeded payload square of each size from any combined tiling.
