@@ -382,6 +382,11 @@ private theorem indexZero_crossing_centered :
       have yDecomposition : y = 4 * (y / 4) + y % 4 := by
         have := Nat.mod_add_div y 4
         omega
+      have levelPositive : 0 < level := by
+        by_contra notPositive
+        have levelZero : level = 0 := by omega
+        subst level
+        simp [isHorizontalCarrier] at horizontal
       rcases supertileIndexGrid_zero_cases level x y xBound yBound indexZero with
           ⟨xMod, yMod, parentZero, parentXEven, parentYEven⟩ |
           ⟨xMod, yMod, parentFour, parentXOdd, parentYOdd⟩ |
@@ -402,11 +407,6 @@ private theorem indexZero_crossing_centered :
         have fineYEq : 2 * y + 1 = liftCoordinate coarseY := by
           simp only [coarseY, liftCoordinate]
           omega
-        have levelPositive : 0 < level := by
-          by_contra notPositive
-          have levelZero : level = 0 := by omega
-          subst level
-          simp [isHorizontalCarrier] at horizontal
         have coarseHorizontal :
             isHorizontalCarrier level coarseX coarseY = true := by
           apply horizontalCarrier_of_liftCoordinate levelPositive
@@ -432,12 +432,6 @@ private theorem indexZero_crossing_centered :
         have fineYEq : 2 * y + 1 = liftCoordinate coarseY := by
           simp only [coarseY, liftCoordinate]
           omega
-        have levelPositive : 0 < level := by
-          by_contra notPositive
-          have levelZero : level = 0 := by omega
-          subst level
-          simp at parentXBound
-          omega
         have xCenter :
             liftCoordinate coarseX % period 1 = 2 * scale 1 + 1 := by
           simp only [coarseX, liftCoordinate, period, scale]
@@ -449,12 +443,7 @@ private theorem indexZero_crossing_centered :
         exact ⟨1, by
           simpa only [fineXEq, fineYEq] using
             centeredAtOne levelPositive xCenter yCenter⟩
-      · have levelPositive : 0 < level := by
-          by_contra notPositive
-          have levelZero : level = 0 := by omega
-          subst level
-          simp [isHorizontalCarrier] at horizontal
-        have xOpening :
+      · have xOpening :
             (2 * x + 1) % period 1 = frameStartResidue 1 := by
           simp only [period, frameStartResidue, scale]
           omega
