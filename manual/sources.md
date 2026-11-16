@@ -1068,8 +1068,11 @@ The routing worker additionally read §3.3, pp. 26–29, on 2026-11-16: light/da
 obstruction signals, free-grid transmission and the two directions of seed removal.
 Routing formalizes the generic conditional step, including its finite-grid/addressed-patch
 consumers. Signals constructs the finite decorated scaffold, decodes arbitrary scaffold planes,
-and characterizes roles by clear signal edges. The concrete forcing/realization obligations
-and Theorem 10 remain outstanding.
+and characterizes roles by clear signal edges. FreeGrid fills gaps between selected free lines
+and proves that a light consecutive marked grid is a routed grid, using the outward-facing
+boundary geometry to rule out extra crossings. These proofs adapt the pinned source’s
+ShadedConsecutiveFreeGrid, SignalCorridors, ShadedObstructionGeometry and ShadedPayloadCorridors.
+The concrete forcing/realization obligations and Theorem 10 remain outstanding.
 This source check is authoring evidence, not independent review.
 
 <a id="johnsonlindenstrauss84"></a>
