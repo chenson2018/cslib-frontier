@@ -9,6 +9,7 @@ module
 
 public import CslibFrontier.Computability.WangTile.Compactness
 public import CslibFrontier.Computability.WangTile.SeededUndecidable
+import CslibFrontier.Computability.Machines.Turing.SingleTape.TM0Restrict
 
 /-!
 # Wang tilings: checked instances
