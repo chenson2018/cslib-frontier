@@ -262,7 +262,6 @@ structure SignalState where
   south : SignalFlow
   /-- North-edge flow. -/
   north : SignalFlow
-  deriving DecidableEq
 
 /-- The state with all four signal directions absent. -/
 @[expose] def SignalState.clear : SignalState := ⟨.none, .none, .none, .none⟩
@@ -321,7 +320,6 @@ structure ShadedSite where
   shade : ShadeState
   /-- Its directed obstruction signals. -/
   signal : SignalState
-  deriving DecidableEq
 
 namespace ShadedSite
 
