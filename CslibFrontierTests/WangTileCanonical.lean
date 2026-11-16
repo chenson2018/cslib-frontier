@@ -47,7 +47,7 @@ example :
       ((seedNode.child (blockPosition 1 1)).child (blockPosition 0 2)) :=
   children_hCompatible_boundary (children_hCompatible_within seedNode 0 1) 2
 
-private theorem parent_refine {fine : Cslib.WangTile.Robinson.Plane} (p : Parent fine)
+private theorem parent_refine {fine : IndexPlane} (p : Parent fine)
     (a b : ℤ) (x y : ℕ) :
     refineIndexGrid (fun i j => p.coarse.index (a + i) (b + j)) x y =
       fine.index (p.offsetX.val + 2 * a + x) (p.offsetY.val + 2 * b + y) := by
