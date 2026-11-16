@@ -114,6 +114,12 @@ structure SeededSquare (I : SeededInstance) (n : ℕ)
   /-- The southwest tile is the seed. -/
   corner : tile 0 0 = I.seed
 
+/-- A tile assembled from four primitive-recursive colour functions is primitive recursive. -/
+theorem primrec_mk {α : Type*} [Primcodable α] {top bottom left right : α → ℕ}
+    (ht : Primrec top) (hb : Primrec bottom) (hl : Primrec left) (hr : Primrec right) :
+    Primrec (fun a => WangTile.mk (top a) (bottom a) (left a) (right a)) :=
+  (Primrec.of_equiv_symm (e := equivProd)).comp (ht.pair (hb.pair (hl.pair hr)))
+
 /-- Reading a tile's top colour is primitive recursive. -/
 theorem primrec_top : Primrec WangTile.top :=
   Primrec.fst.comp (Primrec.of_equiv (e := equivProd))
