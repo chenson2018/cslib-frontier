@@ -30,7 +30,7 @@ of the three problems; in particular, the unseeded plane problem remains a separ
 
 ## References
 
-The prior formalization is `lean-wang`, revision `64268a3`, `LeanWang/Basic.lean`.
+The prior formalization is [lean-wang, revision 64268a3, Basic](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Basic.lean).
 The field order and plane predicate here are those of cslib-frontier issue #5920.
 -/
 
