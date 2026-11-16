@@ -372,25 +372,29 @@ private theorem Good.sgn_self (hS : Good T S) (x : D) : (S.lab x x).sgn = 0 := b
   rw [((hS.isUnit_iff x x).mpr rfl).eq_unit]
   rfl
 
-private theorem Good.ne_of_isStep (hS : Good T S) {x y : D} (h : (S.lab x y).IsStep) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_isStep (hS : Good T S) {x y : D} (h : (S.lab x y).IsStep) :
+    x ≠ y := fun hxy => by
   obtain ⟨d, o, hd⟩ := Atom.isStep_iff.mp h
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [hd] at h₁
   exact h₁
 
-private theorem Good.ne_of_isTile (hS : Good T S) {x y : D} (h : (S.lab x y).IsTile) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_isTile (hS : Good T S) {x y : D} (h : (S.lab x y).IsTile) :
+    x ≠ y := fun hxy => by
   obtain ⟨d, o, hd⟩ := Atom.isTile_iff.mp h
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [hd] at h₁
   exact h₁
 
-private theorem Good.ne_of_green (hS : Good T S) {x y : D} {d : Axis} {o : Direction} (h : S.lab x y = green d o) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_green (hS : Good T S) {x y : D} {d : Axis} {o : Direction}
+    (h : S.lab x y = green d o) : x ≠ y := fun hxy => by
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [h] at h₁
   exact h₁
 
 /-- By rule 1, the edge between two nodes of different axes seen by one node is a tile edge. -/
-private theorem Good.isTile_of_green (hS : Good T S) {h x y : D} {d : Axis} (hx : S.lab h x = green d .forward)
+private theorem Good.isTile_of_green (hS : Good T S) {h x y : D} {d : Axis}
+    (hx : S.lab h x = green d .forward)
     (hy : S.lab h y = green d.other .forward) : (S.lab x y).IsTile := by
   have h₁ : (S.lab x y).src = d.kind := by rw [hS.typed.src_eq, hS.typed.tgt_of_eq hx]; rfl
   have h₂ : (S.lab x y).tgt = d.other.kind := by
@@ -440,20 +444,9 @@ private theorem Tilings.front_eq_back (T : Tilings L) {m m' : Cell L}
   · simp [Tilings.idx, hs, hp h0]
 
 /-- The atomic network of a labelling that satisfies the invariant. -/
-private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D where
-  label := S.lab
-  label_mem_id {x y} := hS.isUnit_iff x y
-  conv_label := hS.typed.conv_lab
-  label_mem_cycles x y w := mem_cycles_tilingFrame.mpr
-    { tgt_eq_src := by rw [hS.typed.tgt_eq, hS.typed.src_eq y w]
-      src_eq_src := by rw [hS.typed.src_eq, hS.typed.src_eq x w]
-      tgt_eq_tgt := by rw [hS.typed.tgt_eq, hS.typed.tgt_eq x w]
-      eq_of_isUnit_left h := by rw [(hS.isUnit_iff _ _).mp h]
-      eq_of_isUnit_right h := by rw [(hS.isUnit_iff _ _).mp h]
-      eq_conv_of_isUnit h := by rw [(hS.isUnit_iff _ _).mp h, hS.typed.conv_lab]
-      not_forbidden := by
-        simp only [Forbidden, hS.typed.conv_lab]
-        rintro (h | h | h | h | h | h) <;> exact hS.rule_free _ _ _ h }
+private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D :=
+  Tiling.network S.lab (fun x => (S.lab x x).src) hS.isUnit_iff hS.typed.conv_lab
+    hS.typed.src_eq hS.rule_free
 
 /-! ### The opening positions -/
 
