@@ -313,9 +313,9 @@ private theorem corner_shade_opposite
     else quarterSouth (2 ^ depth * (4 * (2 * by₀ + cy.val) + 1))
   apply crossing_ne valid (scaled_cell_cycle g (depth + 1) bx by₀) child_cycle
     ancestor descendant (x := x) (y := y)
-  · dsimp [x]
+  · dsimp only [x]
     split_ifs <;> simp
-  · dsimp [y]
+  · dsimp only [y]
     split_ifs <;> simp
   all_goals
     have positive : 0 < 2 ^ depth := pow_pos (by decide) _
