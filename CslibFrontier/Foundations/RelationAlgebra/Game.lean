@@ -19,7 +19,7 @@ import Mathlib.Data.Nat.Pairing
 The game `G(A)` of [HirschHodkinson2001], Definition 1, is played by ∀ and ∃ on the atomic
 networks of a finite relation algebra `A`. ∀ opens with an atom, and ∃ answers with a network
 having an edge labelled by it. In each later round ∀ picks an edge `(m, n)` of the current network
-`N` and atoms `a`, `b` with `N(m, n) ≤ a ; b`, and ∃ answers with a network extending `N` that has
+`N` and atoms `a`, `b` with `N(m, n) ≤ a;b`, and ∃ answers with a network extending `N` that has
 a node `p` with `N(m, p) = a` and `N(p, n) = b`. ∃ wins a play when she answers in every round.
 Theorem 1 of the source states that `A` is representable if and only if ∃ has a winning strategy.
 
@@ -129,7 +129,7 @@ structure Move (P : F.Position) where
   a : α
   /-- The atom demanded on the edge from the witness to `n`. -/
   b : α
-  /-- The source's `a ; b ≥ N(m, n)`. -/
+  /-- The source's `a;b ≥ N(m, n)`. -/
   legal : (a, b, P.network m n) ∈ F.cycles
 
 /-- The position `Q` is a legal response of ∃ to the move `v` at `P`: it extends `P` and has a
@@ -320,7 +320,7 @@ private theorem exists_answer {F : AtomFrame α} {W : Set F.Position}
   ⟨Q, hQ, Fin.castLE (AtomFrame.Position.size_mono hPQ), AtomFrame.Position.network_castLE hPQ, hp⟩
 
 /-- A frame on which ∃ has a winning strategy is an atom structure. Associativity is
-[HirschHodkinson2001], Lemma 7: ∀ opens with `p ≤ r ; q`, then demands `r`, `q` on that edge and
+[HirschHodkinson2001], Lemma 7: ∀ opens with `p ≤ r;q`, then demands `r`, `q` on that edge and
 `s`, `t` on the new edge labelled `q`, and the remaining edge of the resulting network is the atom
 required. The source assumes the other laws; they follow in the same way from at most one move. -/
 @[expose, simps]
