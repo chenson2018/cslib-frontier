@@ -8,6 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.EveryTileOccurs
+public import Mathlib.Computability.RE
 import CslibFrontier.Foundations.Computability.ComputablePred
 import CslibFrontier.Foundations.Data.List.Primrec
 import Mathlib.Data.List.Sublists
