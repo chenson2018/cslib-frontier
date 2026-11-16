@@ -4287,6 +4287,7 @@ public import CslibFrontier.Computability.USTCON.Reader.Encode
 public import CslibFrontier.Computability.USTCON.Reader.Invariant
 public import CslibFrontier.Computability.USTCON.Space
 public import CslibFrontier.Computability.WangTile.Basic
+public import CslibFrontier.Computability.WangTile.Compactness
 public import CslibFrontier.Computability.WordRAM.Admission
 public import CslibFrontier.Computability.WordRAM.Allocation
 public import CslibFrontier.Computability.WordRAM.ArrayAppend
