@@ -150,6 +150,39 @@ The formal chain differs from Sipser's in three ways. The machine is fixed: the 
 
 Not formalized (see the ROADMAP entry; milestone [#3387](https://github.com/cslib-community/cslib-frontier/issues/3387)): decidability of PCP over a one-letter alphabet and of PCP with two dominoes; undecidability for a bounded number of dominoes, such as five; the reduction from the acceptance problem of an arbitrary machine–input pair, as in Sipser; and the standard consumers, namely ambiguity of context-free grammars, emptiness of the intersection of two context-free languages, universality of context-free grammars, and matrix mortality. [Checked clients](../../CslibFrontierTests/PostCorrespondence.lean) check a match of Sipser's four-domino example by `decide` and give an instance with no match because every top is longer than its bottom. They check the start-marker counterexample above, an MPCP instance of a machine that halts at once with a match, and one for a machine that never halts with no match.
 
+## Wang tilings and the Robinson hierarchy
+
+[WangTile.Basic](../../CslibFrontier/Computability/WangTile/Basic.lean) represents an oriented
+tile by its natural-number edge colours `top`, `bottom`, `left`, `right`, in that order for its
+`Primcodable` coding. A palette is a list. `TilesPlane` asks for matching tiles at every integer
+lattice point; `TilesQuadrant` prescribes a southwest seed in the natural-number quadrant, and
+`TilesAtOrigin` prescribes a tile at the origin of the integer plane. The
+[compactness theorem](../../CslibFrontier/Computability/WangTile/Compactness.lean)
+`tilesPlane_iff_squares` constructs a plane from matching finite squares of every positive side
+length, with no boundary constraints. `Rectangle τ w h` records such a finite matching patch.
+
+The [corrected Robinson palette](../../CslibFrontier/Computability/WangTile/Robinson/Tiles.lean)
+has 104 indexed tiles and a matching two-by-two substitution `childBlock`. The
+[recognition theorem](../../CslibFrontier/Computability/WangTile/Robinson/Recognizability.lean)
+`existsUnique_centerParent` recovers the unique parent of the central block of a matching
+four-by-four `Neighborhood` whose central southwest tile has thin phase `a`. The surrounding
+one-cell context is required: a matching isolated two-by-two block can have no parent. This is
+the recognition step of Proposition 8 in the
+[Jeandel–Vanier manuscript](https://www.lacl.fr/pvanier/rech/cirm.pdf), using the corrected
+alphabet from [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3).
+
+[Hierarchy](../../CslibFrontier/Computability/WangTile/Robinson/Hierarchy.lean) provides an indexed
+matching `Plane`, a `Parent` with a parity alignment, and a `Tower` of successive parents.
+`tilesPlane_iff_nonempty_plane` converts between the indexed record and the palette predicate.
+For any indexed plane, `nonempty_parent` supplies a matching parent and `tower` constructs its
+parent tower. `Tower.every_tile` says every tile index occurs at every level. Finally,
+`tilesPlane_tileSet` supplies a plane of the concrete palette, using finite substitution patches
+and compactness. The [ordinary-import clients](../../CslibFrontierTests/WangTileRobinson.lean)
+check a concrete recognizable neighborhood and a matching isolated block without a parent.
+The unseeded domino undecidability theorem remains open in
+[#5920](https://github.com/cslib-community/cslib-frontier/issues/5920); the hierarchy alone does
+not supply the computation-routing reduction.
+
 ## Relative computability and Turing degrees
 
 Mathlib defines relative computability inductively: `Nat.RecursiveIn O f` is the closure of the basic functions and the oracles in `O` under pairing, composition, primitive recursion and unbounded search, `f ≤ᵀ g` is `RecursiveIn {g} f`, and `TuringDegree` is the quotient by mutual reducibility. Diagonal constructions over this notion need an enumeration of oracle computations with finite approximations. [RecursiveInCode](../../CslibFrontier/Foundations/Computability/RecursiveInCode.lean) supplies it. `Nat.RecursiveIn.Code` is the analogue of Mathlib's `Nat.Partrec.Code` with an extra atomic code `oracle`, `Code.eval g` evaluates a code relative to the oracle `g`, and `Code.exists_code` (with `turingReducible_iff_exists_code`) shows that `Nat.RecursiveIn {g} f` holds exactly when `f = Code.eval g c` for some code `c`. Consequently a function or a Turing degree has only countably many predecessors (`countable_setOf_turingReducible`, `TuringDegree.countable_Iic`).

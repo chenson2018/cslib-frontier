@@ -632,9 +632,4 @@ theorem thin_north {lower upper : Index}
 @[simp] theorem phaseNorth_involutive (phase : Thin) : phaseNorth (phaseNorth phase) = phase := by
   cases phase <;> rfl
 
-/-- Horizontal and vertical phase propagation commute. -/
-theorem phaseEast_phaseNorth_comm (phase : Thin) :
-    phaseEast (phaseNorth phase) = phaseNorth (phaseEast phase) := by
-  cases phase <;> rfl
-
 end Cslib.WangTile.Robinson
