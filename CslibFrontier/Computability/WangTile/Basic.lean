@@ -36,6 +36,9 @@ public section
 
 namespace Cslib
 
+-- Exposed so that `decide` can evaluate the derived `DecidableEq` instance in client modules.
+@[expose] public section WangTileDef
+
 /-- A Wang tile: a unit square in fixed orientation with a colour on each edge. -/
 structure WangTile where
   /-- The colour on the top edge. -/
@@ -47,6 +50,8 @@ structure WangTile where
   /-- The colour on the right edge. -/
   right : ℕ
   deriving DecidableEq
+
+end WangTileDef
 
 namespace WangTile
 

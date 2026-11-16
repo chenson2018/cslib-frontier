@@ -29,6 +29,9 @@ example (t : WangTile) :
 
 example (I : SeededInstance) : Encodable.encode I = Encodable.encode (I.tiles, I.seed) := rfl
 
+example : (⟨0, 0, 0, 0⟩ : WangTile) ∈ [⟨1, 2, 3, 4⟩, ⟨0, 0, 0, 0⟩] ∧
+    (⟨0, 0, 0, 0⟩ : WangTile) ≠ ⟨1, 2, 3, 4⟩ := by decide
+
 example : ¬ TilesPlane [] := by
   rintro ⟨f, hf⟩
   simpa using (hf 0 0).1
