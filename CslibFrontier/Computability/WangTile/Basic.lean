@@ -30,7 +30,7 @@ of the three problems; in particular, the unseeded plane problem remains a separ
 
 ## References
 
-The prior formalization is `lean-wang`, revision `64268a3`, `LeanWang/Basic.lean`.
+The prior formalization is [lean-wang, revision 64268a3, Basic](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Basic.lean).
 The field order and plane predicate here are those of cslib-frontier issue #5920.
 -/
 
@@ -113,6 +113,12 @@ structure SeededSquare (I : SeededInstance) (n : ℕ)
     extends Rectangle I.tiles (n + 1) (n + 1) where
   /-- The southwest tile is the seed. -/
   corner : tile 0 0 = I.seed
+
+/-- A tile assembled from four primitive-recursive colour functions is primitive recursive. -/
+theorem primrec_mk {α : Type*} [Primcodable α] {top bottom left right : α → ℕ}
+    (ht : Primrec top) (hb : Primrec bottom) (hl : Primrec left) (hr : Primrec right) :
+    Primrec (fun a => WangTile.mk (top a) (bottom a) (left a) (right a)) :=
+  (Primrec.of_equiv_symm (e := equivProd)).comp (ht.pair (hb.pair (hl.pair hr)))
 
 /-- Reading a tile's top colour is primitive recursive. -/
 theorem primrec_top : Primrec WangTile.top :=
