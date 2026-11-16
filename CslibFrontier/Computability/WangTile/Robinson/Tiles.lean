@@ -8,14 +8,14 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Basic
-import Mathlib.Tactic.FinCases
 
 /-!
 # Corrected Robinson tiles and their substitution
 
-The corrected Ollinger–Robinson alphabet has 104 component triples. Its thin, thick and black
-layers contribute edge-colour digits in bases 4, 4 and 2. The substitution replaces each tile
-by a matching square of four tiles, preserves matching across adjacent squares, and reflects
+This module uses lean-wang's corrected transcription of the 104-tile Ollinger–Robinson
+alphabet and its substitution. Its thin, thick and black layers contribute edge-colour digits
+in bases 4, 4 and 2. The substitution replaces each tile by a matching square of four tiles,
+preserves matching across adjacent squares, and reflects
 matching of their boundaries. Thin-layer matching determines the parity phases of a tiling.
 
 ## Main definitions
@@ -26,19 +26,26 @@ matching of their boundaries. Thin-layer matching determines the parity phases o
 
 ## Main results
 
+* `tile_components_injective`: distinct indices represent distinct Wang tiles.
 * `child_horizontal`, `child_vertical`: each substitution square matches internally.
 * `horizontal_iff_children`, `vertical_iff_children`: boundary matching is preserved and reflected.
 * `thin_east`, `thin_north`: the forced neighboring thin-layer phases.
 
 ## References
 
-The construction follows [JeandelVanier2020], §3.2, Figures 13–16 and the matching step of
-Proposition 8 (pp. 23–26 of the authors' manuscript), using the corrected 104-tile variant.
+The tile set originates in [Ollinger2008], as presented in [JeandelVanier2020], §3.2
+(authors' manuscript pp. 22–26), Figures 13 and 16; the matching and recognition arguments
+follow the corresponding steps of Proposition 8 on p. 24.
 
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3), revision
-`64268a3`, the `Robinson.Closed104.Data`, `Figure16`, `Tiles` and `Recognizability` modules.
-Component names and alphabet order
-are those of its corrected Figure 13; child indices implement its Figure 16 substitution.
+`64268a3`, the `Robinson.Closed104.Data`, `Figure16` and `Tiles` modules.
+Here “corrected” identifies the transcription specified in its
+[plan, lines 94–98](https://github.com/edemaine/lean-wang/blob/64268a3/plan.md#L94-L98):
+the 104 triples of `figures/fig13-human.tsv` and the second thick-layer summand at `L2b`
+with southeast entry `R1` rather than `R3` in the transcription of Figure 16(c).
+Its numeric edge coding retains both boundary lanes and two colours in each thin/thick
+layer, and one black-layer bit. Agreement with the printed figures is not checked in Lean;
+the results concern the explicit palette and substitution below.
 -/
 
 public section
@@ -220,8 +227,19 @@ abbrev Index := Fin 104
     thin.left + 4 * thick.left + 16 * black.left,
     thin.right + 4 * thick.right + 16 * black.right⟩
 
+/-- Distinct alphabet indices represent distinct Wang tiles. -/
+theorem tile_components_injective : Function.Injective (fun i : Index => tile (components i)) := by
+  have h : ∀ i j : Index,
+      (tile (components i)).top = (tile (components j)).top →
+      (tile (components i)).bottom = (tile (components j)).bottom →
+      (tile (components i)).left = (tile (components j)).left →
+      (tile (components i)).right = (tile (components j)).right → i = j := by decide +kernel
+  intro i j hij
+  exact h i j (congrArg WangTile.top hij) (congrArg WangTile.bottom hij)
+    (congrArg WangTile.left hij) (congrArg WangTile.right hij)
+
 /-- The 104 corrected tiles, with the component alphabet's order retained. -/
-@[expose] def tileSet : List WangTile :=
+def tileSet : List WangTile :=
   (List.finRange 104).map fun index => tile (components index)
 
 /-- Palette membership is witnessed by an index in the corrected alphabet. -/
@@ -233,7 +251,9 @@ theorem mem_tileSet {t : WangTile} :
 theorem tile_components_mem (index : Index) : tile (components index) ∈ tileSet :=
   mem_tileSet.mpr ⟨index, rfl⟩
 
-/-- Figure 16's corrected substitution square; `x = 0` is west and `y = 0` is south. -/
+/-- The corrected Figure 16 substitution; `x = 0` is west and `y = 0` is south.
+The 416 entries flatten lean-wang's layer rules `phiL1Star`, `phiL2Component1`,
+`phiL2Component2` and `phiL3` at the revision cited in the module documentation. -/
 @[expose] def childBlock (parent : Index) (x y : Fin 2) : Index :=
   let square (sw se nw ne : Index) : Index :=
     if y = 0 then (if x = 0 then sw else se) else (if x = 0 then nw else ne)
@@ -374,217 +394,7 @@ private def verifiedAt (parent : Index) : Prop :=
 private instance (parent : Index) : Decidable (verifiedAt parent) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
-private theorem check0 : verifiedAt 0 := by decide
-private theorem check1 : verifiedAt 1 := by decide
-private theorem check2 : verifiedAt 2 := by decide
-private theorem check3 : verifiedAt 3 := by decide
-private theorem check4 : verifiedAt 4 := by decide
-private theorem check5 : verifiedAt 5 := by decide
-private theorem check6 : verifiedAt 6 := by decide
-private theorem check7 : verifiedAt 7 := by decide
-private theorem check8 : verifiedAt 8 := by decide
-private theorem check9 : verifiedAt 9 := by decide
-private theorem check10 : verifiedAt 10 := by decide
-private theorem check11 : verifiedAt 11 := by decide
-private theorem check12 : verifiedAt 12 := by decide
-private theorem check13 : verifiedAt 13 := by decide
-private theorem check14 : verifiedAt 14 := by decide
-private theorem check15 : verifiedAt 15 := by decide
-private theorem check16 : verifiedAt 16 := by decide
-private theorem check17 : verifiedAt 17 := by decide
-private theorem check18 : verifiedAt 18 := by decide
-private theorem check19 : verifiedAt 19 := by decide
-private theorem check20 : verifiedAt 20 := by decide
-private theorem check21 : verifiedAt 21 := by decide
-private theorem check22 : verifiedAt 22 := by decide
-private theorem check23 : verifiedAt 23 := by decide
-private theorem check24 : verifiedAt 24 := by decide
-private theorem check25 : verifiedAt 25 := by decide
-private theorem check26 : verifiedAt 26 := by decide
-private theorem check27 : verifiedAt 27 := by decide
-private theorem check28 : verifiedAt 28 := by decide
-private theorem check29 : verifiedAt 29 := by decide
-private theorem check30 : verifiedAt 30 := by decide
-private theorem check31 : verifiedAt 31 := by decide
-private theorem check32 : verifiedAt 32 := by decide
-private theorem check33 : verifiedAt 33 := by decide
-private theorem check34 : verifiedAt 34 := by decide
-private theorem check35 : verifiedAt 35 := by decide
-private theorem check36 : verifiedAt 36 := by decide
-private theorem check37 : verifiedAt 37 := by decide
-private theorem check38 : verifiedAt 38 := by decide
-private theorem check39 : verifiedAt 39 := by decide
-private theorem check40 : verifiedAt 40 := by decide
-private theorem check41 : verifiedAt 41 := by decide
-private theorem check42 : verifiedAt 42 := by decide
-private theorem check43 : verifiedAt 43 := by decide
-private theorem check44 : verifiedAt 44 := by decide
-private theorem check45 : verifiedAt 45 := by decide
-private theorem check46 : verifiedAt 46 := by decide
-private theorem check47 : verifiedAt 47 := by decide
-private theorem check48 : verifiedAt 48 := by decide
-private theorem check49 : verifiedAt 49 := by decide
-private theorem check50 : verifiedAt 50 := by decide
-private theorem check51 : verifiedAt 51 := by decide
-private theorem check52 : verifiedAt 52 := by decide
-private theorem check53 : verifiedAt 53 := by decide
-private theorem check54 : verifiedAt 54 := by decide
-private theorem check55 : verifiedAt 55 := by decide
-private theorem check56 : verifiedAt 56 := by decide
-private theorem check57 : verifiedAt 57 := by decide
-private theorem check58 : verifiedAt 58 := by decide
-private theorem check59 : verifiedAt 59 := by decide
-private theorem check60 : verifiedAt 60 := by decide
-private theorem check61 : verifiedAt 61 := by decide
-private theorem check62 : verifiedAt 62 := by decide
-private theorem check63 : verifiedAt 63 := by decide
-private theorem check64 : verifiedAt 64 := by decide
-private theorem check65 : verifiedAt 65 := by decide
-private theorem check66 : verifiedAt 66 := by decide
-private theorem check67 : verifiedAt 67 := by decide
-private theorem check68 : verifiedAt 68 := by decide
-private theorem check69 : verifiedAt 69 := by decide
-private theorem check70 : verifiedAt 70 := by decide
-private theorem check71 : verifiedAt 71 := by decide
-private theorem check72 : verifiedAt 72 := by decide
-private theorem check73 : verifiedAt 73 := by decide
-private theorem check74 : verifiedAt 74 := by decide
-private theorem check75 : verifiedAt 75 := by decide
-private theorem check76 : verifiedAt 76 := by decide
-private theorem check77 : verifiedAt 77 := by decide
-private theorem check78 : verifiedAt 78 := by decide
-private theorem check79 : verifiedAt 79 := by decide
-private theorem check80 : verifiedAt 80 := by decide
-private theorem check81 : verifiedAt 81 := by decide
-private theorem check82 : verifiedAt 82 := by decide
-private theorem check83 : verifiedAt 83 := by decide
-private theorem check84 : verifiedAt 84 := by decide
-private theorem check85 : verifiedAt 85 := by decide
-private theorem check86 : verifiedAt 86 := by decide
-private theorem check87 : verifiedAt 87 := by decide
-private theorem check88 : verifiedAt 88 := by decide
-private theorem check89 : verifiedAt 89 := by decide
-private theorem check90 : verifiedAt 90 := by decide
-private theorem check91 : verifiedAt 91 := by decide
-private theorem check92 : verifiedAt 92 := by decide
-private theorem check93 : verifiedAt 93 := by decide
-private theorem check94 : verifiedAt 94 := by decide
-private theorem check95 : verifiedAt 95 := by decide
-private theorem check96 : verifiedAt 96 := by decide
-private theorem check97 : verifiedAt 97 := by decide
-private theorem check98 : verifiedAt 98 := by decide
-private theorem check99 : verifiedAt 99 := by decide
-private theorem check100 : verifiedAt 100 := by decide
-private theorem check101 : verifiedAt 101 := by decide
-private theorem check102 : verifiedAt 102 := by decide
-private theorem check103 : verifiedAt 103 := by decide
-
-private theorem verified (parent : Index) : verifiedAt parent := by
-  fin_cases parent
-  · exact check0
-  · exact check1
-  · exact check2
-  · exact check3
-  · exact check4
-  · exact check5
-  · exact check6
-  · exact check7
-  · exact check8
-  · exact check9
-  · exact check10
-  · exact check11
-  · exact check12
-  · exact check13
-  · exact check14
-  · exact check15
-  · exact check16
-  · exact check17
-  · exact check18
-  · exact check19
-  · exact check20
-  · exact check21
-  · exact check22
-  · exact check23
-  · exact check24
-  · exact check25
-  · exact check26
-  · exact check27
-  · exact check28
-  · exact check29
-  · exact check30
-  · exact check31
-  · exact check32
-  · exact check33
-  · exact check34
-  · exact check35
-  · exact check36
-  · exact check37
-  · exact check38
-  · exact check39
-  · exact check40
-  · exact check41
-  · exact check42
-  · exact check43
-  · exact check44
-  · exact check45
-  · exact check46
-  · exact check47
-  · exact check48
-  · exact check49
-  · exact check50
-  · exact check51
-  · exact check52
-  · exact check53
-  · exact check54
-  · exact check55
-  · exact check56
-  · exact check57
-  · exact check58
-  · exact check59
-  · exact check60
-  · exact check61
-  · exact check62
-  · exact check63
-  · exact check64
-  · exact check65
-  · exact check66
-  · exact check67
-  · exact check68
-  · exact check69
-  · exact check70
-  · exact check71
-  · exact check72
-  · exact check73
-  · exact check74
-  · exact check75
-  · exact check76
-  · exact check77
-  · exact check78
-  · exact check79
-  · exact check80
-  · exact check81
-  · exact check82
-  · exact check83
-  · exact check84
-  · exact check85
-  · exact check86
-  · exact check87
-  · exact check88
-  · exact check89
-  · exact check90
-  · exact check91
-  · exact check92
-  · exact check93
-  · exact check94
-  · exact check95
-  · exact check96
-  · exact check97
-  · exact check98
-  · exact check99
-  · exact check100
-  · exact check101
-  · exact check102
-  · exact check103
+private theorem verified : ∀ parent : Index, verifiedAt parent := by decide +kernel
 
 /-- Children in each row of a substituted tile match horizontally. -/
 theorem child_horizontal (parent : Index) (y : Fin 2) :
