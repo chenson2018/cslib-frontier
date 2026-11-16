@@ -1052,6 +1052,11 @@ pp. 23–26. The Robinson modules use the corrected 104-tile variant from
 at that revision, retaining its authors and Apache-2.0 credit. The formalized endpoint is
 matching substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
 it does not include Proposition 8's aperiodicity conclusion or domino undecidability.
+The red-path and shading modules additionally follow §3.3, Figures 17–18, manuscript
+pp. 24, 26–28, read directly on 2026-11-16: crossing red wires receive opposite shades,
+quarter coordinates carry the wires, and the selected light boundaries face outwards.
+Their port connectivity and discrete-height proofs adapt lean-wang's red-graph and oriented-light
+modules at the same pinned revision. These are scaffold ingredients, not Theorem 10's endpoint.
 This source check is authoring evidence, not independent review.
 
 <a id="johnsonlindenstrauss84"></a>
