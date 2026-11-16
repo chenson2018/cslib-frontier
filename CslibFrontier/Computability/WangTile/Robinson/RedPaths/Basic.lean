@@ -407,7 +407,8 @@ private theorem refinedVerticalLane
     (fun y => refineIndexGrid_even_odd grid column y)
     parentLane (fun _ h => children h) boundary
 
-/-- An oriented red cycle transfers across grids agreeing on its bounding rectangle. -/
+/-- An oriented red cycle transfers across grids agreeing from the origin through its
+northeast corner. -/
 theorem CycleOn.congr {g h : ℕ → ℕ → Index} {w e b t : ℕ}
     (c : CycleOn g w e b t) (eq : ∀ x y, x ≤ e → y ≤ t → g x y = h x y) :
     CycleOn h w e b t where
