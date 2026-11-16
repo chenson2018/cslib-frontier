@@ -320,8 +320,8 @@ private theorem corner_shade_opposite
   all_goals
     have positive : 0 < 2 ^ depth := pow_pos (by decide) _
     fin_cases cx <;> fin_cases cy <;>
-      dsimp only [x, y, quarterWest, quarterEast, quarterSouth, quarterNorth] <;>
-      rw [pow_succ] <;> nlinarith
+      simp [x, y, quarterWest, quarterEast, quarterSouth, quarterNorth, pow_succ] <;>
+      nlinarith
 
 private theorem cell_half {scale block cell : ℕ}
     (lower : 2 * scale * block ≤ cell) (upper : cell < 2 * scale * (block + 1)) :
@@ -851,7 +851,7 @@ private theorem clearAt_succ_block (axis : LineAxis) (flipped : Bool) (level : �
   have ha2 : (8 * blockAlong + along) % 2 = along % 2 := by omega
   have hf2 : (8 * blockFixed + fixed) % 2 = fixed % 2 := by omega
   cases axis
-  · simp only [clearAt, nodeAt]
+  · simp only [clearAt, nodeAt, reduceCtorEq, ↓reduceIte]
     rw [show (8 * blockAlong + along) / 2 = 4 * blockAlong + along / 2 by omega,
       show (8 * blockFixed + fixed) / 2 = 4 * blockFixed + fixed / 2 by omega,
       supertileNodeGrid_block _ _ _ _ _ _ (by omega) (by omega)]
