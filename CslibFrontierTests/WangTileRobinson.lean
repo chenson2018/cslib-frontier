@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Henson
 -/
 
-module
 -- upstream: candidate
 
 import CslibFrontier.Computability.WangTile.Robinson.Hierarchy
@@ -34,14 +33,15 @@ example : childBlock 16 0 0 = 40 ∧ childBlock 16 1 0 = 28 ∧
     childBlock 16 0 1 = 64 ∧ childBlock 16 1 1 = 5 := by decide
 
 -- These four tiles match, but their isolated block has no substitution parent.
-example : (tile (components 0)).right = (tile (components 17)).left ∧
-    (tile (components 57)).right = (tile (components 4)).left ∧
-    (tile (components 0)).top = (tile (components 57)).bottom ∧
-    (tile (components 17)).top = (tile (components 4)).bottom := by decide
+example : (components 33).thin = .a ∧
+    (tile (components 33)).right = (tile (components 14)).left ∧
+    (tile (components 77)).right = (tile (components 6)).left ∧
+    (tile (components 33)).top = (tile (components 77)).bottom ∧
+    (tile (components 14)).top = (tile (components 6)).bottom := by decide
 
 example : ¬ ∃ p : Index,
-    childBlock p 0 0 = 0 ∧ childBlock p 1 0 = 17 ∧
-      childBlock p 0 1 = 57 ∧ childBlock p 1 1 = 4 := by decide
+    childBlock p 0 0 = 33 ∧ childBlock p 1 0 = 14 ∧
+      childBlock p 0 1 = 77 ∧ childBlock p 1 1 = 6 := by decide
 
 example : TilesPlane tileSet := tilesPlane_tileSet
 

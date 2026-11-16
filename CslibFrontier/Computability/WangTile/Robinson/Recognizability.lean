@@ -26,8 +26,9 @@ matching two-by-two block need not have a parent.
 The four-by-four argument is the recognition step in [JeandelVanier2020], Proposition 8
 (p. 24 of the authors' manuscript). We use the corrected 104-tile alphabet of the prior
 formalization [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
-the `Robinson.Closed104.LocalRecognizability` and `FiniteRecognizability` modules. Exact enumeration of
-matching rows, including rejected candidates, proves completeness of the finite check.
+the `Robinson.Closed104.LocalRecognizability` and `FiniteRecognizability` modules.
+Exact enumeration of matching rows, including rejected candidates, proves completeness of
+the finite check.
 -/
 
 public section
