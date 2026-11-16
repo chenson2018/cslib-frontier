@@ -908,31 +908,22 @@ private theorem even_child {axis : LineAxis} {root : Node} {depth old child : �
     (hchild : (old % 2 = 0 ∧ (child = 4 * old ∨ child = 4 * old + 1)) ∨
       (old % 2 = 1 ∧ child = 4 * old + 3)) :
     LineFree axis 1 (depth + 1) true root (2 * 4 ^ (depth + 1) + 1 + child) := by
+  have step (fixed parity : ℕ) (hfixed : fixed < 3)
+      (hp : (2 * 4 ^ depth + 1 + old) % 2 = parity)
+      (hc : 2 * 4 ^ (depth + 1) + 1 + child =
+        8 * ((2 * 4 ^ depth + 1 + old) / 2) + fixed)
+      (certificate : ∀ node : Node,
+        (∀ along : Fin 2, clear axis true node along parity) →
+          ∀ along : Fin 8, fineClear axis true node along fixed) :=
+    even_refine hold hc hfixed (by simpa only [hp] using certificate)
   rcases hchild with ⟨hparity, rfl | rfl⟩ | ⟨hparity, rfl⟩
-  · apply even_refine hold (fixed := 1)
-    · rw [pow_succ]
-      omega
-    · decide
-    · intro node hclear along
-      have hp : (2 * 4 ^ depth + 1 + old) % 2 = 1 := by omega
-      rw [hp] at hclear
-      exact ((evenRules node axis).2.1 hclear along).1
-  · apply even_refine hold (fixed := 2)
-    · rw [pow_succ]
-      omega
-    · decide
-    · intro node hclear along
-      have hp : (2 * 4 ^ depth + 1 + old) % 2 = 1 := by omega
-      rw [hp] at hclear
-      exact ((evenRules node axis).2.1 hclear along).2
-  · apply even_refine hold (fixed := 0)
-    · rw [pow_succ]
-      omega
-    · decide
-    · intro node hclear along
-      have hp : (2 * 4 ^ depth + 1 + old) % 2 = 0 := by omega
-      rw [hp] at hclear
-      exact (evenRules node axis).1 hclear along
+  · exact step 1 1 (by decide) (by omega) (by rw [pow_succ]; omega)
+      (fun node hclear along => ((evenRules node axis).2.1 hclear along).1)
+  · exact step 2 1 (by decide) (by omega) (by rw [pow_succ]; omega)
+      (fun node hclear along => ((evenRules node axis).2.1 hclear along).2)
+  · exact step 0 0 (by decide) (by omega) (by rw [pow_succ]; omega)
+      (fun node hclear along => (evenRules node axis).1 hclear along)
+
 
 private theorem offset_parity (depth index : ℕ) :
     offset depth index % 2 = if index = 0 then 0 else 1 := by
