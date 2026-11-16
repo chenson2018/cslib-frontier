@@ -7,7 +7,7 @@ Authors: Chris Henson
 module
 -- upstream: candidate
 
-import CslibFrontier.Computability.WangTile.Routing
+public import CslibFrontier.Computability.WangTile.Routing
 
 /-! Ordinary-module clients of routing: actual addressed squares, extraction from a constant
 corner grid, and an absent-seed example separating realization from forcing. -/
