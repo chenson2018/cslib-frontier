@@ -8,7 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Pointed
-public import CslibFrontier.Computability.WangTile.Compactness
+import CslibFrontier.Computability.WangTile.Compactness
 
 /-!
 # Routed scaffolds and generic seed removal
@@ -71,6 +71,7 @@ def RouteRole.equivCode : RouteRole ≃ Option (Bool × Bool) where
     · rfl
     · cases a <;> cases b <;> rfl
 
+/-- Primitive recursive coding of the five routing roles. -/
 instance : Primcodable RouteRole := Primcodable.ofEquiv _ RouteRole.equivCode
 
 /-- Whether the role prescribes horizontal payload data. -/
