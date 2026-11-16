@@ -371,6 +371,9 @@ def equivFin : Atom (Fin k) ≃ Fin (2 * k + 28) where
 @[simp]
 theorem coe_equivFin (a : Atom (Fin k)) : (equivFin a : ℕ) = a.code := by rfl
 
+theorem code_injective : Function.Injective (code : Atom (Fin k) → ℕ) := fun _ _ h =>
+  equivFin.injective (Fin.ext h)
+
 instance : Finite (Atom (Fin k)) := .of_equiv _ equivFin.symm
 
 end Atom

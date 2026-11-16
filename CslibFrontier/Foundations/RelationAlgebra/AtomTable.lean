@@ -103,6 +103,13 @@ def AtomStructure.map (A : AtomStructure α) (e : α ≃ β) : AtomStructure β 
     ⟨e s, by simpa using hs, by simpa using h⟩
   cycle_left h := by simpa using A.cycle_left h
 
+@[simp]
+theorem AtomStructure.map_map_symm (A : AtomStructure α) (e : α ≃ β) :
+    (A.map e).map e.symm = A := by
+  obtain ⟨conv, id, cycles, _, _, _, _⟩ := A
+  simp only [AtomStructure.map, AtomStructure.mk.injEq]
+  exact ⟨funext fun a => by simp, Set.ext fun a => by simp, Set.ext fun a => by simp⟩
+
 /-- Renaming the atoms of an atom structure gives an isomorphic complex algebra. -/
 def ComplexAlgebra.mapEquiv (A : AtomStructure α) (e : α ≃ β) :
     RelationAlgebraEquiv (ComplexAlgebra A) (ComplexAlgebra (A.map e)) where
