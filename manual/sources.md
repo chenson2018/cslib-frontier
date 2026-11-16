@@ -209,6 +209,16 @@ Claude Berge. *Two Theorems in Graph Theory*. Proceedings of the National Academ
 
 Claude Berge. *Sur le couplage maximum d'un graphe*. Comptes Rendus Hebdomadaires des Séances de l'Académie des Sciences 247, 258–259, 1958. Bibliographic data from secondary bibliographies; the note was not inspected, and no theorem number is claimed. The manual attributes to it the Tutte–Berge formula, following [schrijver17](#schrijver17), Section 5.1.
 
+<a id="berger1966"></a>
+## berger1966
+
+Robert Berger. *The Undecidability of the Domino Problem*. Memoirs of the American
+Mathematical Society 66, 1966. [Publisher record](https://doi.org/10.1090/memo/0066).
+Bibliographic metadata checked on 2026-11-16 against the publisher record and its Crossref
+deposit. The book's full text was inaccessible in this pass: internal locator not verified.
+The formalization uses the later Robinson–Ollinger route described under
+[Jeandel–Vanier](#jeandelvanier2020), ported from the pinned lean-wang revision there.
+
 <a id="bermanhartmanis75"></a>
 ## bermanhartmanis75
 
@@ -1056,7 +1066,7 @@ whose southeast extension uses `R1` rather than `R3`
 ([plan, lines 94–98](https://github.com/edemaine/lean-wang/blob/64268a3/plan.md#L94-L98)).
 Both thick-layer boundary lanes are retained. This records lean-wang's correction, not a
 verified erratum to the printed figures; historical correction: locator not verified.
-Full agreement with those figures is not checked in Lean. The formalized endpoint is matching
+Full agreement with those figures is not checked in Lean. The hierarchy modules establish matching
 substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
 it does not include Proposition 8's aperiodicity conclusion or domino undecidability.
 The routing worker additionally read §3.3, pp. 26–29, on 2026-11-16: light/dark separation,
@@ -1072,7 +1082,17 @@ Nodes are reindexed in source-list order; semantic seam certificates and indexed
 border-refinement witnesses replace repeated searches through the source tables.
 Canonical patches assign nearest-border obstruction signals to matching decorated
 substitutions and establish that the resulting finite scaffold tiles the plane.
-The concrete forcing/realization obligations and Theorem 10 remain outstanding.
+Carrier/Borders, Carrier/Addresses, Carrier/Corners and Realization further adapt the pinned
+revision's ShadedCarrierHierarchy, ShadedCarrierBorderHierarchy, ShadedCarrierBorderGeometry,
+ShadedCarrierBorderIntervals, ShadedCarrierSquareGeometry, ShadedCarrierHierarchyAddressing,
+ShadedCarrierConcreteRoles and ShadedCarrierCornerAddressing. Recursive owner frames identify
+the canonical carriers, their integer addresses satisfy wire equations, and every corner has
+address zero. Thus the concrete scaffold realizes every pointed payload plane, as in
+ShadedCarrierCornerAddressing.lean:435–440. This is the backward seed-removal direction;
+concrete forcing and domino undecidability remain separate obligations.
+The backward authoring worker also read Theorem 10 on manuscript p. 29 and the proof-route
+attribution in §3.4, pp. 29–30, plus [Robinson's primary paper](https://lipn.univ-paris13.fr/~fernique/qc/robinson.pdf),
+§7, printed pp. 201–205, on 2026-11-16.
 The red-path and shading modules are after §3.3, Figures 17–18, manuscript
 pp. 24, 26–28, read directly on 2026-11-16: light red wires cross dark ones, and squares
 emit signals on their exterior borders. The exact opposite-shade crossing rule (also

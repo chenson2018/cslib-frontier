@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 lean-wang contributors. All rights reserved.
+Copyright (c) 2026 lean-wang contributors, Chris Henson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Erik Demaine, Stefan Langerman, GPT 5.5/5.6, Chris Henson
 -/
@@ -32,7 +32,7 @@ with the selected shade boundaries of the actual decorated substitution.
 
 ## References
 
-After [JeandelVanier2020], §3.3 (locator not verified here). The recursive owner and halo
+After [JeandelVanier2020], §3.3, pp. 26–29. The recursive owner and halo
 argument is ported and restructured from lean-wang revision
 `64268a3aaaef3eac65559352ef94f62ab9c00482`, `ShadedCarrierHierarchy` (lines 24–193),
 `ShadedCarrierBorderGeometry`, and `ShadedCarrierBorderHierarchy`. These are ingredients of
@@ -252,7 +252,8 @@ theorem frameEndResidue_lt_period (depth : ℕ) :
   have positive := scale_pos depth
   omega
 
-/-- The border contributed by one frame depth. -/
+/-- The border contributed by one frame depth: `true` is the opening toward increasing
+coordinates, `false` the closing toward decreasing coordinates. -/
 @[expose] def frameBorder (depth coordinate transverse : ℕ) : Option Bool :=
   if inFrame depth transverse then
     if coordinate % period depth = frameStartResidue depth then some true
