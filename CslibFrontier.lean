@@ -4213,6 +4213,8 @@ public import CslibFrontier.Computability.RAM.Input
 public import CslibFrontier.Computability.RAM.Squaring
 public import CslibFrontier.Computability.Reduction.ManyOne
 public import CslibFrontier.Computability.Reduction.TruthTable
+public import CslibFrontier.Computability.RelationAlgebra.Tiling.Frame
+public import CslibFrontier.Computability.RelationAlgebra.Tiling.WinningOfTiling
 public import CslibFrontier.Computability.StreamArithmetic.EstimatorRecipes
 public import CslibFrontier.Computability.StreamArithmetic.Interface
 public import CslibFrontier.Computability.StreamArithmetic.Primitives
@@ -4287,6 +4289,7 @@ public import CslibFrontier.Computability.USTCON.Reader.Encode
 public import CslibFrontier.Computability.USTCON.Reader.Invariant
 public import CslibFrontier.Computability.USTCON.Space
 public import CslibFrontier.Computability.WangTile.Basic
+public import CslibFrontier.Computability.WangTile.EveryTileOccurs
 public import CslibFrontier.Computability.WordRAM.Admission
 public import CslibFrontier.Computability.WordRAM.Allocation
 public import CslibFrontier.Computability.WordRAM.ArrayAppend

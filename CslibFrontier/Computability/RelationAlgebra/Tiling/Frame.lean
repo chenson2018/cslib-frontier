@@ -1,0 +1,261 @@
+/-
+Copyright (c) 2026 Chris Henson. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Chris Henson
+-/
+
+module
+-- upstream: candidate
+
+public import CslibFrontier.Computability.WangTile.Basic
+public import CslibFrontier.Foundations.RelationAlgebra.AtomicNetwork
+
+/-!
+# The relation algebra of a list of Wang tiles
+
+Hirsch and Hodkinson associate with a finite set `τ` of Wang tiles a finite algebra `RA(τ)` whose
+networks force the tile atoms to form tilings [HirschHodkinson2001], Section 4. It has `2k + 28`
+atoms for `k` tiles, and is given by a converse, three identity atoms and a list of inconsistent
+triangles. It need not be associative, so it is defined here as an `AtomFrame`, the data of an
+atom structure without its laws.
+
+The tiles are given as a list `L`, and the tile atoms are indexed by the positions of `L`, so that
+a repeated tile contributes two atoms for each of its positions. The tile at position `0` plays
+the part of the source's special tile `T₀`: rule 3 exempts it, and nothing else is asked of it in
+the definition.
+
+## Conventions
+
+A cycle `(r, s, t)` of a frame means `t ≤ r ; s`, whereas the source's triangle `(a, b, c)` is
+consistent when `c˘ ≤ a ; b`. The source's triangle `(a, b, c)` is therefore the triple
+`(a, b, c˘)` here, and its six Peircean transforms are the triples
+`(r, s, t)`, `(s, t˘, r˘)`, `(t˘, r, s˘)`, `(r˘, t, s)`, `(t, s˘, r)` and `(s˘, r˘, t˘)`.
+
+## Main definitions
+
+* `Cslib.RelationAlgebra.Tiling.Atom`: the atoms of `RA(τ)`, with their converse `Atom.conv` and
+  the kinds `Atom.src`, `Atom.tgt` of node at which their edges start and end.
+* `Cslib.RelationAlgebra.Tiling.Rule`: rules 1–4 of the source and the duals of rules 2–4.
+* `Cslib.RelationAlgebra.Tiling.Cycle`: the consistent triangles.
+* `Cslib.RelationAlgebra.tilingFrame`: the frame of `RA(τ)`.
+
+## References
+
+* [R. Hirsch, I. Hodkinson, *Representability is not decidable for finite relation
+  algebras*][HirschHodkinson2001]
+-/
+
+@[expose] public section
+
+namespace Cslib.RelationAlgebra
+
+namespace Tiling
+
+/-- The three kinds of node in a network over `RA(τ)`. The identity of `RA(τ)` is the join of
+three units `e₀`, `e₁`, `e₂`, and a node is an `i`-node when its loop is labelled `eᵢ`. -/
+inductive Kind where
+  /-- The `0`-nodes, the apexes of green edges. -/
+  | zero
+  /-- The `1`-nodes, which index the columns of a tiling. -/
+  | one
+  /-- The `2`-nodes, which index the rows of a tiling. -/
+  | two
+deriving DecidableEq
+
+/-- The two kinds of node other than `0`, which are also the two axes of the plane: steps between
+`1`-nodes move along the first coordinate, and steps between `2`-nodes along the second. -/
+inductive Axis where
+  /-- The kind `1`, and the first coordinate. -/
+  | one
+  /-- The kind `2`, and the second coordinate. -/
+  | two
+deriving DecidableEq
+
+/-- The kind of node named by an axis. -/
+def Axis.kind : Axis → Kind
+  | one => .one
+  | two => .two
+
+/-- An atom that is not its own converse is either the forward atom of its pair or the reverse
+one, which is the converse of the forward atom. -/
+inductive Direction where
+  /-- The atoms `g₀ᵢ`, `u₀ᵢ`, `v₀ᵢ`, `+1ᵢ` and `T₁₂ⁱ` of the source. -/
+  | forward
+  /-- Their converses `gᵢ₀`, `uᵢ₀`, `vᵢ₀`, `-1ᵢ` and `T₂₁ⁱ`. -/
+  | reverse
+deriving DecidableEq
+
+/-- The other direction. -/
+def Direction.flip : Direction → Direction
+  | forward => reverse
+  | reverse => forward
+
+@[simp]
+theorem Direction.flip_flip (o : Direction) : o.flip.flip = o := by cases o <;> rfl
+
+/-- The atoms of `RA(τ)` for tiles indexed by `ι` [HirschHodkinson2001], Section 4.1: there are
+`2k + 28` of them when `ι` has `k` elements. -/
+inductive Atom (ι : Type*) where
+  /-- The unit `eᵢ`, the part of the identity on the `i`-nodes. -/
+  | unit (i : Kind)
+  /-- The white atom `wᵢⱼ` from `i`-nodes to `j`-nodes; the source writes `wᵢ` for `wᵢᵢ`. -/
+  | white (i j : Kind)
+  /-- The green atom `g₀d` from `0`-nodes to `d`-nodes, and its converse `g_d0`. -/
+  | green (d : Axis) (o : Direction)
+  /-- The atom `u₀d` from `0`-nodes to `d`-nodes, and its converse `u_d0`. -/
+  | u (d : Axis) (o : Direction)
+  /-- The atom `v₀d` from `0`-nodes to `d`-nodes, and its converse `v_d0`. -/
+  | v (d : Axis) (o : Direction)
+  /-- The step `+1_d` between `d`-nodes, and its converse `-1_d`. -/
+  | step (d : Axis) (o : Direction)
+  /-- The tile atom `T₁₂ⁱ` from `1`-nodes to `2`-nodes, and its converse `T₂₁ⁱ`. -/
+  | tile (i : ι) (o : Direction)
+deriving DecidableEq
+
+namespace Atom
+
+variable {ι : Type*}
+
+/-- The converse of an atom [HirschHodkinson2001], Section 4.2. -/
+def conv : Atom ι → Atom ι
+  | unit i => unit i
+  | white i j => white j i
+  | green d o => green d o.flip
+  | u d o => u d o.flip
+  | v d o => v d o.flip
+  | step d o => step d o.flip
+  | tile i o => tile i o.flip
+
+/-- The kind of node at which the edges labelled by an atom start: the index of the source's
+start unit. -/
+def src : Atom ι → Kind
+  | unit i | white i _ => i
+  | green _ .forward | u _ .forward | v _ .forward => .zero
+  | green d .reverse | u d .reverse | v d .reverse | step d _ => d.kind
+  | tile _ .forward => .one
+  | tile _ .reverse => .two
+
+/-- The kind of node at which the edges labelled by an atom end: the index of the source's end
+unit. -/
+def tgt (a : Atom ι) : Kind := a.conv.src
+
+/-- The identity atoms are the three units. -/
+def IsUnit : Atom ι → Prop
+  | unit _ => True
+  | _ => False
+
+instance : DecidablePred (IsUnit : Atom ι → Prop) := fun a => by
+  cases a <;> unfold IsUnit <;> infer_instance
+
+@[simp]
+theorem conv_conv (a : Atom ι) : a.conv.conv = a := by cases a <;> simp [conv]
+
+@[simp]
+theorem isUnit_conv {a : Atom ι} : a.conv.IsUnit ↔ a.IsUnit := by cases a <;> exact .rfl
+
+end Atom
+
+open Atom
+
+/-- The inconsistent triangles listed in [HirschHodkinson2001], Section 4.2: rule 1, rules 2–4
+and the duals of rules 2–4, which exchange the kinds `1` and `2`, left with bottom and right with
+top. The triple `(r, s, t)` is the source's triangle `(r, s, t˘)`; in particular the step `+1` of
+the source's rule 2 appears here as its converse. The colours compared are those of the tiles at
+the two positions of `L`, and rule 3 concerns every position but `0`. -/
+def Rule (L : List WangTile) :
+    Atom (Fin L.length) → Atom (Fin L.length) → Atom (Fin L.length) → Prop
+  | green .one .reverse, green .two .forward, white .one .two => True
+  | tile i .forward, tile j .reverse, step .one .reverse => L[i].left ≠ L[j].right
+  | tile i .reverse, tile j .forward, step .two .reverse => L[i].bottom ≠ L[j].top
+  | u .one .reverse, green .two .forward, tile i .forward => i.val ≠ 0
+  | u .two .reverse, green .one .forward, tile i .reverse => i.val ≠ 0
+  | v .one .reverse, green .one .forward, step .one _ => True
+  | v .two .reverse, green .two .forward, step .two _ => True
+  | _, _, _ => False
+
+instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Rule L r s t) := by
+  unfold Rule
+  split <;> infer_instance
+
+/-- A triangle is forbidden when it or one of its five other Peircean transforms is listed in
+`Rule`. -/
+def Forbidden (L : List WangTile) (r s t : Atom (Fin L.length)) : Prop :=
+  Rule L r s t ∨ Rule L s t.conv r.conv ∨ Rule L t.conv r s.conv ∨
+    Rule L r.conv t s ∨ Rule L t s.conv r ∨ Rule L s.conv r.conv t.conv
+
+instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Forbidden L r s t) :=
+  inferInstanceAs (Decidable (_ ∨ _))
+
+/-- The consistent triangles of `RA(τ)`, as triples `(r, s, t)` with `t ≤ r ; s`
+[HirschHodkinson2001], Section 4.2: the kinds of node match, a triangle with an identity atom is
+degenerate, and the triangle is not forbidden. -/
+structure Cycle (L : List WangTile) (r s t : Atom (Fin L.length)) : Prop where
+  /-- The edge labelled `s` starts where the edge labelled `r` ends. -/
+  tgt_eq_src : r.tgt = s.src
+  /-- The edges labelled `r` and `t` start at the same kind of node. -/
+  src_eq_src : r.src = t.src
+  /-- The edges labelled `s` and `t` end at the same kind of node. -/
+  tgt_eq_tgt : s.tgt = t.tgt
+  /-- The source's `(eᵢ, x, y)` is inconsistent unless `x = y˘`. -/
+  eq_of_isUnit_left : r.IsUnit → t = s
+  /-- The transform of that rule in which the unit is the second atom. -/
+  eq_of_isUnit_right : s.IsUnit → t = r
+  /-- The transform of that rule in which the unit is the third atom. -/
+  eq_conv_of_isUnit : t.IsUnit → s = r.conv
+  /-- Neither the triangle nor any of its Peircean transforms is listed in `Rule`. -/
+  not_forbidden : ¬Forbidden L r s t
+
+theorem cycle_iff {L : List WangTile} {r s t : Atom (Fin L.length)} :
+    Cycle L r s t ↔ r.tgt = s.src ∧ r.src = t.src ∧ s.tgt = t.tgt ∧ (r.IsUnit → t = s) ∧
+      (s.IsUnit → t = r) ∧ (t.IsUnit → s = r.conv) ∧ ¬Forbidden L r s t :=
+  ⟨fun ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇⟩ => ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇⟩,
+    fun ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇⟩ => ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇⟩⟩
+
+instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Cycle L r s t) :=
+  decidable_of_iff' _ cycle_iff
+
+variable {L : List WangTile} {r s t : Atom (Fin L.length)}
+
+/-- The consistent triangles are closed under the Peircean transform `(r, s, t) ↦ (s, t˘, r˘)`.
+With `Cycle.cycle_left` it generates the six transforms. -/
+theorem Cycle.rotate (h : Cycle L r s t) : Cycle L s t.conv r.conv where
+  tgt_eq_src := h.tgt_eq_tgt
+  src_eq_src := h.tgt_eq_src.symm
+  tgt_eq_tgt := by simpa [Atom.tgt] using h.src_eq_src.symm
+  eq_of_isUnit_left hs := congrArg conv (h.eq_of_isUnit_right hs).symm
+  eq_of_isUnit_right ht := (h.eq_conv_of_isUnit (isUnit_conv.mp ht)).symm
+  eq_conv_of_isUnit hr := congrArg conv (h.eq_of_isUnit_left (isUnit_conv.mp hr))
+  not_forbidden h' := h.not_forbidden (by simp only [Forbidden, conv_conv] at h' ⊢; tauto)
+
+/-- The consistent triangles are closed under the Peircean transform `(r, s, t) ↦ (r˘, t, s)`,
+the law `AtomStructure.cycle_left` of an atom structure. -/
+theorem Cycle.cycle_left (h : Cycle L r s t) : Cycle L r.conv t s where
+  tgt_eq_src := by simpa [Atom.tgt] using h.src_eq_src
+  src_eq_src := h.tgt_eq_src
+  tgt_eq_tgt := h.tgt_eq_tgt.symm
+  eq_of_isUnit_left hr := (h.eq_of_isUnit_left (isUnit_conv.mp hr)).symm
+  eq_of_isUnit_right ht := by rw [h.eq_conv_of_isUnit ht]
+  eq_conv_of_isUnit hs := by rw [conv_conv, h.eq_of_isUnit_right hs]
+  not_forbidden h' := h.not_forbidden (by simp only [Forbidden, conv_conv] at h' ⊢; tauto)
+
+end Tiling
+
+open Tiling
+
+/-- The frame of the algebra `RA(τ)` of [HirschHodkinson2001], Section 4, for the tiles listed in
+`L`: its atoms, their converses, the three identity atoms and the consistent triangles. The tile
+at position `0` is the one exempted by rule 3. The algebra need not be associative, so this is a
+frame and not an atom structure. -/
+def tilingFrame (L : List WangTile) : AtomFrame (Atom (Fin L.length)) where
+  conv := Atom.conv
+  id := {a | a.IsUnit}
+  cycles := {(r, s, t) | Cycle L r s t}
+
+@[simp]
+theorem mem_cycles_tilingFrame {L : List WangTile} {r s t : Atom (Fin L.length)} :
+    (r, s, t) ∈ (tilingFrame L).cycles ↔ Cycle L r s t := .rfl
+
+instance (L : List WangTile) : DecidablePred (· ∈ (tilingFrame L).cycles) := fun (r, s, t) =>
+  inferInstanceAs (Decidable (Cycle L r s t))
+
+end Cslib.RelationAlgebra
