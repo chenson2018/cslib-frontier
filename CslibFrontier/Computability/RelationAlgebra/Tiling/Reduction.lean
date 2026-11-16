@@ -32,6 +32,8 @@ as in the source, where a non-associative `RA(τ)` is treated as a no-instance.
 
 ## Main results
 
+* `Cslib.RelationAlgebra.presents_tilingTable_iff`: the atom structures that the table of `RA(τ)`
+  presents are those whose frame is `tilingFrame`, with the atoms numbered.
 * `Cslib.RelationAlgebra.isRepresentable_tilingTable_iff`: the table of `RA(τ)` presents an atom
   structure with a representable complex algebra if and only if ∃ has a winning strategy in the
   game on `tilingFrame`. This uses Theorem 1 and Lemma 7 of the source.
@@ -226,8 +228,10 @@ triples of atoms that satisfy `Tiling.CycleCode`, in lexicographic order. -/
 variable {L : List WangTile}
 
 /-- The table of `RA(τ)` presents an atom structure exactly when that structure, with its atoms
-renamed by the numbering, has the frame `tilingFrame`. -/
-private theorem presents_tilingTable_iff (A : AtomStructure (Fin (2 * L.length + 28))) :
+renamed back along the numbering `Tiling.Atom.equivFin`, has the frame `tilingFrame L`: the
+converse list, the identity list and the cycle list of the table are the converse, the units and
+the consistent triangles of `RA(τ)` on the numbers of the atoms. -/
+theorem presents_tilingTable_iff (A : AtomStructure (Fin (2 * L.length + 28))) :
     (tilingTable L).Presents A ↔ (A.map equivFin.symm).frame = tilingFrame L := by
   have hconv (a : Atom (Fin L.length)) :
       (tilingTable L).conv[(equivFin a : ℕ)]? = some (equivFin a.conv : ℕ) := by

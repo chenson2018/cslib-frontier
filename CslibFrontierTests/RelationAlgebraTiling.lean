@@ -21,8 +21,8 @@ namespace Cslib.Tests.RelationAlgebraTiling
 
 open Cslib Cslib.RelationAlgebra Cslib.WangTile Tiling Tiling.Atom
 
-/-- Two tiles: the first matches itself in both directions, the second only horizontally, and
-the first can stand to the left of the second but not to its right. -/
+/-- Two tiles: the first matches itself in both directions, the second in neither, and the first
+can stand to the left of the second but not to its right. -/
 def tiles : List WangTile := [⟨0, 0, 0, 0⟩, ⟨1, 2, 0, 3⟩]
 
 /-- The first position of `tiles`. -/

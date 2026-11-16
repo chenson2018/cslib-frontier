@@ -72,20 +72,6 @@ private theorem cycle_step_green_green (d : Axis) (o : Direction) :
   ⟨rfl, rfl, rfl, nofun, nofun, nofun, by
     cases d <;> cases o <;> simp [Forbidden, Rule, conv, Direction.flip]⟩
 
-/-- By rule 1, an edge from a `1`-node to a `2`-node with a common green neighbour is labelled by
-a tile atom. -/
-private theorem exists_eq_tile_of_cycle {t : Atom (Fin L.length)}
-    (h : Cycle L (green .one .reverse) (green .two .forward) t) : ∃ i, t = tile i .forward := by
-  have hsrc : Kind.one = t.src := h.src_eq_src
-  have htgt : Kind.two = t.tgt := h.tgt_eq_tgt
-  have hrule : ¬Rule L (green .one .reverse) (green .two .forward) t := fun hr =>
-    h.not_forbidden (.inl hr)
-  rcases t with i | ⟨i, j⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨i, o⟩
-  case unit => cases hsrc; cases htgt
-  case white => cases hsrc; cases htgt; exact (hrule trivial).elim
-  case tile => cases o <;> first | exact ⟨i, rfl⟩ | cases hsrc
-  all_goals cases d <;> cases o <;> first | (cases hsrc; done) | cases htgt
-
 /-- **Theorem 3 of [HirschHodkinson2001]**: if ∃ has a winning strategy in the game on the frame
 of `RA(τ)`, then every position of the list of tiles is at the origin of a tiling of the plane by
 positions of the list. -/
@@ -110,7 +96,7 @@ theorem everyIndexOccurs_of_hasWinningStrategy (h : (tilingFrame L).HasWinningSt
   obtain ⟨b, rfl, hb⟩ := chain .two b₀ (by rw [← N.conv_label, hb₀]; rfl)
   have hcb (y : ℤ) : N c (b y) = green .two .forward := by rw [← N.conv_label, (hb y).1]; rfl
   -- the tiles on the edges from the `a x` to the `b y`
-  choose F hF using fun x y => exists_eq_tile_of_cycle
+  choose F hF using fun x y => Cycle.exists_eq_tile
     (show Cycle L _ _ (N (a x) (b y)) from (ha x).1 ▸ hcb y ▸ N.label_mem_cycles (a x) c (b y))
   have hF' (x y : ℤ) : N (b y) (a x) = tile (F x y) .reverse := by rw [← N.conv_label, hF]; rfl
   refine ⟨F, by simpa [hF] using hab, fun x y => ⟨?_, ?_⟩⟩

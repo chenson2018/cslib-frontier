@@ -27,6 +27,7 @@ a set that tiles the plane may contain a tile that no tiling uses.
 
 ## Main results
 
+* `Cslib.WangTile.lt_freshTile`: the colour of the fresh tile exceeds every colour of the list.
 * `Cslib.WangTile.everyTileOccurs_iff_everyIndexOccurs`: the two forms of the problem agree.
 * `Cslib.WangTile.everyTileOccurs_cons_freshTile_iff`: adjoining the fresh tile to a list does
   not change the answer.
@@ -80,8 +81,9 @@ theorem everyTileOccurs_iff_everyIndexOccurs {L : List WangTile} :
     obtain ⟨F, hF, hmatch⟩ := h ⟨i, hi⟩
     exact ⟨fun x y => L[F x y], by simp [hF], fun x y => ⟨L.getElem_mem _, hmatch x y⟩⟩
 
-/-- Every colour of a tile of `τ` is smaller than the colour of `freshTile τ`. -/
-private theorem lt_freshTile {τ : List WangTile} {t : WangTile} (ht : t ∈ τ) :
+/-- Every colour of a tile of `τ` is smaller than the colour on the four edges of `freshTile τ`,
+which is therefore on no edge of a tile of `τ`. -/
+theorem lt_freshTile {τ : List WangTile} {t : WangTile} (ht : t ∈ τ) :
     max (max t.top t.bottom) (max t.left t.right) < (freshTile τ).top := by
   induction τ with
   | nil => simp at ht

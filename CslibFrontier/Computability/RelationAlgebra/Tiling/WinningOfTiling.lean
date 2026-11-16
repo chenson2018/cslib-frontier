@@ -392,43 +392,26 @@ private theorem Good.ne_of_green (hS : Good T S) {x y : D} {d : Axis} {o : Direc
   rw [h] at h₁
   exact h₁
 
+/-- The atomic network of a labelling that satisfies the invariant. -/
+private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D :=
+  Tiling.network S.lab (fun x => (S.lab x x).src) hS.isUnit_iff hS.typed.conv_lab
+    hS.typed.src_eq hS.rule_free
+
 /-- By rule 1, the edge between two nodes of different axes seen by one node is a tile edge. -/
 private theorem Good.isTile_of_green (hS : Good T S) {h x y : D} {d : Axis}
     (hx : S.lab h x = green d .forward)
     (hy : S.lab h y = green d.other .forward) : (S.lab x y).IsTile := by
-  have h₁ : (S.lab x y).src = d.kind := by rw [hS.typed.src_eq, hS.typed.tgt_of_eq hx]; rfl
-  have h₂ : (S.lab x y).tgt = d.other.kind := by
-    rw [hS.typed.tgt_eq, hS.typed.tgt_of_eq hy]
-    rfl
-  have h₃ := hS.rule_free x h y
-  have h₄ := hS.rule_free y h x
-  rw [hS.typed.eq_conv hx, hy] at h₃
-  rw [hS.typed.eq_conv hy, hx, ← hS.typed.conv_lab x y] at h₄
-  rcases hl : S.lab x y with i | ⟨i, j⟩ | ⟨d', o⟩ | ⟨d', o⟩ | ⟨d', o⟩ | ⟨d', o⟩ | ⟨i, o⟩
-  · rw [hl] at h₁ h₂
-    exact absurd (h₁.symm.trans h₂) (by simp)
-  · rw [hl] at h₁ h₂ h₃ h₄
-    obtain rfl : i = d.kind := h₁
-    obtain rfl : j = d.other.kind := h₂
-    cases d
-    · exact (h₃ trivial).elim
-    · exact (h₄ trivial).elim
-  · rw [hl] at h₁ h₂
-    cases o
-    · exact absurd h₁ (by simp)
-    · exact absurd h₂ (by simp)
-  · rw [hl] at h₁ h₂
-    cases o
-    · exact absurd h₁ (by simp)
-    · exact absurd h₂ (by simp)
-  · rw [hl] at h₁ h₂
-    cases o
-    · exact absurd h₁ (by simp)
-    · exact absurd h₂ (by simp)
-  · rw [hl] at h₁ h₂
-    exact absurd ((Atom.src_step d' o).symm.trans h₁ |>.symm.trans
-      ((Atom.tgt_step d' o).symm.trans h₂)) (by simp)
-  · trivial
+  have key {x y : D} (hx : S.lab h x = green .one .forward)
+      (hy : S.lab h y = green .two .forward) : (S.lab x y).IsTile := by
+    have hc : Cycle L (S.lab x h) (S.lab h y) (S.lab x y) := hS.network.label_mem_cycles x h y
+    rw [hS.typed.eq_conv hx, hy] at hc
+    obtain ⟨i, hi⟩ := hc.exists_eq_tile
+    simp [hi, Atom.IsTile]
+  cases d with
+  | one => exact key hx hy
+  | two =>
+    have ht := key hy hx
+    rwa [← hS.typed.conv_lab, Atom.isTile_conv] at ht
 
 /-- The tiles at two cells of one tiling that are adjacent along an axis match. -/
 private theorem Tilings.front_eq_back (T : Tilings L) {m m' : Cell L}
@@ -442,11 +425,6 @@ private theorem Tilings.front_eq_back (T : Tilings L) {m m' : Cell L}
   by_cases h0 : m.seed = 0
   · simp [Tilings.idx, hs, h0, T.til_zero]
   · simp [Tilings.idx, hs, hp h0]
-
-/-- The atomic network of a labelling that satisfies the invariant. -/
-private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D :=
-  Tiling.network S.lab (fun x => (S.lab x x).src) hS.isUnit_iff hS.typed.conv_lab
-    hS.typed.src_eq hS.rule_free
 
 /-! ### The opening positions -/
 
@@ -894,8 +872,7 @@ private theorem exLabel_tgt (x : D) : (M.exLabel T x).tgt = M.kind := by
     split_ifs <;> simp [hk, Atom.conv, Direction.flip, Atom.tgt]
   · rw [Kind.axis_eq_some] at hk
     rename_i d e
-    split_ifs with hde <;> simp [hk, hde]
-    cases d <;> cases e <;> simp_all [Axis.other]
+    split_ifs with hde <;> cases d <;> cases e <;> simp_all [Axis.other]
 
 private theorem ext_of_isPar {x : D} (h : M.IsPar x) : M.ext T x = M.par x := by simp [ext, h]
 
