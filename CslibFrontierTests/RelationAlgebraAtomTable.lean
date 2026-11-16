@@ -55,11 +55,11 @@ theorem isRepresentable_cyclicTwo : cyclicTwo.IsRepresentable :=
 
 The integral relation algebra `14₃₇` with four atoms: the identity `0`, an atom `1` with converse
 `2`, and a symmetric atom `3`. It is listed as not representable in
-[Bodirsky, Jahn, Knäuer, Konečný, Winkler, *Network satisfaction over four-atom relation
-algebras: complexity and representations*, arXiv:2507.09324v3], Table 9 and Theorem 4.2, where
-the proof is cited to Maddux, *Relation Algebras* (2006). Four is the least number of atoms of a
-relation algebra with no representation. The proof here is by Theorem 1 of Hirsch and Hodkinson:
-∀ wins the game in three rounds. -/
+[BodirskyJahnKnauerKonecnyWinkler2026], Table 9 and Theorem 4.2, where the proof is cited to
+Maddux, *Relation Algebras* (2006) (that book was not read; locator not verified). The same source
+states that four is the least number of atoms of a relation algebra with no representation. The
+proof here does not rely on the source: it is by Theorem 1 of [HirschHodkinson2001], and ∀ wins
+the game in three rounds. -/
 
 /-- The table of `14₃₇`. Writing `r`, `r˘`, `a` for the atoms `1`, `2`, `3`, the cycles other than
 those with the identity are the Peircean transforms of `r ≤ r ; r`, `r ≤ a ; r`, `r ≤ r ; a` and
@@ -76,7 +76,7 @@ set_option synthInstance.maxSize 1024 in
 def fourAtomsStructure : AtomStructure (Fin 4) where
   conv := ![0, 2, 1, 3]
   id := {a | a.val ∈ fourAtoms.id}
-  cycles := {c | (c.1.val, c.2.1.val, c.2.2.val) ∈ fourAtoms.cycles}
+  cycles := {(a, b, c) | (a.val, b.val, c.val) ∈ fourAtoms.cycles}
   assoc {r q p s t} :=
     (by decide : ∀ r q p s t : Fin 4, (r.val, q.val, p.val) ∈ fourAtoms.cycles →
       (s.val, t.val, q.val) ∈ fourAtoms.cycles → ∃ q' : Fin 4,

@@ -44,6 +44,11 @@ consistent when `c˘ ≤ a ; b`. The source's triangle `(a, b, c)` is therefore 
 * `Cslib.RelationAlgebra.Tiling.Atom.code`, `Atom.equivFin`: the numbering of the atoms, a
   bijection with `Fin (2 * k + 28)`.
 
+## Main results
+
+* `Cslib.RelationAlgebra.Tiling.Cycle.exists_eq_tile`: by rule 1, an edge from a `1`-node to a
+  `2`-node under a common green apex is labelled by a tile atom.
+
 ## References
 
 * [R. Hirsch, I. Hodkinson, *Representability is not decidable for finite relation
@@ -225,6 +230,21 @@ theorem cycle_iff {L : List WangTile} {r s t : Atom (Fin L.length)} :
 
 instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Cycle L r s t) :=
   decidable_of_iff' _ cycle_iff
+
+/-- By rule 1, an edge from a `1`-node to a `2`-node that some `0`-node joins by green edges is
+labelled by a tile atom: the atoms from `1`-nodes to `2`-nodes are the tile atoms and the white
+atom `w₁₂`, which rule 1 forbids here. -/
+theorem Cycle.exists_eq_tile {L : List WangTile} {t : Atom (Fin L.length)}
+    (h : Cycle L (green .one .reverse) (green .two .forward) t) : ∃ i, t = tile i .forward := by
+  have hsrc : Kind.one = t.src := h.src_eq_src
+  have htgt : Kind.two = t.tgt := h.tgt_eq_tgt
+  have hrule : ¬Rule L (green .one .reverse) (green .two .forward) t := fun hr =>
+    h.not_forbidden (.inl hr)
+  rcases t with i | ⟨i, j⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨i, o⟩
+  case unit => cases hsrc; cases htgt
+  case white => cases hsrc; cases htgt; exact (hrule trivial).elim
+  case tile => cases o <;> first | exact ⟨i, rfl⟩ | cases hsrc
+  all_goals cases d <;> cases o <;> first | (cases hsrc; done) | cases htgt
 
 end Tiling
 
