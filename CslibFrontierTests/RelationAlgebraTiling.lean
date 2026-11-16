@@ -64,6 +64,19 @@ example : (u .one .reverse, green .two .forward, tile t₁ .forward) ∉
 example : (green .one .forward, step .one .reverse, v .one .forward) ∉
     (tilingFrame tiles).cycles := by decide
 
+/-- A network with two nodes, a `1`-node and a `2`-node joined by a tile edge, built from its
+labels. -/
+def tileEdge : AtomicNetwork (tilingFrame tiles) Bool :=
+  Tiling.network
+    (fun d e => match d, e with
+      | false, false => unit .one
+      | false, true => tile t₁ .forward
+      | true, false => tile t₁ .reverse
+      | true, true => unit .two)
+    (fun d => if d then .two else .one) (by decide) (by decide) (by decide) (by decide)
+
+example : tileEdge false true = tile t₁ .forward := rfl
+
 /-! ### The table -/
 
 example : (tilingTable tiles).size = 32 := rfl

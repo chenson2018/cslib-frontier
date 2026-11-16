@@ -39,6 +39,8 @@ consistent when `c˘ ≤ a ; b`. The source's triangle `(a, b, c)` is therefore 
 * `Cslib.RelationAlgebra.Tiling.Rule`: rules 1–4 of the source and the duals of rules 2–4.
 * `Cslib.RelationAlgebra.Tiling.Cycle`: the consistent triangles.
 * `Cslib.RelationAlgebra.tilingFrame`: the frame of `RA(τ)`.
+* `Cslib.RelationAlgebra.Tiling.network`: networks over the frame, from labellings that avoid the
+  rules.
 * `Cslib.RelationAlgebra.Tiling.Atom.code`, `Atom.equivFin`: the numbering of the atoms, a
   bijection with `Fin (2 * k + 28)`.
 
@@ -267,6 +269,33 @@ theorem mem_cycles_tilingFrame {L : List WangTile} {r s t : Atom (Fin L.length)}
 
 instance (L : List WangTile) : DecidablePred (· ∈ (tilingFrame L).cycles) := fun (r, s, t) =>
   inferInstanceAs (Decidable (Cycle L r s t))
+
+/-- A network over the frame of `RA(τ)`, from a labelling of the ordered pairs of nodes in which
+the loops are the edges with unit labels, reversed edges carry converse atoms, every label starts
+at the kind of its first node, and no three nodes, taken in any order, form a triangle listed in
+`Rule`. The six Peircean transforms of a triangle of a network are its six orderings, so the rules
+need to be checked only as listed. -/
+@[simps]
+def Tiling.network {L : List WangTile} {D : Type*} (label : D → D → Atom (Fin L.length))
+    (kind : D → Kind) (isUnit_label : ∀ d e, (label d e).IsUnit ↔ d = e)
+    (conv_label : ∀ d e, (label d e).conv = label e d)
+    (src_label : ∀ d e, (label d e).src = kind d)
+    (not_rule : ∀ d e f, ¬Rule L (label d e) (label e f) (label d f)) :
+    AtomicNetwork (tilingFrame L) D where
+  label := label
+  label_mem_id := isUnit_label _ _
+  conv_label := conv_label
+  label_mem_cycles d e f :=
+    { tgt_eq_src := by rw [Atom.tgt, conv_label, src_label, src_label]
+      src_eq_src := by rw [src_label, src_label]
+      tgt_eq_tgt := by rw [Atom.tgt, Atom.tgt, conv_label, conv_label, src_label, src_label]
+      eq_of_isUnit_left := fun h => by rw [(isUnit_label d e).mp h]
+      eq_of_isUnit_right := fun h => by rw [(isUnit_label e f).mp h]
+      eq_conv_of_isUnit := fun h => by rw [conv_label, (isUnit_label d f).mp h]
+      not_forbidden := by
+        simp only [Forbidden, conv_label, not_or]
+        exact ⟨not_rule _ _ _, not_rule _ _ _, not_rule _ _ _, not_rule _ _ _, not_rule _ _ _,
+          not_rule _ _ _⟩ }
 
 end Cslib.RelationAlgebra
 
