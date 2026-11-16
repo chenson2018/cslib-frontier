@@ -805,8 +805,8 @@ private def nodeCheck (node : Node) : Bool := decide (
     (node.child (blockPosition x ⟨y.val + 1, by omega⟩))))
 
 private def nodeChunk (chunk : ℕ) : Bool :=
-  (List.range 24).all fun offset =>
-    nodeCheck ⟨⟨(24 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
+  (List.range 8).all fun offset =>
+    nodeCheck ⟨⟨(8 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
 
 private def pairCheck (left right : Node) : Bool := decide (
   (HCompatible left right → ∀ y : Fin 4, HCompatible
@@ -827,8 +827,34 @@ private theorem node_9 : nodeChunk 9 = true := by decide +kernel
 private theorem node_10 : nodeChunk 10 = true := by decide +kernel
 private theorem node_11 : nodeChunk 11 = true := by decide +kernel
 private theorem node_12 : nodeChunk 12 = true := by decide +kernel
+private theorem node_13 : nodeChunk 13 = true := by decide +kernel
+private theorem node_14 : nodeChunk 14 = true := by decide +kernel
+private theorem node_15 : nodeChunk 15 = true := by decide +kernel
+private theorem node_16 : nodeChunk 16 = true := by decide +kernel
+private theorem node_17 : nodeChunk 17 = true := by decide +kernel
+private theorem node_18 : nodeChunk 18 = true := by decide +kernel
+private theorem node_19 : nodeChunk 19 = true := by decide +kernel
+private theorem node_20 : nodeChunk 20 = true := by decide +kernel
+private theorem node_21 : nodeChunk 21 = true := by decide +kernel
+private theorem node_22 : nodeChunk 22 = true := by decide +kernel
+private theorem node_23 : nodeChunk 23 = true := by decide +kernel
+private theorem node_24 : nodeChunk 24 = true := by decide +kernel
+private theorem node_25 : nodeChunk 25 = true := by decide +kernel
+private theorem node_26 : nodeChunk 26 = true := by decide +kernel
+private theorem node_27 : nodeChunk 27 = true := by decide +kernel
+private theorem node_28 : nodeChunk 28 = true := by decide +kernel
+private theorem node_29 : nodeChunk 29 = true := by decide +kernel
+private theorem node_30 : nodeChunk 30 = true := by decide +kernel
+private theorem node_31 : nodeChunk 31 = true := by decide +kernel
+private theorem node_32 : nodeChunk 32 = true := by decide +kernel
+private theorem node_33 : nodeChunk 33 = true := by decide +kernel
+private theorem node_34 : nodeChunk 34 = true := by decide +kernel
+private theorem node_35 : nodeChunk 35 = true := by decide +kernel
+private theorem node_36 : nodeChunk 36 = true := by decide +kernel
+private theorem node_37 : nodeChunk 37 = true := by decide +kernel
+private theorem node_38 : nodeChunk 38 = true := by decide +kernel
 
-private theorem node_chunks (chunk : Fin 13) : nodeChunk chunk.val = true := by
+private theorem node_chunks (chunk : Fin 39) : nodeChunk chunk.val = true := by
   fin_cases chunk
   · exact node_0
   · exact node_1
@@ -843,6 +869,32 @@ private theorem node_chunks (chunk : Fin 13) : nodeChunk chunk.val = true := by
   · exact node_10
   · exact node_11
   · exact node_12
+  · exact node_13
+  · exact node_14
+  · exact node_15
+  · exact node_16
+  · exact node_17
+  · exact node_18
+  · exact node_19
+  · exact node_20
+  · exact node_21
+  · exact node_22
+  · exact node_23
+  · exact node_24
+  · exact node_25
+  · exact node_26
+  · exact node_27
+  · exact node_28
+  · exact node_29
+  · exact node_30
+  · exact node_31
+  · exact node_32
+  · exact node_33
+  · exact node_34
+  · exact node_35
+  · exact node_36
+  · exact node_37
+  · exact node_38
 
 -- Checked semantic seam caches and side refinement avoid enumerating every node pair.
 -- Every cached code and four-child expansion is validated against the actual decorated nodes.
@@ -1079,8 +1131,8 @@ private def seamCheck (node : Node) : Bool := decide (
     vExpansion (cachedSeams node).north x))
 
 private def seamChunk (chunk : Nat) : Bool :=
-  (List.range 24).all fun offset =>
-    seamCheck ⟨⟨(24 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
+  (List.range 8).all fun offset =>
+    seamCheck ⟨⟨(8 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
 
 private theorem seam_0 : seamChunk 0 = true := by decide +kernel
 private theorem seam_1 : seamChunk 1 = true := by decide +kernel
@@ -1095,8 +1147,34 @@ private theorem seam_9 : seamChunk 9 = true := by decide +kernel
 private theorem seam_10 : seamChunk 10 = true := by decide +kernel
 private theorem seam_11 : seamChunk 11 = true := by decide +kernel
 private theorem seam_12 : seamChunk 12 = true := by decide +kernel
+private theorem seam_13 : seamChunk 13 = true := by decide +kernel
+private theorem seam_14 : seamChunk 14 = true := by decide +kernel
+private theorem seam_15 : seamChunk 15 = true := by decide +kernel
+private theorem seam_16 : seamChunk 16 = true := by decide +kernel
+private theorem seam_17 : seamChunk 17 = true := by decide +kernel
+private theorem seam_18 : seamChunk 18 = true := by decide +kernel
+private theorem seam_19 : seamChunk 19 = true := by decide +kernel
+private theorem seam_20 : seamChunk 20 = true := by decide +kernel
+private theorem seam_21 : seamChunk 21 = true := by decide +kernel
+private theorem seam_22 : seamChunk 22 = true := by decide +kernel
+private theorem seam_23 : seamChunk 23 = true := by decide +kernel
+private theorem seam_24 : seamChunk 24 = true := by decide +kernel
+private theorem seam_25 : seamChunk 25 = true := by decide +kernel
+private theorem seam_26 : seamChunk 26 = true := by decide +kernel
+private theorem seam_27 : seamChunk 27 = true := by decide +kernel
+private theorem seam_28 : seamChunk 28 = true := by decide +kernel
+private theorem seam_29 : seamChunk 29 = true := by decide +kernel
+private theorem seam_30 : seamChunk 30 = true := by decide +kernel
+private theorem seam_31 : seamChunk 31 = true := by decide +kernel
+private theorem seam_32 : seamChunk 32 = true := by decide +kernel
+private theorem seam_33 : seamChunk 33 = true := by decide +kernel
+private theorem seam_34 : seamChunk 34 = true := by decide +kernel
+private theorem seam_35 : seamChunk 35 = true := by decide +kernel
+private theorem seam_36 : seamChunk 36 = true := by decide +kernel
+private theorem seam_37 : seamChunk 37 = true := by decide +kernel
+private theorem seam_38 : seamChunk 38 = true := by decide +kernel
 
-private theorem seam_chunks (chunk : Fin 13) : seamChunk chunk.val = true := by
+private theorem seam_chunks (chunk : Fin 39) : seamChunk chunk.val = true := by
   fin_cases chunk
   · exact seam_0
   · exact seam_1
@@ -1111,16 +1189,42 @@ private theorem seam_chunks (chunk : Fin 13) : seamChunk chunk.val = true := by
   · exact seam_10
   · exact seam_11
   · exact seam_12
+  · exact seam_13
+  · exact seam_14
+  · exact seam_15
+  · exact seam_16
+  · exact seam_17
+  · exact seam_18
+  · exact seam_19
+  · exact seam_20
+  · exact seam_21
+  · exact seam_22
+  · exact seam_23
+  · exact seam_24
+  · exact seam_25
+  · exact seam_26
+  · exact seam_27
+  · exact seam_28
+  · exact seam_29
+  · exact seam_30
+  · exact seam_31
+  · exact seam_32
+  · exact seam_33
+  · exact seam_34
+  · exact seam_35
+  · exact seam_36
+  · exact seam_37
+  · exact seam_38
 
 private theorem checked_from_chunks (check : Node → Bool)
-    (chunks : ∀ chunk : Fin 13, (List.range 24).all (fun offset =>
-      check ⟨⟨(24 * chunk.val + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩) = true)
+    (chunks : ∀ chunk : Fin 39, (List.range 8).all (fun offset =>
+      check ⟨⟨(8 * chunk.val + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩) = true)
     (node : Node) : check node = true := by
-  let chunk : Fin 13 := ⟨node.code.val / 24, by omega⟩
-  have checked := List.all_eq_true.mp (chunks chunk) (node.code.val % 24)
+  let chunk : Fin 39 := ⟨node.code.val / 8, by omega⟩
+  have checked := List.all_eq_true.mp (chunks chunk) (node.code.val % 8)
     (List.mem_range.mpr (Nat.mod_lt _ (by decide)))
   have reconstructed :
-      (⟨⟨(24 * chunk.val + node.code.val % 24) % 312,
+      (⟨⟨(8 * chunk.val + node.code.val % 8) % 312,
         Nat.mod_lt _ (by decide)⟩⟩ : Node) = node := by
     cases node with
     | mk code =>
@@ -1381,8 +1485,8 @@ private def borderCheck (index : Fin 376) : Bool :=
       (childX = 2 ∧ childY = 2 ∧ state.xParity = 0 ∧ state.yParity = 0)))
 
 private def borderChunk (chunk : ℕ) : Bool :=
-  (List.range 24).all fun offset =>
-    borderCheck ⟨(24 * chunk + offset) % 376, Nat.mod_lt _ (by decide)⟩
+  (List.range 8).all fun offset =>
+    borderCheck ⟨(8 * chunk + offset) % 376, Nat.mod_lt _ (by decide)⟩
 
 private theorem border_0 : borderChunk 0 = true := by decide +kernel
 private theorem border_1 : borderChunk 1 = true := by decide +kernel
@@ -1400,8 +1504,39 @@ private theorem border_12 : borderChunk 12 = true := by decide +kernel
 private theorem border_13 : borderChunk 13 = true := by decide +kernel
 private theorem border_14 : borderChunk 14 = true := by decide +kernel
 private theorem border_15 : borderChunk 15 = true := by decide +kernel
+private theorem border_16 : borderChunk 16 = true := by decide +kernel
+private theorem border_17 : borderChunk 17 = true := by decide +kernel
+private theorem border_18 : borderChunk 18 = true := by decide +kernel
+private theorem border_19 : borderChunk 19 = true := by decide +kernel
+private theorem border_20 : borderChunk 20 = true := by decide +kernel
+private theorem border_21 : borderChunk 21 = true := by decide +kernel
+private theorem border_22 : borderChunk 22 = true := by decide +kernel
+private theorem border_23 : borderChunk 23 = true := by decide +kernel
+private theorem border_24 : borderChunk 24 = true := by decide +kernel
+private theorem border_25 : borderChunk 25 = true := by decide +kernel
+private theorem border_26 : borderChunk 26 = true := by decide +kernel
+private theorem border_27 : borderChunk 27 = true := by decide +kernel
+private theorem border_28 : borderChunk 28 = true := by decide +kernel
+private theorem border_29 : borderChunk 29 = true := by decide +kernel
+private theorem border_30 : borderChunk 30 = true := by decide +kernel
+private theorem border_31 : borderChunk 31 = true := by decide +kernel
+private theorem border_32 : borderChunk 32 = true := by decide +kernel
+private theorem border_33 : borderChunk 33 = true := by decide +kernel
+private theorem border_34 : borderChunk 34 = true := by decide +kernel
+private theorem border_35 : borderChunk 35 = true := by decide +kernel
+private theorem border_36 : borderChunk 36 = true := by decide +kernel
+private theorem border_37 : borderChunk 37 = true := by decide +kernel
+private theorem border_38 : borderChunk 38 = true := by decide +kernel
+private theorem border_39 : borderChunk 39 = true := by decide +kernel
+private theorem border_40 : borderChunk 40 = true := by decide +kernel
+private theorem border_41 : borderChunk 41 = true := by decide +kernel
+private theorem border_42 : borderChunk 42 = true := by decide +kernel
+private theorem border_43 : borderChunk 43 = true := by decide +kernel
+private theorem border_44 : borderChunk 44 = true := by decide +kernel
+private theorem border_45 : borderChunk 45 = true := by decide +kernel
+private theorem border_46 : borderChunk 46 = true := by decide +kernel
 
-private theorem border_chunks (chunk : Fin 16) : borderChunk chunk.val = true := by
+private theorem border_chunks (chunk : Fin 47) : borderChunk chunk.val = true := by
   fin_cases chunk
   · exact border_0
   · exact border_1
@@ -1419,13 +1554,44 @@ private theorem border_chunks (chunk : Fin 16) : borderChunk chunk.val = true :=
   · exact border_13
   · exact border_14
   · exact border_15
+  · exact border_16
+  · exact border_17
+  · exact border_18
+  · exact border_19
+  · exact border_20
+  · exact border_21
+  · exact border_22
+  · exact border_23
+  · exact border_24
+  · exact border_25
+  · exact border_26
+  · exact border_27
+  · exact border_28
+  · exact border_29
+  · exact border_30
+  · exact border_31
+  · exact border_32
+  · exact border_33
+  · exact border_34
+  · exact border_35
+  · exact border_36
+  · exact border_37
+  · exact border_38
+  · exact border_39
+  · exact border_40
+  · exact border_41
+  · exact border_42
+  · exact border_43
+  · exact border_44
+  · exact border_45
+  · exact border_46
 
 private theorem border_index_checked (index : Fin 376) : borderCheck index = true := by
-  let chunk : Fin 16 := ⟨index.val / 24, by omega⟩
-  have checked := List.all_eq_true.mp (border_chunks chunk) (index.val % 24)
+  let chunk : Fin 47 := ⟨index.val / 8, by omega⟩
+  have checked := List.all_eq_true.mp (border_chunks chunk) (index.val % 8)
     (List.mem_range.mpr (Nat.mod_lt _ (by decide)))
   have reconstructed :
-      (⟨(24 * chunk.val + index.val % 24) % 376, Nat.mod_lt _ (by decide)⟩ : Fin 376) =
+      (⟨(8 * chunk.val + index.val % 8) % 376, Nat.mod_lt _ (by decide)⟩ : Fin 376) =
         index := by
     apply Fin.ext
     dsimp only [chunk]
