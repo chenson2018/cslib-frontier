@@ -501,11 +501,33 @@ states its DDH assumption `CyclicGroupFamily.DDH`, which on a prime-order family
 uniform strict PPT machine on `encDDHInput`, so Exercise 10.24's distinguisher is efficient, and
 `CyclicGroupFamily.not_ddh_of_even_order` proves that DDH does not hold when every group the setup
 law can produce has even order. No family of the groups `(ZMod p)ˣ` is constructed, so the book's
-conclusion that DDH does not hold in `Z_p^*` is proved only in the fixed-group form. The
+conclusion that DDH does not hold in `Z_p^*` is proved only in the fixed-group form. More
+generally, for any prime divisor `l ∣ q` ([bs23][bs23], Exercise 16.2(a), p. 707),
+[`DiffieHellman/SmallFactor.lean`](../../CslibFrontier/Crypto/Computational/DiffieHellman/SmallFactor.lean)
+generalizes both lemmas (`div_nsmul_smul_eq_zero_iff` and `dvd_val_mul_iff`, with `EvenOrder` now
+re-exporting `SmallFactor` at `l = 2`) and proves that `ddhSmallFactorDistinguisher q l` has
+exact fixed-group advantage `((3 * l - 2) * (l - 1)) / l ^ 3` in `ℝ≥0` (at least `1 / l` by
+`inv_le_ddhAdvantage_ddhSmallFactorDistinguisher`, equal to `1 / 2` at `l = 2`, and close to
+`3 / l` for large `l`, matching the book's "advantage about `1 / l`") via
+`ddhAdvantage_ddhSmallFactorDistinguisher`. Over a `CyclicGroupFamily`,
+`CyclicGroupFamily.ddhSmallFactorDistinguisher` is polynomial time on `encDDHInput` whenever its
+selector is (`CyclicGroupFamily.isPPT_ddhSmallFactorDistinguisher`), DDH fails whenever a
+polynomial-time selector finds a polynomially bounded prime factor infinitely often
+(`CyclicGroupFamily.not_ddh_of_prime_factor`), and
+`CyclicGroupFamily.not_ddh_of_polynomiallyBounded_minFac` proves that DDH fails when `1 < F.order d`
+and `(F.order d).minFac ≤ bound n` across `(setup n).support` infinitely often for a polynomially
+bounded `bound`. The distinguisher instantiated in that proof uses `Nat.findGreatest` to test the
+greatest prime factor up to `C * (n + 1) ^ D` where the exercise names the smallest prime factor,
+yielding the same theorem. Polynomial time on `encDDHInput` is proved rather than an `O(log q)`
+count of group operations, and Exercise 16.2(b) stays open. The
 [even-order client](../../CslibFrontierTests/Crypto/DiffieHellmanEvenOrder.lean) checks `ZMod 6`,
 `(ZMod 7)ˣ` and the odd-order failure of Lemma 16.1 in `ZMod 5`, applies
 `not_ddh_of_even_order` to the residue groups `ZMod (2 (n + 1))`, and derives that a prime-order
-family fails `PrimeOrderGroupFamily.DDH` for any setup law that only produces groups of order `2`.
+family fails `PrimeOrderGroupFamily.DDH` for any setup law that only produces groups of order `2`;
+the [small-factor client](../../CslibFrontierTests/Crypto/DiffieHellmanSmallFactor.lean) checks
+`ZMod 15` and `(ZMod 7)ˣ` at `l = 3` (`14 / 27`), `oddFactorFamily` under
+`not_ddh_of_polynomiallyBounded_minFac`, a non-constant selector under `not_ddh_of_prime_factor`,
+and five hypothesis counterexamples.
 
 For a linear feedback shift register ([bs23][bs23], Section 3.8, p. 75), `LFSR.output taps ℓ state`
 in [`PRG/LFSR.lean`](../../CslibFrontier/Crypto/Primitives/PRG/LFSR.lean) clocks it `ℓ` times with
@@ -1378,6 +1400,8 @@ The [Naor–Reingold test client](../../CslibFrontierTests/Crypto/NaorReingold.l
 public construction and security endpoints.
 
 For two-party key exchange secure against passive eavesdroppers ([katzlindell20][katzlindell20], §11.3, Definition 11.1, Construction 11.2, Theorem 11.3, pp. 390–395, and Exercises 11.3–11.4, pp. 399–400), import [`KeyExchange.lean`](../../CslibFrontier/Crypto/Computational/KeyExchange.lean) and [`Encryption/PublicKeyCPA.lean`](../../CslibFrontier/Crypto/Computational/Encryption/PublicKeyCPA.lean) (checked in [`CslibFrontierTests/Crypto/KeyExchange.lean`](../../CslibFrontierTests/Crypto/KeyExchange.lean)). `KeyExchange T K` models a protocol by its honest-execution law `execute : ℕ → PMF (Outcome T K)`, with keys in a set `K transcript` named by the transcript (`KeyExchange.Correct`; honest-party efficiency is not bundled). An `Eavesdropper T K` is typed: it receives the security parameter and a `View T K` (a transcript and a candidate key), and its efficiency is `Eavesdropper.IsPPT encT encK`, read through the `enc_structure` encoding `encView`. `realGame` and `idealGame` draw the view `realView` (transcript and Alice's key) or `idealView` (transcript and a fresh ideal key) and run the eavesdropper on it (`EavSecure`, `EavSecureBits`); `withSetup_realView_bind` and `withSetup_idealView_bind` split off a setup draw. Over any `PrimeOrderGroupFamily`, the transcript is the record `DHTranscript` and the key a group element (`DHKey`, `encDHKey`). At a fixed group, `dhExecution` is correct (`dhKeyExchange_correct`) and its real and ideal experiments are the DDH experiments of the typed distinguisher `dhEavToDDH` (`withSetup_realView_dhExecution`, `withSetup_idealView_dhExecution`); `dhKeyExchange setup` draws the group first, which gives `realGame_dhKeyExchange`, `idealGame_dhKeyExchange` and `EavSecure` against the uniform group-element ideal key `dhIdealKey` under `DDH` (`DDH.dhKeyExchange_eavSecure`). The test derives the word-level statement for eavesdroppers on the encoded transcript and key. At a fixed group, the active man-in-the-middle execution `dhMitmExecution` shares keys with both parties while each party's view has the law of `realView` of an honest execution (`dhMitmExecution_keys`, `map_aliceView_dhMitmExecution`, `map_bobView_dhMitmExecution`), and the 3-message XOR protocol `xorKeyExchange`, whose transcript is the record `XorTranscript`, is correct yet broken with advantage at least `1 / 2` by `xorEavesdropper` (`isPPT_xorEavesdropper`, `not_eavSecureBits_xorKeyExchange`). In `Encryption/PublicKeyCPA.lean`, `cpaOracleGameOn`, `WordINDCPAOracleOn`, and `WordINDCPAOracle` equip both stages of a `WordCPAAdversary` with an explicit public-key encryption oracle `encryptionOracle`, and `INDCPAOn.wordINDCPAOracleOn` and `WordINDCPA.wordINDCPAOracle` prove that single-challenge eavesdropping security implies oracle-CPA security whenever `encrypt` is uniform strict PPT ([katzlindell20][katzlindell20], §12.2.1, Proposition 12.3, p. 406; the multi-message left-or-right Theorem 12.6 is not formalized).
+
+For key-guessing security of anonymous two-party key exchange ([bs23][bs23], Section 10.1, Attack Game 10.1, Definition 10.1, p. 400, and Section 10.4.2, pp. 407–408), import [`KeyExchange/KeyGuessing.lean`](../../CslibFrontier/Crypto/Computational/KeyExchange/KeyGuessing.lean) (checked in [`CslibFrontierTests/Crypto/KeyExchangeKeyGuessing.lean`](../../CslibFrontierTests/Crypto/KeyExchangeKeyGuessing.lean)). A `KeyGuesser T K` receives the security parameter and the public transcript and outputs a key guess in `K transcript` (key types need decidable equality, `[∀ t, DecidableEq (K t)]`, because the game compares keys), with efficiency predicate `KeyGuesser.IsPPT encT encK` reading `encPair encUnary encT` and writing `encBits`. `anonKEGame protocol adversary n` draws an outcome from `protocol.execute n` and accepts when `adversary` guesses `outcome.aliceKey`; `AnonKESecure protocol encT encK` requires every PPT key guesser to win with negligible probability. Unlike the book, `KeyExchange.Correct` and honest-party efficiency are unbundled on `KeyExchange` (so the book's property is `protocol.Correct ∧ protocol.AnonKESecure encT encK`, and `Correct.anonKEGame_eq_bobKey` identifies guessing `outcome.aliceKey` with guessing `outcome.bobKey` when `protocol.Correct` holds), and `AnonKESecure` avoids colliding with `KeyExchange.EavSecure` (the Katz–Lindell real-versus-ideal view-indistinguishability notion, which gives key-guessing security only when the ideal key is hard to guess; no implication is proved here) for what Boneh–Shoup calls "secure against an eavesdropper". Over any `PrimeOrderGroupFamily`, `dhToCDHAdversary` and `cdhToDHKeyGuesser` are definitionally mutually inverse conversions matching `anonKEGame` and `cdhGame` at every security parameter (`anonKEGame_dhKeyExchange`, `cdhGame_eq_anonKEGame_dhKeyExchange`) and preserving PPT efficiency (`isPPT_dhToCDHAdversary`, `isPPT_cdhToDHKeyGuesser`), yielding `dhKeyExchange_anonKESecure_iff_cdh`: for any `setup : ℕ → PMF F.Desc`, `(F.dhKeyExchange setup).AnonKESecure F.encDHTranscript F.encDHKey ↔ F.CDH setup` (where `DHTranscript` carries `groupParameters : F.Desc` and `setup` need not be efficiently samplable, in place of fixed system parameters and concrete advantage bounds; authenticated key exchange and active attacks are not formalized). The checked examples cover the `rfl` round-trips, fixed-group failure via `CDH.discreteLog`, a concrete PPT key guesser on `schnorrGroups`, a probability-`1` break on `xorKeyExchange` via `realGame_xorEavesdropper`, a half-leaking protocol satisfying `Correct` and `AnonKESecure`, and a non-`Correct` protocol separating `outcome.aliceKey` from `outcome.bobKey`.
 
 For the RSA least-significant-bit experiment and algebraic attacks on plain RSA, import [`RSALeastSignificantBit.lean`](../../CslibFrontier/Crypto/Computational/RSALeastSignificantBit.lean) and [`RSAAttacks.lean`](../../CslibFrontier/Crypto/Computational/RSAAttacks.lean) ([katzlindell20][katzlindell20], §9.2.5, pp. 334–336, §12.5.1, pp. 436–440, and §12.5.3, pp. 443–445; checked instances are in [`CslibFrontierTests/Crypto/RSALeastSignificantBit.lean`](../../CslibFrontierTests/Crypto/RSALeastSignificantBit.lean) and [`CslibFrontierTests/Crypto/RSAAttacks.lean`](../../CslibFrontierTests/Crypto/RSAAttacks.lean)). `rsaLSBGame` samples `desc ← gen n` and a uniform residue `x ← Fin desc.modulus` (matching `rsaInversionGame` rather than `(ZMod N)ˣ`) and asks an `RSAPredictor` (with `RSAPredictor.IsPPT`, reading `encRSAInput` and writing a bit) for `x.testBit 0` given `pk.eval x`. The library does not state the hard-core property of this bit as an assumption, since the literature proves it from the RSA assumption ([#5578](https://github.com/cslib-community/cslib-frontier/issues/5578)). For odd `N`, `two_pow_mul_mod_mod_two` equates the parity of `2 ^ k * x % N` (`k ≠ 0`) with that of `⌊2 ^ k * x / N⌋`, `lsbRecover_lsbQueries` recovers `x` from the parities of the preimages of the `m` doubling queries `2 ^ (k * e) * y % N` once `N ≤ 2 ^ m`, and `lsbInverter` wins `rsaInversionGame` with probability `1` given a predictor that is always correct on the modulus (`eval_lsbInverter`, `succProbability_rsaInversionGame_lsbInverter`). `computableInPolyTime_lsbQueries`, `computableInPolyTime_lsbRecover`, and `isPPT_lsbInverter` certify uniform strict-PPT efficiency for `lsbInverter` whenever the predictor is PPT, yielding `RSAOneWay.not_frequently_alwaysCorrect_lsbPredictor` on eventually odd moduli; the noisy reconstruction of Theorem 12.31 for predictors with small noticeable bias, and with it the hard-core theorem, remains open. [`RSAHalfPredicate.lean`](../../CslibFrontier/Crypto/Computational/RSAHalfPredicate.lean) treats the half predicate `[x · r mod N > N / 2]` (Boneh–Shoup v0.6, Exercise 12.21, pp. 519–520 [bs23][bs23]). For odd `N ≤ 2 ^ m` and `x < N`, its values at `r = 2 ^ k`, `k < m`, recover `x` through `lsbRecover` (`lsbRecover_map_decide_lt_two_mul`). For odd moduli and a half oracle `H` that is always correct on RSA images, `halfToLSBPredictor H` predicts the least significant bit (`eval_halfToLSBPredictor`), so `lsbInverter (halfToLSBPredictor H)` wins `rsaInversionGame` with probability `1` (`succProbability_rsaInversionGame_halfToLSBPredictor`); it asks `H` at the RSA images of `2 ^ k * x % N`, `k < N.size` (`lsbInverter_halfToLSBPredictor`), and is PPT whenever `H` is (`isPPT_halfToLSBPredictor` with `isPPT_lsbInverter`). Under `RSAOneWay` on eventually odd moduli, no PPT half predictor is always correct for infinitely many security parameters (`RSAOneWay.not_frequently_alwaysCorrect_halfPredictor`). Checked instances are in [`CslibFrontierTests/Crypto/RSAHalfPredicate.lean`](../../CslibFrontierTests/Crypto/RSAHalfPredicate.lean). `RSAAttacks.lean` proves plain-RSA multiplicative malleability (`rsaEval_mul`, `rsaInvert_rsaEval_mul`), common-modulus recovery of every message `m` coprime to `N` from its encryptions under coprime exponents `e₁`, `e₂` by Shamir's trick (`commonRoot_rsaEval`: `commonRoot N e₂ e₁ (rsaEval N e₁ m) (rsaEval N e₂ m) = m % N`), unreduced short-message and pairwise-coprime CRT broadcast `e`-th root recovery (`rsaEval_eq_pow_of_pow_lt`, `eq_of_pow_eq_rsaEval`, `chineseRemainderOfList_rsaEval_eq_pow`, `eq_of_pow_eq_chineseRemainderOfList_rsaEval`), factoring `N` from `(N, φ(N))` (`factorOfTotient_eq`, `RSADesc.factorOfTotient_eq`, `computableInPolyTime_factorOfTotient`), the polynomial-time equivalence `totientHard_iff_modulusFactoringHard` (`TotientHard.modulusFactoringHard`, `ModulusFactoringHard.totientHard`, after Theorem 9.49) between `TotientHard` (`totientGame`) and `ModulusFactoringHard` via `factorToTotient` and `totientToFactor`, the certified PPT hierarchy `RSAOneWay` $\Rightarrow$ `RSAKeyRecoveryHard` (`rsaKeyRecoveryGame`) $\Rightarrow$ `TotientHard` $\Leftrightarrow$ `ModulusFactoringHard` (`RSAOneWay.rsaKeyRecoveryHard`, `RSAOneWay.totientHard`, `RSAOneWay.modulusFactoringHard`, `RSAKeyRecoveryHard.totientHard`, `RSAKeyRecoveryHard.modulusFactoringHard`) via `totientToKeyRecovery`, `keyRecoveryToRSA`, and `factorToRSA` (using the polynomial-time binary modular inverse `BinaryGcd.modInv`, `BinaryGcd.modInv_eq_zmod_inv_val`, and `ComputableInPolyTime.binary_modInv` in [`PolyTime/Nat/Gcd.lean`](../../CslibFrontier/Computability/Machines/Turing/MultiTape/Complexity/PolyTime/Nat/Gcd.lean)), the general nontrivial-square-root factoring lemmas `gcd_sub_one_proper_of_sq_modEq_one` and `gcd_add_one_proper_of_sq_modEq_one` for any `N` and `y`, and the deterministic steps `RSADesc.pow_mul_sub_one_modEq_one`, `RSADesc.gcd_sub_one_proper`, and `RSADesc.gcd_add_one_proper` of Corollary 9.51; the reverse randomized reduction from factoring to `RSAKeyRecoveryHard` (Theorem 9.50 / Corollary 9.51) is not yet formalized.
 
@@ -3542,12 +3566,46 @@ concatenate to it (`flatten_mdLengthBlocks`); for larger `s` the count does not 
 bits are dropped. `mdLengthBlocks_suffix_iff`: if `mdLengthBlockCount n m₂ < 2 ^ (n / 2)`, then
 `mdLengthBlocks n m₁` is a suffix of `mdLengthBlocks n m₂` only when `m₁ = m₂`.
 `computableInPolyTime_mdLengthBlocks` is the polynomial-time certificate, with `n` in unary. The
-hash built from this padding and Theorem 8.3 (p. 297) for it are not yet library declarations. The
 [checked examples](../../CslibFrontierTests/Crypto/MerkleDamgardLengthPadding.lean) compute both
-cases of p. 297 at `n = 4`, show that suffix-freeness fails at the first count that does not fit,
-and derive collision resistance of the chain on the messages whose count fits from
-`CompressionFamily.collisionResistantOn_merkleDamgardChain`; run
+cases of p. 297 at `n = 4`, show that suffix-freeness and the block-alignment laws
+(`length_mdLengthPad` and `flatten_mdLengthBlocks`) fail at the first count that does not fit
+(`s = 2 ^ (n / 2)`), and derive collision resistance of the chain on the messages whose count fits
+from `CompressionFamily.collisionResistantOn_merkleDamgardChain`; run
 `scripts/build.sh CslibFrontierTests.Crypto.MerkleDamgardLengthPadding`.
+
+For the length-strengthened Merkle–Damgård hash of [bs23][bs23], §8.4 (pp. 295–298), import
+[`MerkleDamgard/LengthStrengthened.lean`](../../CslibFrontier/Crypto/Computational/MerkleDamgard/LengthStrengthened.lean).
+`lengthStrengthenedMD h k msg` runs `merkleDamgardChain` on `mdLengthBlocks k.length msg` starting
+from the all-zero `k.length`-bit IV `List.replicate k.length false`; when `h k` maps `2 * k.length`-bit
+inputs to `k.length`-bit digests, the hash output also has `k.length` bits
+(`length_lengthStrengthenedMD`), and together with a uniform `2 * k.length`-bit length
+assumption and polynomial-time `h` this certifies `lengthStrengthenedMD h` in deterministic
+polynomial time (`computableInPolyTime_lengthStrengthenedMD`). The book uses an independent block
+length `ℓ`, any fixed `IV`, and a block-count field of fixed width (typically 64 bits); here
+`ℓ = n = k.length`, `IV = 0^n`, the key `k` is uniform over `n`-bit strings, and the count field
+has `n / 2` bits, so the count fits only when `mdLengthBlockCount n msg < 2 ^ (n / 2)`. For
+Theorem 8.3 (pp. 297–298), `lengthStrengthenedWrapper h valid adversary` runs `adversary`, tests
+`isCollision (lengthStrengthenedMD h) valid`, extracts a compression collision via
+`extractChainCollision` when that check passes, and returns `([], [])` otherwise, certified
+uniformly strict PPT by `isPPT_lengthStrengthenedWrapper` (from polynomial-time `h` and `valid`,
+`2 * k.length`-to-`k.length` length preservation, and strict PPT `adversary`).
+For `succProbability_collisionGame_lengthStrengthenedMD_eq`: at a parameter `n`, if
+`(h k x).length = n` whenever `k.length = n` and `x.length = 2 * n`, and `valid n m = true`
+implies `mdLengthBlockCount n m < 2 ^ (n / 2)`, then `adversary` wins
+`collisionGame (lengthStrengthenedMD h) valid` with the exact same probability with which
+`lengthStrengthenedWrapper h valid adversary` wins `collisionGame h validCompressionInput`.
+Because every strict PPT adversary outputs messages of polynomially bounded length while
+`2 ^ (n / 2)` grows exponentially, any `CompressionFamily h` yields
+`CollisionResistant (lengthStrengthenedMD h)`
+(`CompressionFamily.collisionResistant_lengthStrengthenedMD`) and `HashFamily (lengthStrengthenedMD h)`
+(`CompressionFamily.hashFamily_lengthStrengthenedMD`). The
+[checked examples](../../CslibFrontierTests/Crypto/MerkleDamgardLengthStrengthened.lean) compute
+known-answer digests under an XOR compression function at `n = 4`, apply
+`succProbability_collisionGame_lengthStrengthenedMD_eq` to a concrete 5-bit collision domain under
+that XOR compression function (`1` vs `1`), verify the suffix collision behind the `n = 4` overflow
+pair (`mdLengthBlockCount 4 msg = 7`), and build an `n = 4` overflow collision under an all-zero
+compression function (`1` vs `0`); run
+`scripts/build.sh CslibFrontierTests.Crypto.MerkleDamgardLengthStrengthened`.
 
 Merkle–Damgård chains have many messages with one digest at little more than the cost of one
 collision (Joux's attack, [bs23][bs23], §8.4.1, pp. 298–299). Import
