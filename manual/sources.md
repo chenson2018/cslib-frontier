@@ -1064,12 +1064,10 @@ obstruction signals, free-grid transmission and the two directions of seed remov
 Routing formalizes the generic conditional step, including its finite-grid/addressed-patch
 consumers. Signals constructs the finite decorated scaffold, decodes arbitrary scaffold planes,
 and characterizes roles by clear signal edges. Canonical certificates retain 312 selected
-decorated nodes and 376 border states from that same lean-wang revision's
-[ShadedSubstitutionStateWitnesses](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedSubstitutionStateWitnesses.lean)
-and
-[ShadedCarrierBorderHierarchyData](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedCarrierBorderHierarchyData.lean).
-Nodes are reindexed in source-list order; semantic seam certificates and indexed
-border-refinement witnesses replace repeated searches through the source tables.
+decorated nodes from that same lean-wang revision's
+[ShadedSubstitutionStateWitnesses](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedSubstitutionStateWitnesses.lean).
+Nodes are reindexed in source-list order; semantic seam certificates replace repeated
+decoding of the source tables.
 Canonical patches assign nearest-border obstruction signals to matching decorated
 substitutions and establish that the resulting finite scaffold tiles the plane.
 The concrete forcing/realization obligations and Theorem 10 remain outstanding.
