@@ -221,7 +221,6 @@ private theorem axisCoordinate_succ_of_not_free
   simp [axisCoordinate, axisSource, freeCount_succ, notFree, sameCenter]
   omega
 
-
 /-- Forget whether a crossing carries the distinguished corner marker. -/
 @[expose] def eraseCorner : RouteRole → RouteRole
   | .corner => .active
@@ -713,7 +712,6 @@ recognition and centered corner markers. -/
       simpa only [VerticalStepAt, AxisStepAt, axisOutgoing, pointAt,
         sourceAt, orientedNat, axisSuccessor, upperRole, Fin.val_mk] using step
 
-
 /-- A selected closing border is exactly a closing boundary of one of the
 contributing frame depths.  The outer border contributes only an opening. -/
 private theorem selectedBorder_eq_some_false_iff
@@ -770,14 +768,8 @@ private theorem selectedBorder_eq_some_false_iff_of_owner
       ∃ depth, ownerDepth ≤ depth ∧ depth ≤ level ∧
         inFrame depth transverse = true ∧
         coordinate % period depth = frameEndResidue depth := by
-  rw [selectedBorder_eq_some_false_iff]
-  constructor
-  · rintro ⟨depth, positive, bounded, inside, closing⟩
-    exact ⟨depth, ownerDepth_le_of_inFrame owner positive inside,
-      bounded, inside, closing⟩
-  · rintro ⟨depth, ownerLe, bounded, inside, closing⟩
-    exact ⟨depth, (depthAt_pos owner).trans_le ownerLe,
-      bounded, inside, closing⟩
+  rw [selectedBorder_eq_some_iff_of_owner owner]
+  simp [outerBorder, frameBorder_eq_some_false_iff]
 
 /-- No selected boundary of any enclosing frame enters the strict interior of
 the smallest frame owning the transverse coordinate. -/
@@ -905,22 +897,12 @@ private theorem between_frameBounds
   have baseLe : base ≤ position := by
     simp only [frameOpening] at afterOpening
     omega
-  have offsetLt : position - base < period depth := by
+  have positionUpper : position < frameBase depth coordinate + period depth := by
     simp only [frameClosing] at beforeClosing
     have endLt := frameEndResidue_lt_period depth
     omega
-  have baseMod : base % period depth = 0 := by
-    simp [base, frameBase]
-  have positionMod : position % period depth = position - base := by
-    calc
-      position % period depth = (base + (position - base)) % period depth := by
-        rw [Nat.add_sub_of_le baseLe]
-      _ = (base % period depth +
-          (position - base) % period depth) % period depth := by
-        rw [Nat.add_mod]
-      _ = position - base := by
-        rw [baseMod, Nat.mod_eq_of_lt offsetLt]
-        simp [Nat.mod_eq_of_lt offsetLt]
+  have positionMod : position % period depth = position - base :=
+    mod_eq_sub_frameBase_of_mem_block baseLe positionUpper
   have startLt : frameStartResidue depth < position - base := by
     simp only [frameOpening] at afterOpening
     omega
@@ -1272,17 +1254,7 @@ private theorem horizontalCarrier_of_intervalEdge_pair
             coordinateClear' lower before)
         (fun candidate after before =>
           selectedBorder_eq_none_after_frameClosing owner after before)
-      have decomposition : frameBase depth coordinate + coordinate % period depth = coordinate :=
-        Nat.div_add_mod coordinate (period depth)
-      have geometry : inFrame depth coordinate = true ∧
-          onFrameBoundary depth coordinate = false := by
-        constructor
-        · simp only [frameOpening, frameClosing] at bounds
-          simp [inFrame]
-          omega
-        · simp only [frameOpening, frameClosing] at bounds
-          simp [onFrameBoundary]
-          omega
+      have geometry := between_frameBounds bounds.1 bounds.2
       simpa [isHorizontalCarrier, owner] using geometry
 
 /-- Both canonical signal edges are clear exactly on an arithmetic horizontal carrier. -/
@@ -1299,6 +1271,5 @@ theorem intervalEdge_pair_iff_horizontalCarrier
   constructor
   · exact horizontalCarrier_of_intervalEdge_pair coordinate_lt
   · exact intervalEdge_pair_of_horizontalCarrier coordinate_lt
-
 
 end Cslib.WangTile.Robinson.Carrier
