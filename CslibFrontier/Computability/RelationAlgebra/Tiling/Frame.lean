@@ -9,6 +9,7 @@ module
 
 public import CslibFrontier.Computability.WangTile.Basic
 public import CslibFrontier.Foundations.RelationAlgebra.AtomicNetwork
+import Mathlib.Tactic.IntervalCases
 
 /-!
 # The relation algebra of a list of Wang tiles
@@ -38,6 +39,10 @@ consistent when `c˘ ≤ a ; b`. The source's triangle `(a, b, c)` is therefore 
 * `Cslib.RelationAlgebra.Tiling.Rule`: rules 1–4 of the source and the duals of rules 2–4.
 * `Cslib.RelationAlgebra.Tiling.Cycle`: the consistent triangles.
 * `Cslib.RelationAlgebra.tilingFrame`: the frame of `RA(τ)`.
+* `Cslib.RelationAlgebra.Tiling.network`: networks over the frame, from labellings that avoid the
+  rules.
+* `Cslib.RelationAlgebra.Tiling.Atom.code`, `Atom.equivFin`: the numbering of the atoms, a
+  bijection with `Fin (2 * k + 28)`.
 
 ## References
 
@@ -145,7 +150,7 @@ def IsUnit : Atom ι → Prop
   | _ => False
 
 instance : DecidablePred (IsUnit : Atom ι → Prop) := fun a => by
-  cases a <;> unfold IsUnit <;> infer_instance
+  cases a <;> first | exact isTrue trivial | exact isFalse id
 
 @[simp]
 theorem conv_conv (a : Atom ι) : a.conv.conv = a := by cases a <;> simp [conv]
@@ -173,9 +178,16 @@ def Rule (L : List WangTile) :
   | v .two .reverse, green .two .forward, step .two _ => True
   | _, _, _ => False
 
+-- By cases on the atoms, so that `decide` can evaluate the instance in other modules.
 instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Rule L r s t) := by
-  unfold Rule
-  split <;> infer_instance
+  rcases r with _ | _ | ⟨_ | _, _ | _⟩ | ⟨_ | _, _ | _⟩ | ⟨_ | _, _ | _⟩ | _ | ⟨i, _ | _⟩ <;>
+    (try exact isFalse id) <;>
+  rcases s with _ | _ | ⟨_ | _, _ | _⟩ | _ | _ | _ | ⟨j, _ | _⟩ <;> (try exact isFalse id) <;>
+  rcases t with _ | ⟨_ | _ | _, _ | _ | _⟩ | _ | _ | _ | ⟨_ | _, _ | _⟩ | ⟨k, _ | _⟩ <;>
+  first
+    | exact isFalse id
+    | exact isTrue trivial
+    | (dsimp only [Rule]; infer_instance)
 
 /-- A triangle is forbidden when it or one of its five other Peircean transforms is listed in
 `Rule`. -/
@@ -258,4 +270,148 @@ theorem mem_cycles_tilingFrame {L : List WangTile} {r s t : Atom (Fin L.length)}
 instance (L : List WangTile) : DecidablePred (· ∈ (tilingFrame L).cycles) := fun (r, s, t) =>
   inferInstanceAs (Decidable (Cycle L r s t))
 
+/-- A network over the frame of `RA(τ)`, from a labelling of the ordered pairs of nodes in which
+the loops are the edges with unit labels, reversed edges carry converse atoms, every label starts
+at the kind of its first node, and no three nodes, taken in any order, form a triangle listed in
+`Rule`. The six Peircean transforms of a triangle of a network are its six orderings, so the rules
+need to be checked only as listed. -/
+@[simps]
+def Tiling.network {L : List WangTile} {D : Type*} (label : D → D → Atom (Fin L.length))
+    (kind : D → Kind) (isUnit_label : ∀ d e, (label d e).IsUnit ↔ d = e)
+    (conv_label : ∀ d e, (label d e).conv = label e d)
+    (src_label : ∀ d e, (label d e).src = kind d)
+    (not_rule : ∀ d e f, ¬Rule L (label d e) (label e f) (label d f)) :
+    AtomicNetwork (tilingFrame L) D where
+  label := label
+  label_mem_id := isUnit_label _ _
+  conv_label := conv_label
+  label_mem_cycles d e f :=
+    { tgt_eq_src := by rw [Atom.tgt, conv_label, src_label, src_label]
+      src_eq_src := by rw [src_label, src_label]
+      tgt_eq_tgt := by rw [Atom.tgt, Atom.tgt, conv_label, conv_label, src_label, src_label]
+      eq_of_isUnit_left := fun h => by rw [(isUnit_label d e).mp h]
+      eq_of_isUnit_right := fun h => by rw [(isUnit_label e f).mp h]
+      eq_conv_of_isUnit := fun h => by rw [conv_label, (isUnit_label d f).mp h]
+      not_forbidden := by
+        simp only [Forbidden, conv_label, not_or]
+        exact ⟨not_rule _ _ _, not_rule _ _ _, not_rule _ _ _, not_rule _ _ _, not_rule _ _ _,
+          not_rule _ _ _⟩ }
+
 end Cslib.RelationAlgebra
+
+end
+
+/-! ### The numbering of the atoms -/
+
+public section
+
+namespace Cslib.RelationAlgebra.Tiling
+
+/-- The number of a kind of node. -/
+@[expose] def Kind.toNat : Kind → ℕ
+  | zero => 0
+  | one => 1
+  | two => 2
+
+/-- The axes are numbered `0` and `1`. -/
+@[expose] def Axis.toNat : Axis → ℕ
+  | one => 0
+  | two => 1
+
+/-- The forward direction is numbered `0` and the reverse direction `1`. -/
+@[expose] def Direction.toNat : Direction → ℕ
+  | forward => 0
+  | reverse => 1
+
+namespace Atom
+
+variable {k : ℕ}
+
+/-- The number of an atom of `RA(τ)` for `k` tiles, among `0, …, 2k + 27`:
+
+| numbers | atoms |
+|---|---|
+| `0, 1, 2` | `e₀, e₁, e₂` |
+| `3 + 3i + j` | `wᵢⱼ` |
+| `12, 13, 14, 15` | `+1₁, -1₁, +1₂, -1₂` |
+| `16, 17, 18, 19` | `g₀₁, g₁₀, g₀₂, g₂₀` |
+| `20, 21, 22, 23` | `u₀₁, u₁₀, u₀₂, u₂₀` |
+| `24, 25, 26, 27` | `v₀₁, v₁₀, v₀₂, v₂₀` |
+| `28 + 2i, 29 + 2i` | `T₁₂ⁱ, T₂₁ⁱ` |
+-/
+@[expose] def code : Atom (Fin k) → ℕ
+  | unit i => i.toNat
+  | white i j => 3 + 3 * i.toNat + j.toNat
+  | step d o => 12 + 2 * d.toNat + o.toNat
+  | green d o => 16 + 2 * d.toNat + o.toNat
+  | u d o => 20 + 2 * d.toNat + o.toNat
+  | v d o => 24 + 2 * d.toNat + o.toNat
+  | tile i o => 28 + 2 * i + o.toNat
+
+theorem code_lt (a : Atom (Fin k)) : a.code < 2 * k + 28 := by
+  rcases a with i | ⟨i, j⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨i, o⟩
+  case tile => cases o <;> simp only [code, Direction.toNat] <;> omega
+  case unit => cases i <;> simp only [code, Kind.toNat] <;> omega
+  case white => cases i <;> cases j <;> simp only [code, Kind.toNat] <;> omega
+  all_goals cases d <;> cases o <;> simp only [code, Axis.toNat, Direction.toNat] <;> omega
+
+private def kindOf : ℕ → Kind
+  | 0 => .zero
+  | 1 => .one
+  | _ => .two
+
+private def axisOf : ℕ → Axis
+  | 0 => .one
+  | _ => .two
+
+private def directionOf : ℕ → Direction
+  | 0 => .forward
+  | _ => .reverse
+
+/-- The atom with a given number. -/
+private def decode (n : Fin (2 * k + 28)) : Atom (Fin k) :=
+  if h : 28 ≤ n.val then tile ⟨(n - 28) / 2, by omega⟩ (directionOf (n % 2))
+  else if 24 ≤ n.val then v (axisOf ((n - 24) / 2)) (directionOf (n % 2))
+  else if 20 ≤ n.val then u (axisOf ((n - 20) / 2)) (directionOf (n % 2))
+  else if 16 ≤ n.val then green (axisOf ((n - 16) / 2)) (directionOf (n % 2))
+  else if 12 ≤ n.val then step (axisOf ((n - 12) / 2)) (directionOf (n % 2))
+  else if 3 ≤ n.val then white (kindOf ((n - 3) / 3)) (kindOf (n % 3))
+  else unit (kindOf n)
+
+/-- `RA(τ)` has `2k + 28` atoms for `k` tiles: the numbering `Atom.code` is a bijection. -/
+def equivFin : Atom (Fin k) ≃ Fin (2 * k + 28) where
+  toFun a := ⟨a.code, a.code_lt⟩
+  invFun := decode
+  left_inv a := by
+    rcases a with i | ⟨i, j⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨d, o⟩ | ⟨i, o⟩
+    case tile =>
+      have h : 28 ≤ 28 + 2 * i.val + o.toNat := by omega
+      have h₁ : (28 + 2 * i.val + o.toNat - 28) / 2 = i := by
+        cases o <;> simp only [Direction.toNat] <;> omega
+      have h₂ : directionOf ((28 + 2 * i.val + o.toNat) % 2) = o := by
+        cases o <;> simp [Direction.toNat, directionOf, Nat.add_mod]
+      simp only [decode, code, h, ↓reduceDIte, h₁, h₂, Fin.eta]
+    case unit => cases i <;> simp [decode, code, Kind.toNat, kindOf]
+    case white => cases i <;> cases j <;> simp [decode, code, Kind.toNat, kindOf]
+    all_goals cases d <;> cases o <;>
+      simp [decode, code, Axis.toNat, Direction.toNat, axisOf, directionOf]
+  right_inv n := by
+    obtain ⟨n, hn⟩ := n
+    by_cases h : 28 ≤ n
+    · obtain h2 | h2 := Nat.mod_two_eq_zero_or_one n <;>
+        simp [decode, code, h, h2, Direction.toNat, directionOf] <;> omega
+    · have : n < 28 := by omega
+      interval_cases n <;>
+        simp [decode, code, Kind.toNat, Axis.toNat, Direction.toNat, kindOf, axisOf, directionOf]
+
+@[simp]
+theorem coe_equivFin (a : Atom (Fin k)) : (equivFin a : ℕ) = a.code := by rfl
+
+theorem code_injective : Function.Injective (code : Atom (Fin k) → ℕ) := fun _ _ h =>
+  equivFin.injective (Fin.ext h)
+
+instance : Finite (Atom (Fin k)) := .of_equiv _ equivFin.symm
+
+end Atom
+
+end Cslib.RelationAlgebra.Tiling
