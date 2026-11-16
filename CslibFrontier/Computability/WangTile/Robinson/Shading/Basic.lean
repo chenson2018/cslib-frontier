@@ -583,18 +583,28 @@ theorem CycleShade.east_at
   | .south => (stateGrid port.x port.y).south
   | .north => (stateGrid port.x port.y).north
 
+/-- A locally allowed shade state has exactly the red-graph incidence at each port. -/
+theorem value_isSome_eq_portPresent_of_allowed
+    {grid : Nat → Nat → Index} {shadeGrid : Nat → Nat → ShadeState}
+    (port : Port)
+    (allowed : locallyAllowed
+      ⟨grid (port.x / 2) (port.y / 2), quadrantAt port.x port.y⟩
+      (shadeGrid port.x port.y) = true) :
+    (value shadeGrid port).isSome = portPresent grid port := by
+  rcases port with ⟨x, y, side⟩
+  have rules := allowedFor_iff.mp allowed
+  cases side
+  · exact rules.west_present
+  · exact rules.east_present
+  · exact rules.south_present
+  · exact rules.north_present
+
 /-- Allowed shade states have exactly the red-graph incidence. -/
 theorem value_isSome_eq_portPresent
     {grid : Nat → Nat → Index} {shadeGrid : Nat → Nat → ShadeState}
     (valid : ValidShadeGrid grid shadeGrid) (port : Port) :
-    (value shadeGrid port).isSome = portPresent grid port := by
-  rcases port with ⟨x, y, side⟩
-  have allowed := valid.rules x y
-  cases side
-  · exact allowed.west_present
-  · exact allowed.east_present
-  · exact allowed.south_present
-  · exact allowed.north_present
+    (value shadeGrid port).isSome = portPresent grid port :=
+  value_isSome_eq_portPresent_of_allowed port (valid.allowed port.x port.y)
 
 /-- Even parity means equal shades; odd parity means opposite present shades. -/
 @[expose] def Related (parity : Bool) (first second : Option Shade) : Prop :=
@@ -642,34 +652,54 @@ private theorem related_true_of_ne_of_present
     apply hne
     exact congrArg some heq)
 
+private theorem Link.sound_on {indexGrid : Nat → Nat → Index}
+    {stateGrid : Nat → Nat → ShadeState} {region : Nat → Nat → Prop}
+    (allowed : ∀ x y, region x y → locallyAllowed
+      ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩ (stateGrid x y) = true)
+    (hmatch : ∀ x y, region x y → region (x + 1) y →
+      (stateGrid x y).east = (stateGrid (x + 1) y).west)
+    (vmatch : ∀ x y, region x y → region x (y + 1) →
+      (stateGrid x y).north = (stateGrid x (y + 1)).south)
+    {first second : Port} {parity : Bool} (link : Link indexGrid first second parity) :
+    region first.x first.y → region second.x second.y →
+      Related parity (value stateGrid first) (value stateGrid second) := by
+  induction link with
+  | horizontalMatch x y => exact hmatch x y
+  | verticalMatch x y => exact vmatch x y
+  | horizontal x y hpath =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).horizontal_eq hpath
+  | vertical x y hpath =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).vertical_eq hpath
+  | westNorth x y hwest hnorth =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).west_north_corner_eq hwest hnorth
+  | westSouth x y hwest hsouth =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).west_south_corner_eq hwest hsouth
+  | eastNorth x y heast hnorth =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).east_north_corner_eq heast hnorth
+  | eastSouth x y heast hsouth =>
+      exact fun h _ => (allowedFor_iff.mp (allowed x y h)).east_south_corner_eq heast hsouth
+  | crossing x y hhorizontal hvertical =>
+      intro h _
+      have rules : Allowed (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) :=
+        allowedFor_iff.mp (allowed x y h)
+      apply related_true_of_ne_of_present
+      · exact rules.west_present.trans (by
+          simp only [hasWest, hhorizontal, Bool.true_or])
+      · exact rules.south_present.trans (by
+          simp only [hasSouth, hvertical, Bool.true_or])
+      · exact rules.crossing_opposite hhorizontal hvertical
+  | symm link ih => exact fun hfirst hsecond => Related.symm (ih hsecond hfirst)
+
 /-- Each graph link enforces the corresponding shade parity in a valid grid. -/
 theorem Link.sound {indexGrid : Nat → Nat → Index}
     {stateGrid : Nat → Nat → ShadeState}
     (valid : ValidShadeGrid indexGrid stateGrid)
     {first second : Port} {parity : Bool}
     (link : Link indexGrid first second parity) :
-    Related parity (value stateGrid first) (value stateGrid second) := by
-  induction link with
-  | horizontalMatch x y => exact valid.hmatch x y
-  | verticalMatch x y => exact valid.vmatch x y
-  | horizontal x y hpath => exact (valid.rules x y).horizontal_eq hpath
-  | vertical x y hpath => exact (valid.rules x y).vertical_eq hpath
-  | westNorth x y hwest hnorth =>
-      exact (valid.rules x y).west_north_corner_eq hwest hnorth
-  | westSouth x y hwest hsouth =>
-      exact (valid.rules x y).west_south_corner_eq hwest hsouth
-  | eastNorth x y heast hnorth =>
-      exact (valid.rules x y).east_north_corner_eq heast hnorth
-  | eastSouth x y heast hsouth =>
-      exact (valid.rules x y).east_south_corner_eq heast hsouth
-  | crossing x y hhorizontal hvertical =>
-      apply related_true_of_ne_of_present
-      · exact (valid.rules x y).west_present.trans (by
-          simp only [hasWest, hhorizontal, Bool.true_or])
-      · exact (valid.rules x y).south_present.trans (by
-          simp only [hasSouth, hvertical, Bool.true_or])
-      · exact (valid.rules x y).crossing_opposite hhorizontal hvertical
-  | symm link ih => exact Related.symm ih
+    Related parity (value stateGrid first) (value stateGrid second) :=
+  link.sound_on (region := fun _ _ => True)
+    (fun x y _ => valid.allowed x y)
+    (fun x y _ _ => valid.hmatch x y) (fun x y _ _ => valid.vmatch x y) trivial trivial
 
 /-- A parity-consistent assignment to all red-graph ports.  Incidence is part
 of the data because match links exist independently of whether the shared
@@ -772,6 +802,28 @@ theorem Path.sound {indexGrid : Nat → Nat → Index}
   | ofLink link => exact link.sound valid
   | trans firstPath secondPath firstIH secondIH =>
       exact Related.trans firstIH secondIH
+
+/-- A bounded red-wire path relates its endpoint shades using only local validity and
+matching within the bounding rectangle. -/
+theorem BoundedPath.sound {indexGrid : Nat → Nat → Index}
+    {stateGrid : Nat → Nat → ShadeState} {width height : Nat}
+    (allowed : ∀ x y, x < width → y < height → locallyAllowed
+      ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩ (stateGrid x y) = true)
+    (hmatch : ∀ x y, x + 1 < width → y < height →
+      (stateGrid x y).east = (stateGrid (x + 1) y).west)
+    (vmatch : ∀ x y, x < width → y + 1 < height →
+      (stateGrid x y).north = (stateGrid x (y + 1)).south)
+    {first second : Port} {parity : Bool}
+    (path : BoundedPath indexGrid width height first second parity) :
+    Related parity (value stateGrid first) (value stateGrid second) := by
+  induction path with
+  | refl port bounds => rfl
+  | ofLink link first second =>
+      exact link.sound_on (region := fun x y => x < width ∧ y < height)
+        (fun x y h => allowed x y h.1 h.2)
+        (fun x y _ h => hmatch x y h.1 h.2)
+        (fun x y _ h => vmatch x y h.1 h.2) first second
+  | trans firstPath secondPath firstIH secondIH => exact Related.trans firstIH secondIH
 
 @[expose] public section
 /-- Which side of a vertical red border is the board interior. -/
