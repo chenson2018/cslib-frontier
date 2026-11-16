@@ -1052,6 +1052,10 @@ pp. 23–26. The Robinson modules use the corrected 104-tile variant from
 at that revision, retaining its authors and Apache-2.0 credit. The formalized endpoint is
 matching substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
 it does not include Proposition 8's aperiodicity conclusion or domino undecidability.
+The routing worker additionally read §3.3, pp. 26–29, on 2026-11-16: light/dark separation,
+obstruction signals, free-grid transmission and the two directions of seed removal.
+Routing formalizes the generic conditional step, including its finite-grid/addressed-patch
+consumers; the concrete geometric obligations and Theorem 10 remain outstanding.
 This source check is authoring evidence, not independent review.
 
 <a id="johnsonlindenstrauss84"></a>

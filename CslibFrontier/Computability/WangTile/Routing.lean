@@ -36,8 +36,10 @@ zero or a colour occurring in the payload palette.
 
 Restructured from [lean-wang, revision 64268a3, routed scaffolds](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Scaffold/Routed.lean)
 and its `PointedCarrierAddressing` and `PointedPlane` modules. The construction is a step of
-the Robinson seed-removal argument [Robinson1971]; no concrete scaffold obligations are assumed
-proved here.
+the seed-removal argument in [JeandelVanier2020], §3.3, pp. 26–29, after [Robinson1971].
+The roles separate crossings from intervening wire cells, and the two obligations isolate the
+arbitrarily large seeded-square and pointed-plane construction steps; no concrete scaffold
+obligations are assumed proved here.
 -/
 
 public section
@@ -94,6 +96,17 @@ structure RoutedScaffold where
 @[expose] def layer (base payload : WangTile) : WangTile :=
   ⟨Nat.pair base.top payload.top, Nat.pair base.bottom payload.bottom,
     Nat.pair base.left payload.left, Nat.pair base.right payload.right⟩
+
+/-- Layering retains both tile components. -/
+theorem layer_eq_layer_iff {a b c d : WangTile} :
+    layer a b = layer c d ↔ a = c ∧ b = d := by
+  cases a; cases b; cases c; cases d
+  simp only [layer, WangTile.mk.injEq, Nat.pair_eq_pair]
+  constructor
+  · rintro ⟨⟨ht, ht'⟩, ⟨hb, hb'⟩, ⟨hl, hl'⟩, ⟨hr, hr'⟩⟩
+    exact ⟨⟨ht, hb, hl, hr⟩, ⟨ht', hb', hl', hr'⟩⟩
+  · rintro ⟨⟨ht, hb, hl, hr⟩, ⟨ht', hb', hl', hr'⟩⟩
+    exact ⟨⟨ht, ht'⟩, ⟨hb, hb'⟩, ⟨hl, hl'⟩, ⟨hr, hr'⟩⟩
 
 private def palette (τ : List WangTile) : List ℕ :=
   0 :: τ.flatMap fun t => [t.top, t.bottom, t.left, t.right]
