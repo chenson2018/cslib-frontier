@@ -26,8 +26,8 @@ part of the logical interface.
 
 ## Main results
 
-* `RedShadeGraphRefinement.boundedConnectorPath`: live old exit ports reach the
-  corresponding macrocell boundary with even crossing parity.
+* `RedShadeGraphRefinement.livePortPath`: live old ports reach their refined images
+  with even crossing parity.
 * `RedShadeGraphLocalCoverage.exists_boundedPath`: every live fine port is reached
   from the new cycle or an inherited live old port.
 * `RedShadeGraphRefinement.path_refine`: arbitrary red paths preserve parity through
@@ -35,11 +35,12 @@ part of the logical interface.
 
 ## References
 
-The corrected construction follows [JeandelVanier2020], §§3.2–3.3, Figures 16–18
+The corrected construction is after [JeandelVanier2020], §§3.2–3.3, Figures 16–18
 (manuscript pp. 26–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, `RedShadeGraphCertificate`,
-`RedShadeGraphLocalCoverage`, `RedShadeGraphRefinement` and `RedShadeGraphPathRefinement`.
+`RedShadeGraphLocalCoverage`, `RedShadeGraphRefinement`, `RedShadeGraphPathRefinement`,
+`RedShadeGraphTranslation` and `RedShadeGraphCoarsening`.
 The predecessor compression is original; its finite input derives from that revision's
 `RedShadeGraphPathWitnesses` and keeps every port and crossing parity unchanged.
 -/
@@ -51,9 +52,12 @@ open QuarterGeometry RedCycles RedShadeGraph RedShadeGraphBoundedPath
 namespace RedShadeGraphRefinement
 
 /-- The two exits of a quarter macrocell needing a connector. -/
-inductive ExitSide where
+private inductive ExitSide where
   | east | north
   deriving DecidableEq
+
+private instance : Fintype ExitSide :=
+  Fintype.ofList [.east, .north] (by intro side; cases side <;> simp)
 
 /-- Constant grid with the specified parent tile. -/
 @[expose] def coarseGrid (parent : Index) : Nat → Nat → Index := fun _ _ => parent
@@ -63,13 +67,13 @@ inductive ExitSide where
   iterateRefine 2 (coarseGrid parent)
 
 /-- A live exit of the old southwest quarter block. -/
-@[expose] def internalPort (side : ExitSide) (offset : Nat) : Port :=
+@[expose] private def internalPort (side : ExitSide) (offset : Nat) : Port :=
   match side with
   | .east => ⟨1, offset, .east⟩
   | .north => ⟨offset, 1, .north⟩
 
 /-- The corresponding exit on the boundary of the substituted macrocell. -/
-@[expose] def externalPort (side : ExitSide) (offset : Nat) : Port :=
+@[expose] private def externalPort (side : ExitSide) (offset : Nat) : Port :=
   match side with
   | .east => ⟨7, offset, .east⟩
   | .north => ⟨offset, 7, .north⟩
@@ -185,13 +189,12 @@ private structure Row where
   parity : Bool
   predecessor : Nat
   move : Nat
-  deriving Inhabited
 
 private structure Forest where
   root : Nat
   rows : List Row
 
-private def Forest.row (f : Forest) (i : Nat) : Row := f.rows.getD i default
+private def Forest.row (f : Forest) (i : Nat) : Row := f.rows.getD i ⟨0, false, 0, 0⟩
 
 private instance (p : Port) (w h : Nat) : Decidable (PortInBounds p w h) :=
   inferInstanceAs (Decidable (_ ∧ _))
@@ -537,9 +540,6 @@ private def selected (parent : Index) : List (Fin 32) :=
   | 73 | 79 => [7, 17, 18, 30, 31]
   | 34 | 35 | 50 | 51 | 97 | _ => [7, 17, 18, 5, 2]
 
-private def side (i : Fin 4) : Side :=
-  match i.val with | 0 => .west | 1 => .east | 2 => .south | _ => .north
-
 private def reaches (f : Forest) (target : Port) : Bool :=
   f.rows.any fun r => decide (decodePort r.port = target)
 
@@ -550,228 +550,49 @@ private def connects (f : Forest) (start finish : Port) : Bool :=
 private def Verified (parent : Index) : Prop :=
   (∀ id ∈ selected parent,
     (forest id).Valid (fineGrid parent) ∧ decodePort (forest id).root ∈ sources parent) ∧
-  (∀ x y : Fin 8, ∀ s : Fin 4,
-    portPresent (fineGrid parent) ⟨x, y, side s⟩ = true →
-    ((selected parent).any fun id => reaches (forest id) ⟨x, y, side s⟩) = true) ∧
-  (∀ b : Bool, ∀ offset : Fin 2,
-    let exit := if b then ExitSide.north else ExitSide.east
+  (∀ x y : Fin 8, ∀ s : Side,
+    portPresent (fineGrid parent) ⟨x, y, s⟩ = true →
+    ((selected parent).any fun id => reaches (forest id) ⟨x, y, s⟩) = true) ∧
+  (∀ exit : ExitSide, ∀ offset : Fin 2,
     portPresent (coarseGrid parent) (internalPort exit offset) = true →
     ((selected parent).any fun id =>
       connects (forest id) (internalPort exit offset) (externalPort exit offset)) = true)
 
 private instance (parent : Index) : Decidable (Verified parent) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
-private theorem checked0 : Verified 0 := by decide
-private theorem checked1 : Verified 1 := by decide
-private theorem checked2 : Verified 2 := by decide
-private theorem checked3 : Verified 3 := by decide
-private theorem checked4 : Verified 4 := by decide
-private theorem checked5 : Verified 5 := by decide
-private theorem checked6 : Verified 6 := by decide
-private theorem checked7 : Verified 7 := by decide
-private theorem checked8 : Verified 8 := by decide
-private theorem checked9 : Verified 9 := by decide
-private theorem checked10 : Verified 10 := by decide
-private theorem checked11 : Verified 11 := by decide
-private theorem checked12 : Verified 12 := by decide
-private theorem checked13 : Verified 13 := by decide
-private theorem checked14 : Verified 14 := by decide
-private theorem checked15 : Verified 15 := by decide
-private theorem checked16 : Verified 16 := by decide
-private theorem checked17 : Verified 17 := by decide
-private theorem checked18 : Verified 18 := by decide
-private theorem checked19 : Verified 19 := by decide
-private theorem checked20 : Verified 20 := by decide
-private theorem checked21 : Verified 21 := by decide
-private theorem checked22 : Verified 22 := by decide
-private theorem checked23 : Verified 23 := by decide
-private theorem checked24 : Verified 24 := by decide
-private theorem checked25 : Verified 25 := by decide
-private theorem checked26 : Verified 26 := by decide
-private theorem checked27 : Verified 27 := by decide
-private theorem checked28 : Verified 28 := by decide
-private theorem checked29 : Verified 29 := by decide
-private theorem checked30 : Verified 30 := by decide
-private theorem checked31 : Verified 31 := by decide
-private theorem checked32 : Verified 32 := by decide
-private theorem checked33 : Verified 33 := by decide
-private theorem checked34 : Verified 34 := by decide
-private theorem checked35 : Verified 35 := by decide
-private theorem checked36 : Verified 36 := by decide
-private theorem checked37 : Verified 37 := by decide
-private theorem checked38 : Verified 38 := by decide
-private theorem checked39 : Verified 39 := by decide
-private theorem checked40 : Verified 40 := by decide
-private theorem checked41 : Verified 41 := by decide
-private theorem checked42 : Verified 42 := by decide
-private theorem checked43 : Verified 43 := by decide
-private theorem checked44 : Verified 44 := by decide
-private theorem checked45 : Verified 45 := by decide
-private theorem checked46 : Verified 46 := by decide
-private theorem checked47 : Verified 47 := by decide
-private theorem checked48 : Verified 48 := by decide
-private theorem checked49 : Verified 49 := by decide
-private theorem checked50 : Verified 50 := by decide
-private theorem checked51 : Verified 51 := by decide
-private theorem checked52 : Verified 52 := by decide
-private theorem checked53 : Verified 53 := by decide
-private theorem checked54 : Verified 54 := by decide
-private theorem checked55 : Verified 55 := by decide
-private theorem checked56 : Verified 56 := by decide
-private theorem checked57 : Verified 57 := by decide
-private theorem checked58 : Verified 58 := by decide
-private theorem checked59 : Verified 59 := by decide
-private theorem checked60 : Verified 60 := by decide
-private theorem checked61 : Verified 61 := by decide
-private theorem checked62 : Verified 62 := by decide
-private theorem checked63 : Verified 63 := by decide
-private theorem checked64 : Verified 64 := by decide
-private theorem checked65 : Verified 65 := by decide
-private theorem checked66 : Verified 66 := by decide
-private theorem checked67 : Verified 67 := by decide
-private theorem checked68 : Verified 68 := by decide
-private theorem checked69 : Verified 69 := by decide
-private theorem checked70 : Verified 70 := by decide
-private theorem checked71 : Verified 71 := by decide
-private theorem checked72 : Verified 72 := by decide
-private theorem checked73 : Verified 73 := by decide
-private theorem checked74 : Verified 74 := by decide
-private theorem checked75 : Verified 75 := by decide
-private theorem checked76 : Verified 76 := by decide
-private theorem checked77 : Verified 77 := by decide
-private theorem checked78 : Verified 78 := by decide
-private theorem checked79 : Verified 79 := by decide
-private theorem checked80 : Verified 80 := by decide
-private theorem checked81 : Verified 81 := by decide
-private theorem checked82 : Verified 82 := by decide
-private theorem checked83 : Verified 83 := by decide
-private theorem checked84 : Verified 84 := by decide
-private theorem checked85 : Verified 85 := by decide
-private theorem checked86 : Verified 86 := by decide
-private theorem checked87 : Verified 87 := by decide
-private theorem checked88 : Verified 88 := by decide
-private theorem checked89 : Verified 89 := by decide
-private theorem checked90 : Verified 90 := by decide
-private theorem checked91 : Verified 91 := by decide
-private theorem checked92 : Verified 92 := by decide
-private theorem checked93 : Verified 93 := by decide
-private theorem checked94 : Verified 94 := by decide
-private theorem checked95 : Verified 95 := by decide
-private theorem checked96 : Verified 96 := by decide
-private theorem checked97 : Verified 97 := by decide
-private theorem checked98 : Verified 98 := by decide
-private theorem checked99 : Verified 99 := by decide
-private theorem checked100 : Verified 100 := by decide
-private theorem checked101 : Verified 101 := by decide
-private theorem checked102 : Verified 102 := by decide
-private theorem checked103 : Verified 103 := by decide
+private theorem verified0 : ∀ i : Fin 13, Verified ⟨0 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified1 : ∀ i : Fin 13, Verified ⟨13 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified2 : ∀ i : Fin 13, Verified ⟨26 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified3 : ∀ i : Fin 13, Verified ⟨39 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified4 : ∀ i : Fin 13, Verified ⟨52 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified5 : ∀ i : Fin 13, Verified ⟨65 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified6 : ∀ i : Fin 13, Verified ⟨78 + i.val, by omega⟩ := by
+  decide +kernel
+private theorem verified7 : ∀ i : Fin 13, Verified ⟨91 + i.val, by omega⟩ := by
+  decide +kernel
 
 private theorem verified (parent : Index) : Verified parent := by
-  fin_cases parent
-  · exact checked0
-  · exact checked1
-  · exact checked2
-  · exact checked3
-  · exact checked4
-  · exact checked5
-  · exact checked6
-  · exact checked7
-  · exact checked8
-  · exact checked9
-  · exact checked10
-  · exact checked11
-  · exact checked12
-  · exact checked13
-  · exact checked14
-  · exact checked15
-  · exact checked16
-  · exact checked17
-  · exact checked18
-  · exact checked19
-  · exact checked20
-  · exact checked21
-  · exact checked22
-  · exact checked23
-  · exact checked24
-  · exact checked25
-  · exact checked26
-  · exact checked27
-  · exact checked28
-  · exact checked29
-  · exact checked30
-  · exact checked31
-  · exact checked32
-  · exact checked33
-  · exact checked34
-  · exact checked35
-  · exact checked36
-  · exact checked37
-  · exact checked38
-  · exact checked39
-  · exact checked40
-  · exact checked41
-  · exact checked42
-  · exact checked43
-  · exact checked44
-  · exact checked45
-  · exact checked46
-  · exact checked47
-  · exact checked48
-  · exact checked49
-  · exact checked50
-  · exact checked51
-  · exact checked52
-  · exact checked53
-  · exact checked54
-  · exact checked55
-  · exact checked56
-  · exact checked57
-  · exact checked58
-  · exact checked59
-  · exact checked60
-  · exact checked61
-  · exact checked62
-  · exact checked63
-  · exact checked64
-  · exact checked65
-  · exact checked66
-  · exact checked67
-  · exact checked68
-  · exact checked69
-  · exact checked70
-  · exact checked71
-  · exact checked72
-  · exact checked73
-  · exact checked74
-  · exact checked75
-  · exact checked76
-  · exact checked77
-  · exact checked78
-  · exact checked79
-  · exact checked80
-  · exact checked81
-  · exact checked82
-  · exact checked83
-  · exact checked84
-  · exact checked85
-  · exact checked86
-  · exact checked87
-  · exact checked88
-  · exact checked89
-  · exact checked90
-  · exact checked91
-  · exact checked92
-  · exact checked93
-  · exact checked94
-  · exact checked95
-  · exact checked96
-  · exact checked97
-  · exact checked98
-  · exact checked99
-  · exact checked100
-  · exact checked101
-  · exact checked102
-  · exact checked103
+  have key : ∀ k : Fin 8, ∀ i : Fin 13, Verified ⟨13 * k.val + i.val, by omega⟩ := by
+    intro k
+    fin_cases k
+    · exact verified0
+    · exact verified1
+    · exact verified2
+    · exact verified3
+    · exact verified4
+    · exact verified5
+    · exact verified6
+    · exact verified7
+  have h := key ⟨parent.val / 13, by omega⟩ ⟨parent.val % 13, Nat.mod_lt _ (by decide)⟩
+  have e : (⟨13 * (parent.val / 13) + parent.val % 13, by omega⟩ : Index) = parent :=
+    Fin.ext (Nat.div_add_mod _ _)
+  exact e ▸ h
 
 private theorem reaches_sound {grid : Nat → Nat → Index} {f : Forest}
     (valid : f.Valid grid) {target : Port} (h : reaches f target = true) :
@@ -797,30 +618,21 @@ private theorem bounds_of_mem {p : Port} {width height : Nat}
   obtain ⟨y, hy, x, hx, h⟩ := h
   rcases h with rfl | rfl | rfl | rfl <;> exact ⟨hx, hy⟩
 
-private theorem side_surjective (s : Side) : ∃ i : Fin 4, side i = s := by
-  cases s
-  · exact ⟨0, rfl⟩
-  · exact ⟨1, rfl⟩
-  · exact ⟨2, rfl⟩
-  · exact ⟨3, rfl⟩
-
 end RedPathCertificate
 namespace RedShadeGraphRefinement
 open RedPathCertificate
 
 /-- Every live old east or north port reaches its macrocell boundary evenly,
 with every intermediate port inside the `8 × 8` quarter block. -/
-theorem boundedConnectorPath (parent : Index) (exit : ExitSide)
+private theorem boundedConnectorPath (parent : Index) (exit : ExitSide)
     {offset : Nat} (hoffset : offset < 2)
     (present : portPresent (coarseGrid parent) (internalPort exit offset) = true) :
     BoundedPath (fineGrid parent) 8 8 (internalPort exit offset)
       (externalPort exit offset) false := by
   have checked := (verified parent).2.2
   have accepted : ((selected parent).any fun id =>
-      connects (forest id) (internalPort exit offset) (externalPort exit offset)) = true := by
-    cases exit
-    · exact checked false ⟨offset, hoffset⟩ present
-    · exact checked true ⟨offset, hoffset⟩ present
+      connects (forest id) (internalPort exit offset) (externalPort exit offset)) = true :=
+    checked exit ⟨offset, hoffset⟩ present
   obtain ⟨id, hid, h⟩ := List.any_eq_true.mp accepted
   exact connects_sound ((verified parent).1 id hid).1 h
 
@@ -836,19 +648,14 @@ theorem exists_boundedPath (parent : Index) {target : Port}
     ∃ source ∈ sources parent, ∃ parity,
       BoundedPath (fineGrid parent) 8 8 source target parity := by
   obtain ⟨hx, hy⟩ := bounds_of_mem mem
-  obtain ⟨s, hs⟩ := side_surjective target.side
-  have targetEq : (⟨target.x, target.y, side s⟩ : Port) = target := by
-    cases target
-    simp_all only
-  have accepted := (verified parent).2.1 ⟨target.x, hx⟩ ⟨target.y, hy⟩ s
-  rw [targetEq] at accepted
+  have accepted := (verified parent).2.1 ⟨target.x, hx⟩ ⟨target.y, hy⟩ target.side
   obtain ⟨id, hid, hreach⟩ := List.any_eq_true.mp (accepted present)
   obtain ⟨valid, hsource⟩ := (verified parent).1 id hid
   exact ⟨_, hsource, reaches_sound valid hreach⟩
 
-private theorem baseChecked : ∀ x y s : Fin 4,
-    portPresent (fineGrid 0) ⟨2 + x.val, 2 + y.val, side s⟩ = true →
-    reaches (forest 2) ⟨2 + x.val, 2 + y.val, side s⟩ = true := by decide
+private theorem baseChecked : ∀ x y : Fin 4, ∀ s : Side,
+    portPresent (fineGrid 0) ⟨2 + x.val, 2 + y.val, s⟩ = true →
+    reaches (forest 2) ⟨2 + x.val, 2 + y.val, s⟩ = true := by decide
 
 /-- Every live port in the central `4 × 4` region of parent zero's block
 belongs to the newly created cycle component. -/
@@ -857,14 +664,13 @@ theorem base_exists_boundedPath {target : Port}
     (south : 2 ≤ target.y) (north : target.y < 6)
     (present : portPresent (fineGrid 0) target = true) :
     ∃ parity, BoundedPath (fineGrid 0) 8 8 cycleSource target parity := by
-  obtain ⟨s, hs⟩ := side_surjective target.side
-  have targetEq : (⟨2 + (target.x - 2), 2 + (target.y - 2), side s⟩ : Port) = target := by
+  have targetEq : (⟨2 + (target.x - 2), 2 + (target.y - 2), target.side⟩ : Port) = target := by
     have hx : 2 + (target.x - 2) = target.x := by omega
     have hy : 2 + (target.y - 2) = target.y := by omega
     cases target
     simp only [Port.mk.injEq]
-    exact ⟨hx, hy, hs⟩
-  have h := baseChecked ⟨target.x - 2, by omega⟩ ⟨target.y - 2, by omega⟩ s
+    exact ⟨hx, hy, rfl⟩
+  have h := baseChecked ⟨target.x - 2, by omega⟩ ⟨target.y - 2, by omega⟩ target.side
   rw [targetEq] at h
   exact reaches_sound ((verified 0).1 2 (by decide)).1 (h present)
 
@@ -937,7 +743,7 @@ private theorem link_translate
   | symm _ ih => exact Link.symm (ih hsecond hfirst)
 
 /-- Transport a bounded path to any even translate with the same local components. -/
-theorem boundedPath_translate
+private theorem boundedPath_translate
     {grid other : Nat → Nat → Index} {width height offsetX offsetY : Nat}
     (hx : offsetX % 2 = 0) (hy : offsetY % 2 = 0)
     (componentsEq : ∀ x y, x < width → y < height →
@@ -1004,7 +810,7 @@ private theorem quadrantAt_sparse (x y : Nat) :
   simp [quadrantAt, sparseCoordinate, Nat.add_mod, Nat.mul_mod]
 
 /-- An east/north port is moved to the macrocell boundary when it exits an old tile. -/
-@[expose] def exitCoordinate (coordinate : Nat) : Nat :=
+@[expose] private def exitCoordinate (coordinate : Nat) : Nat :=
   if coordinate % 2 = 1 then 8 * (coordinate / 2) + 7 else sparseCoordinate coordinate
 
 /-- Side-sensitive refinement: west/south stay sparse, east/north reach the block boundary. -/

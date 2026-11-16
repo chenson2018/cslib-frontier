@@ -83,71 +83,154 @@ example (n : Nat) : CycleOn
     (2 ^ n) (3 * 2 ^ n) (2 ^ n) (3 * 2 ^ n) := by
   simpa only [Nat.mul_one, Nat.one_mul, Nat.mul_comm] using (fixed_cycle 103).iterateRefine n
 
-/-! A periodic light-square shade grid satisfies all geometry premises together.
-This does not claim that its tile indices form a matching Robinson plane. -/
+/-- Complete local coverage reaches a concrete live macrocell exit. -/
+example : ∃ source ∈ RedShadeGraphLocalCoverage.sources 13, ∃ parity,
+    RedShadeGraphBoundedPath.BoundedPath (RedShadeGraphRefinement.fineGrid 13)
+      8 8 source ⟨7, 1, .east⟩ parity :=
+  RedShadeGraphLocalCoverage.exists_boundedPath 13 (by decide) (by decide)
+
+/-- A live old east port connects evenly to its side-sensitive refined image. -/
+example : Path (iterateRefine 2 crossingGrid)
+    (RedShadeGraphRefinement.sparsePort ⟨1, 1, .east⟩)
+    (RedShadeGraphRefinement.refinedPort ⟨1, 1, .east⟩) false :=
+  RedShadeGraphRefinement.livePortPath crossingGrid ⟨1, 1, .east⟩ (by decide)
+
+/-! A light board with a nonempty interior, free row 2, and non-free column 3.
+The fixture is adapted from reviewer-claude-shading's checked example; it asserts local
+shade validity, without asserting that these indices tile as ordinary Robinson Wang tiles. -/
 
 namespace Cslib.WangTile.Robinson.Tests
+open RedShadeCycles ShadedPlaneSignalGrid
 
-open QuarterGeometry RedShadePaths RedShadeCycles OrientedRedCycles
-
-private def cornerGrid (x y : Nat) : Index :=
-  if y % 2 = 0 then (if x % 2 = 0 then 0 else 1)
-  else (if x % 2 = 0 then 2 else 3)
-
-private def cornerShades (x y : Nat) : RedShades.State :=
+private def boardGrid (x y : Nat) : Index :=
   match x % 4, y % 4 with
-  | 1, 1 => ⟨none, some .light, none, some .light⟩
-  | 2, 1 => ⟨some .light, none, none, some .light⟩
-  | 1, 2 => ⟨none, some .light, some .light, none⟩
-  | 2, 2 => ⟨some .light, none, some .light, none⟩
+  | 0, 0 => 0 | 3, 0 => 1 | 0, 3 => 2 | 3, 3 => 3
+  | 1, 0 | 2, 0 => 22
+  | 1, 3 | 2, 3 => 10
+  | 0, 1 | 0, 2 => 14
+  | 3, 1 | 3, 2 => 16
+  | 1, 1 => 0 | 2, 1 => 1 | 1, 2 => 2 | 2, 2 => 3
+  | _, _ => 0
+
+private def lightShade : Option Shade := some .light
+
+private def boardShades (x y : Nat) : State :=
+  match x % 8, y % 8 with
+  | 1, 1 => ⟨none, lightShade, none, lightShade⟩
+  | 2, 1 | 3, 1 | 4, 1 | 5, 1 => ⟨lightShade, lightShade, none, none⟩
+  | 6, 1 => ⟨lightShade, none, none, lightShade⟩
+  | 1, 2 | 1, 3 | 1, 4 | 1, 5 => ⟨none, none, lightShade, lightShade⟩
+  | 6, 2 | 6, 3 | 6, 4 | 6, 5 => ⟨none, none, lightShade, lightShade⟩
+  | 1, 6 => ⟨none, lightShade, lightShade, none⟩
+  | 2, 6 | 3, 6 | 4, 6 | 5, 6 => ⟨lightShade, lightShade, none, none⟩
+  | 6, 6 => ⟨lightShade, none, lightShade, none⟩
+  | 3, 3 => ⟨none, lightShade, none, lightShade⟩
+  | 4, 3 => ⟨lightShade, none, none, lightShade⟩
+  | 3, 4 => ⟨none, lightShade, lightShade, none⟩
+  | 4, 4 => ⟨lightShade, none, lightShade, none⟩
   | _, _ => ⟨none, none, none, none⟩
 
-private theorem cornerShades_valid : ValidShadeGrid cornerGrid cornerShades where
-  allowed x y := by
-    have finite : ∀ x y : Fin 4,
-        RedShades.locallyAllowed
-          ⟨cornerGrid (x.val / 2) (y.val / 2), quadrantAt x.val y.val⟩
-          (cornerShades x.val y.val) = true := by decide
-    have hx : ((x % 4) / 2) % 2 = (x / 2) % 2 := by omega
-    have hy : ((y % 4) / 2) % 2 = (y / 2) % 2 := by omega
-    have hx' : (x % 4) % 2 = x % 2 := by omega
-    have hy' : (y % 4) % 2 = y % 2 := by omega
-    simpa only [cornerGrid, cornerShades, quadrantAt, Nat.mod_mod, hx, hy, hx', hy'] using
-      finite ⟨x % 4, Nat.mod_lt _ (by decide)⟩ ⟨y % 4, Nat.mod_lt _ (by decide)⟩
-  hmatch x y := by
-    have finite : ∀ x y : Fin 4,
-        (cornerShades x.val y.val).east = (cornerShades (x.val + 1) y.val).west := by
-      decide
-    simpa [cornerShades, Nat.add_mod] using
-      finite ⟨x % 4, Nat.mod_lt _ (by decide)⟩ ⟨y % 4, Nat.mod_lt _ (by decide)⟩
-  vmatch x y := by
-    have finite : ∀ x y : Fin 4,
-        (cornerShades x.val y.val).north = (cornerShades x.val (y.val + 1)).south := by
-      decide
-    simpa [cornerShades, Nat.add_mod] using
-      finite ⟨x % 4, Nat.mod_lt _ (by decide)⟩ ⟨y % 4, Nat.mod_lt _ (by decide)⟩
+private theorem boardGrid_mod (x y : Nat) : boardGrid x y = boardGrid (x % 4) (y % 4) := by
+  simp [boardGrid]
 
-private theorem cornerCycle : CycleOn cornerGrid 0 1 0 1 where
+private theorem boardShades_congr {a b a' b' : Nat} (ha : a % 8 = a' % 8) (hb : b % 8 = b' % 8) :
+    boardShades a b = boardShades a' b' := by
+  unfold boardShades; rw [ha, hb]
+
+private theorem quadrantAt_mod (x y : Nat) : quadrantAt x y = quadrantAt (x % 8) (y % 8) := by
+  have hx : x % 8 % 2 = x % 2 := by omega
+  have hy : y % 8 % 2 = y % 2 := by omega
+  simp [quadrantAt, hx, hy]
+
+private theorem boardValid : ValidShadeGrid boardGrid boardShades where
+  allowed x y := by
+    have finite : ∀ x y : Fin 8,
+        RedShades.locallyAllowed
+          ⟨boardGrid (x.val / 2) (y.val / 2), quadrantAt x.val y.val⟩ (boardShades x.val y.val) = true := by
+      decide
+    have h := finite ⟨x % 8, Nat.mod_lt _ (by decide)⟩ ⟨y % 8, Nat.mod_lt _ (by decide)⟩
+    have hx : (x % 8 / 2) % 4 = (x / 2) % 4 := by omega
+    have hy : (y % 8 / 2) % 4 = (y / 2) % 4 := by omega
+    rw [boardGrid_mod (x / 2), boardShades_congr (a' := x % 8) (b' := y % 8) (by omega) (by omega),
+      quadrantAt_mod x, ← hx, ← hy, ← boardGrid_mod]
+    exact h
+  hmatch x y := by
+    have finite : ∀ x y : Fin 8,
+        (boardShades x.val y.val).east = (boardShades (x.val + 1) y.val).west := by decide
+    have h := finite ⟨x % 8, Nat.mod_lt _ (by decide)⟩ ⟨y % 8, Nat.mod_lt _ (by decide)⟩
+    rw [boardShades_congr (a := x) (a' := x % 8) (b := y) (b' := y % 8) (by omega) (by omega),
+      boardShades_congr (a := x + 1) (a' := x % 8 + 1) (b := y) (b' := y % 8) (by omega) (by omega)]
+    exact h
+  vmatch x y := by
+    have finite : ∀ x y : Fin 8,
+        (boardShades x.val y.val).north = (boardShades x.val (y.val + 1)).south := by decide
+    have h := finite ⟨x % 8, Nat.mod_lt _ (by decide)⟩ ⟨y % 8, Nat.mod_lt _ (by decide)⟩
+    rw [boardShades_congr (a := x) (a' := x % 8) (b := y) (b' := y % 8) (by omega) (by omega),
+      boardShades_congr (a := x) (a' := x % 8) (b := y + 1) (b' := y % 8 + 1) (by omega) (by omega)]
+    exact h
+
+private theorem boardCycle : CycleOn boardGrid 0 3 0 3 where
   west_lt_east := by decide
   south_lt_north := by decide
   southwest := by decide
   southeast := by decide
   northwest := by decide
   northeast := by decide
-  southLane := by intros; omega
-  northLane := by intros; omega
-  westLane := by intros; omega
-  eastLane := by intros; omega
+  southLane x h₁ h₂ := by
+    have : x = 1 ∨ x = 2 := by omega
+    rcases this with rfl | rfl <;> decide
+  northLane x h₁ h₂ := by
+    have : x = 1 ∨ x = 2 := by omega
+    rcases this with rfl | rfl <;> decide
+  westLane y h₁ h₂ := by
+    have : y = 1 ∨ y = 2 := by omega
+    rcases this with rfl | rfl <;> decide
+  eastLane y h₁ h₂ := by
+    have : y = 1 ∨ y = 2 := by omega
+    rcases this with rfl | rfl <;> decide
 
-private theorem cornerCycle_light : CycleShade cornerShades 0 1 0 1 .light := by
+private theorem boardLight : CycleShade boardShades 0 3 0 3 .light := by
   constructor <;> decide
 
-example : ∃ (grid : Nat → Nat → Index) (shades : Nat → Nat → RedShades.State),
-    ValidShadeGrid grid shades ∧ CycleOn grid 0 1 0 1 ∧
-      CycleShade shades 0 1 0 1 .light :=
-  ⟨cornerGrid, cornerShades, cornerShades_valid, cornerCycle, cornerCycle_light⟩
+private theorem freeRow : IsFreeRow boardGrid boardShades 0 3 2 := by
+  intro x h₁ h₂
+  have : x = 2 ∨ x = 3 ∨ x = 4 ∨ x = 5 := by
+    simp only [quarterWest, quarterEast] at h₁ h₂; omega
+  rcases this with rfl | rfl | rfl | rfl <;> decide
 
-example : ShadedObstructionGeometry.Geometry cornerGrid cornerShades 0 1 0 1 :=
-  OrientedLightGeometry.CycleShade.geometry cornerCycle_light cornerCycle cornerShades_valid
+private theorem notFreeColumn : ¬ IsFreeColumn boardGrid boardShades 0 3 3 := by
+  intro h
+  have := h 3 (by decide) (by decide)
+  revert this
+  decide
+
+/-- The geometry theorem applied at an interior point: the alternatives it offers. -/
+example :
+    ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 2) (quadrantAt 3 2) (boardShades 3 2) ≠ none ∨
+    (∃ boundary, 2 < boundary ∧ boundary < quarterNorth 3 ∧
+      ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 boundary) (quadrantAt 3 boundary)
+        (boardShades 3 boundary) = some .north ∧
+      ∀ y, 2 < y → y < boundary →
+        ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 y) (quadrantAt 3 y) (boardShades 3 y) = none) ∨
+    (∃ boundary, quarterSouth 0 < boundary ∧ boundary < 2 ∧
+      ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 boundary) (quadrantAt 3 boundary)
+        (boardShades 3 boundary) = some .south ∧
+      ∀ y, boundary < y → y < 2 →
+        ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 y) (quadrantAt 3 y) (boardShades 3 y) = none) :=
+  (OrientedLightGeometry.CycleShade.geometry boardLight boardCycle boardValid).verticalBoundary
+    (by decide) (by decide) (by decide) (by decide) freeRow notFreeColumn
+
+/-- Independently: the first and third alternatives fail here, so the theorem really selects
+the inner board's south side at `y = 3`, whose interior lies to the north. -/
+example : ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 2) (quadrantAt 3 2) (boardShades 3 2) = none ∧
+    ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 3) (quadrantAt 3 3) (boardShades 3 3) =
+      some .north := by
+  constructor <;> decide
+
+/-- A wrongly oriented inner boundary is rejected by the local rules together with the outer
+light boardCycle: flipping nothing but the claim, `some .south` at `y = 3` is false. -/
+example : ShadedSignals.selectedHorizontalFor (componentAt boardGrid 3 3) (quadrantAt 3 3) (boardShades 3 3) ≠
+    some .south := by decide
+
 
 end Cslib.WangTile.Robinson.Tests
