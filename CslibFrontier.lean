@@ -1938,7 +1938,9 @@ public import CslibFrontier.Computability.Complexity.Classes.BPP
 public import CslibFrontier.Computability.Complexity.Classes.BPP.Amplification
 public import CslibFrontier.Computability.Complexity.Classes.BPP.Collapse
 public import CslibFrontier.Computability.Complexity.Classes.BPP.Derandomization
+public import CslibFrontier.Computability.Complexity.Classes.BPP.Derandomization.CircuitPRG
 public import CslibFrontier.Computability.Complexity.Classes.BPP.Derandomization.Generator
+public import CslibFrontier.Computability.Complexity.Classes.BPP.Derandomization.SeedEnumeration
 public import CslibFrontier.Computability.Complexity.Classes.BPP.KarpLipton
 public import CslibFrontier.Computability.Complexity.Classes.BPP.Reduction
 public import CslibFrontier.Computability.Complexity.Classes.BPP.WorstCaseHardness
@@ -2219,6 +2221,7 @@ public import CslibFrontier.Computability.Complexity.Classes.ParityP
 public import CslibFrontier.Computability.Complexity.Classes.ParityP.Closure
 public import CslibFrontier.Computability.Complexity.Classes.Promise.Basic
 public import CslibFrontier.Computability.Complexity.Classes.Promise.Circuit
+public import CslibFrontier.Computability.Complexity.Classes.Promise.Oracle
 public import CslibFrontier.Computability.Complexity.Classes.Promise.PP
 public import CslibFrontier.Computability.Complexity.Classes.Promise.Probabilistic
 public import CslibFrontier.Computability.Complexity.Classes.Promise.Randomized
@@ -3602,6 +3605,7 @@ public import CslibFrontier.Computability.Machines.Turing.MultiTape.Halting.SMN
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.Halting.SMNBounds
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.Halting.Specialize
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.HaltsAt
+public import CslibFrontier.Computability.Machines.Turing.MultiTape.HeadCounters
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.InputAt
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.InputPrefix
 public import CslibFrontier.Computability.Machines.Turing.MultiTape.Internal.BinaryAddition
@@ -5064,6 +5068,7 @@ public import CslibFrontier.Crypto.Primitives.PRF.RandPrefixFreeEncoding
 public import CslibFrontier.Crypto.Primitives.PRF.RandomOracleModel
 public import CslibFrontier.Crypto.Primitives.PRF.ToPRG
 public import CslibFrontier.Crypto.Primitives.PRG.Circuit
+public import CslibFrontier.Crypto.Primitives.PRG.Deterministic
 public import CslibFrontier.Crypto.Primitives.PRG.Game
 public import CslibFrontier.Crypto.Primitives.PRG.LFSR
 public import CslibFrontier.Crypto.Primitives.PRG.LinearCongruential
@@ -5838,6 +5843,7 @@ public import CslibFrontier.Foundations.Combinatorics.Expander.BipartiteTanner
 public import CslibFrontier.Foundations.Combinatorics.Expander.BoxProduct
 public import CslibFrontier.Foundations.Combinatorics.Expander.Cayley
 public import CslibFrontier.Foundations.Combinatorics.Expander.Cheeger
+public import CslibFrontier.Foundations.Combinatorics.Expander.Chernoff
 public import CslibFrontier.Foundations.Combinatorics.Expander.Connected
 public import CslibFrontier.Foundations.Combinatorics.Expander.Contraction
 public import CslibFrontier.Foundations.Combinatorics.Expander.CutRank
@@ -6037,6 +6043,7 @@ public import CslibFrontier.Foundations.Control.Monad.FindM
 public import CslibFrontier.Foundations.Control.Monad.IsMonadHom.StateT
 public import CslibFrontier.Foundations.Control.Monad.MapM
 public import CslibFrontier.Foundations.Control.Monad.Memoize
+public import CslibFrontier.Foundations.Control.Monad.StateT
 public import CslibFrontier.Foundations.Data.BiTape
 public import CslibFrontier.Foundations.Data.BiTape.OfCells
 public import CslibFrontier.Foundations.Data.BinaryBranching
