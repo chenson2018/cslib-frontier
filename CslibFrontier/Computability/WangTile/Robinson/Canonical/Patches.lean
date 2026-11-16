@@ -9,8 +9,6 @@ module
 
 public import CslibFrontier.Computability.WangTile.Robinson.Canonical.Certificates
 import CslibFrontier.Computability.WangTile.Compactness
-import Mathlib.Data.List.ChainOfFn
-import Mathlib.Data.List.Interleave
 
 /-!
 # Canonical decorated Robinson patches
@@ -146,17 +144,11 @@ private theorem adjacent_pairs {α : Type*} (rel : α → α → Prop)
     (between : ∀ i, i + 1 < n → rel (block i 1) (block (i + 1) 0))
     (hx : x + 1 < 2 * n) :
     rel (block (x / 2) (x % 2)) (block ((x + 1) / 2) ((x + 1) % 2)) := by
-  have interleaved : List.Interleaves rel
-      (List.ofFn fun i : Fin n => block i.val 1)
-      (List.ofFn fun i : Fin n => block i.val 0) :=
-    List.interleaves_ofFn_even.mpr ⟨fun i => within i.val i.isLt, between⟩
-  have chained := (List.interleaves_iff_length_isChain_interleave.mp interleaved).2
-  rw [List.interleave_ofFn_ofFn_even, List.isChain_ofFn] at chained
-  have selected (k : ℕ) :
-      (if k % 2 = 0 then block (k / 2) 0 else block (k / 2) 1) =
-        block (k / 2) (k % 2) := by
-    rcases Nat.mod_two_eq_zero_or_one k with hbit | hbit <;> simp [hbit]
-  simpa only [selected] using chained x hx
+  rcases Nat.mod_two_eq_zero_or_one x with h | h
+  · rw [h, show (x + 1) / 2 = x / 2 by omega, show (x + 1) % 2 = 1 by omega]
+    exact within _ (by omega)
+  · rw [h, show (x + 1) / 2 = x / 2 + 1 by omega, show (x + 1) % 2 = 0 by omega]
+    exact between _ (by omega)
 
 /-- Every canonical supertile obeys the shade rules throughout its finite square. -/
 theorem supertile_validShadeRectangle (level : Nat) (root : Node) :

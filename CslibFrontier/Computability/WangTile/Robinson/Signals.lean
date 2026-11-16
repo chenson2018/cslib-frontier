@@ -26,18 +26,18 @@ the clear northeast quarter of index zero additionally marks a seeded crossing.
 * `ShadedSite`: a quarter with a shade state and an obstruction state.
 * `scaffold`: the finite shaded Robinson scaffold with its routing decoder.
 * `DecodedPlane`: the semantic sites of an ordinary scaffold plane.
+* `QuarterPlane.regroup`: exact parent regrouping of any matching quarter plane.
 
 ## Main results
 
-* `QuarterPlane.regroup`: every matching quarter plane has an exact parent regrouping.
 * `DecodedPlane.validGrid`: both decorations remain valid on any regrouped quadrant.
 * `ShadedSite.horizontal_iff`, `ShadedSite.vertical_iff`: exact matching semantics.
-* `ShadedSite.routeRole_tile`: the local clear-edge description of the routing role.
 
 ## References
 
-The signal rules are a step of the seed-removal construction in [JeandelVanier2020],
+The obstruction signals are a step of the seed-removal construction in [JeandelVanier2020],
 Section 3.3, pp. 26–29 of the authors' manuscript, using its corrected 104-tile alphabet.
+The directed encoding and the precise absorption rule here are those of lean-wang's `Signals`.
 Prior formalization, revision `64268a3`:
 [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3/LeanWang/Robinson/Closed104),
 modules `QuarterRegrouping` (`phase_even`, `exists_southwest_origin`, `block_spec`),
@@ -239,6 +239,7 @@ structure SignalState where
   south : SignalFlow
   /-- North-edge flow. -/
   north : SignalFlow
+  deriving DecidableEq
 
 /-- The state with all four signal directions absent. -/
 @[expose] def SignalState.clear : SignalState := ⟨.none, .none, .none, .none⟩
@@ -298,23 +299,26 @@ structure ShadedSite where
   /-- Its directed obstruction signals. -/
   signal : SignalState
 
-namespace ShadedSite
-
-private def shadeCode : Option Shade → ℕ
+/-- Code optional red shades as edge colours: absent is zero, light is one, dark is two.
+The canonical seam certificates use the same coding as the scaffold's shade layer. -/
+@[expose] def Shade.code : Option Shade → ℕ
   | none => 0
   | some .light => 1
   | some .dark => 2
 
-private theorem shadeCode_injective : Function.Injective shadeCode := by
+/-- The shade edge code retains absence and both shades. -/
+theorem Shade.code_injective : Function.Injective Shade.code := by
   intro a b h
   rcases a with _ | a <;> rcases b with _ | b
   · rfl
-  · cases b <;> simp [shadeCode] at h
-  · cases a <;> simp [shadeCode] at h
-  · cases a <;> cases b <;> simp_all [shadeCode]
+  · cases b <;> simp [Shade.code] at h
+  · cases a <;> simp [Shade.code] at h
+  · cases a <;> cases b <;> simp_all [Shade.code]
+
+namespace ShadedSite
 
 private def shadeTile (s : ShadeState) : WangTile :=
-  ⟨shadeCode s.north, shadeCode s.south, shadeCode s.west, shadeCode s.east⟩
+  ⟨Shade.code s.north, Shade.code s.south, Shade.code s.west, Shade.code s.east⟩
 
 private def signalTile (s : SignalState) : WangTile :=
   ⟨s.north.code, s.south.code, s.west.code, s.east.code⟩
@@ -344,7 +348,7 @@ theorem horizontal_iff (a b : ShadedSite) :
       (quarterTile a.quarter).right = (quarterTile b.quarter).left ∧
       a.shade.east = b.shade.west ∧ a.signal.east = b.signal.west := by
   simp [tile, layer, shadeTile, signalTile, Nat.pair_eq_pair,
-    shadeCode_injective.eq_iff, SignalFlow.code_injective.eq_iff, and_assoc]
+    Shade.code_injective.eq_iff, SignalFlow.code_injective.eq_iff, and_assoc]
 
 /-- Vertical matching means quarter matching and equality of both decorations. -/
 theorem vertical_iff (a b : ShadedSite) :
@@ -352,7 +356,7 @@ theorem vertical_iff (a b : ShadedSite) :
       (quarterTile a.quarter).top = (quarterTile b.quarter).bottom ∧
       a.shade.north = b.shade.south ∧ a.signal.north = b.signal.south := by
   simp [tile, layer, shadeTile, signalTile, Nat.pair_eq_pair,
-    shadeCode_injective.eq_iff, SignalFlow.code_injective.eq_iff, and_assoc]
+    Shade.code_injective.eq_iff, SignalFlow.code_injective.eq_iff, and_assoc]
 
 private def horizontalClear (t : WangTile) : Bool :=
   decide ((Nat.unpair t.left).2 = 0 ∧ (Nat.unpair t.right).2 = 0)
