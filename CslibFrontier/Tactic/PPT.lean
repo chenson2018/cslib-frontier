@@ -87,8 +87,8 @@ private meta def pptKnownCall : Aesop.RuleTac :=
 
 /-- Expose named probabilistic certificates as search alternatives. -/
 @[aesop unsafe 99% tactic (rule_sets := [PPT])]
-private meta def pptCertificate : Aesop.RuleTac :=
-  Cslib.Tactic.applyCertificates ``IsPPTOn
+private meta def pptCertificate : Aesop.RuleTac := fun input =>
+  withReducible <| Cslib.Tactic.applyCertificates ``IsPPTOn input
 
 /-- Apply a composition theorem with named explicit or implicit arguments, leaving remaining
 premises as subgoals. -/
@@ -235,7 +235,7 @@ private meta def pptFunProp : TacticM Unit :=
     let target := (← instantiateMVars (← getMainTarget)).consumeMData
     unless target.isAppOfArity ``IsPPTOn 5 do throwError "expected an encoded-input PPT goal"
     if target.getAppArgs[2]!.hasExprMVar then throwError "input encoding is not yet determined"
-    Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
+    withReducible <| Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
 
 /-- Let plain compositional rules finish an oracle PPT goal before splitting binds, while
 delegating top-level conditionals and `OracleComp.iterate` loops directly to their rules. -/
@@ -251,7 +251,7 @@ private meta def oraclePptFunProp : TacticM Unit :=
       throwError "oracle iterations use explicit loop rules"
     if (← Cslib.Tactic.withConditionalBody? program fun _ => pure true).isSome then
       throwError "conditional alternatives precede generic composition"
-    Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
+    withReducible <| Cslib.Tactic.PolyTime.Internal.funPropWithPlainBoundary 128
 
 attribute [program_certificate]
   Turing.MultiTapeTM.ComputableInPolyTime.isPPTOn
@@ -292,7 +292,7 @@ private meta def applyConditional (predicate rule : Name) : TacticM Unit :=
     let conditional? ← Cslib.Tactic.withConditionalBody? target.getAppArgs.back!
       fun _ => pure true
     unless conditional?.isSome do throwError "expected a conditional program"
-    liftMetaTactic fun goal => goal.applyConst rule
+    liftMetaTactic fun goal => withReducible <| goal.applyConst rule
 
 /-- Closed Boolean branch selection with a plain polynomial-time condition. -/
 @[aesop unsafe 80% tactic (rule_sets := [PPT])]
@@ -325,7 +325,7 @@ private meta def applyIterate (predicate rule : Name) : TacticM Unit :=
       if body.isAppOf ``OracleComp.iterate then return true
       return (← whnfR body).isAppOf ``OracleComp.iterate
     unless iteration do throwError "expected a probabilistic iteration"
-    liftMetaTactic fun goal => goal.applyConst rule
+    liftMetaTactic fun goal => withReducible <| goal.applyConst rule
 
 /-- Retain the nonincreasing-state closed iteration alternative at its original priority. -/
 @[aesop unsafe 80% tactic (rule_sets := [PPT])]

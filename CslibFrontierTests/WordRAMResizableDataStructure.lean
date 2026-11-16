@@ -490,7 +490,7 @@ theorem pushCommitProg_realizesBounded :
     rcases h with ⟨hw_eq, hw, hbw, hfit_n, hfit⟩
     unfold Fits at *
     try exact ⟨s.mem d.1 + 1, hw_eq, hw, hbw, Nat.lt_succ_self _, hfit⟩
-    try omega
+    omega
 
 /-- Prepare `pop`: if `n = 0` return `((0, 0), 0)`; else read `last = readPacked ... (n - 1)`,
 decrement `mem[base]` to `n - 1`, and return
@@ -534,7 +534,7 @@ theorem popPrepProg_realizesBounded :
     try simp only [StateTransitionSpec.clientResult, StateTransitionSpec.clientState,
       runClient_readPackedMemProg, runClient_packedWordsProg _ hw]
     try refine ⟨s.mem d, trivial, hw, hbw, by omega, hfit⟩
-    try omega
+    omega
 
 /-- Execute non-resizing `get` (`tag = 2`), `set` (`tag = 3`), or `length` (`tag = 4`), taking
 `((base, tag), (arg1, arg2))`. -/
@@ -567,7 +567,7 @@ theorem getSetLenProg_realizesBounded :
     unfold Fits at *
     try exact ⟨s.mem d.1.1, hw_eq, hw, hbw, hidx_cond (Or.inl hc), hfit⟩
     try exact ⟨s.mem d.1.1, hw_eq, hw, hbw, hidx_cond (Or.inr hc), hfit⟩
-    try omega
+    omega
 
 /-! ## 3. Generic `RealizesBounded` → `RCode` leaf lifter (`emitLeafCode`) -/
 

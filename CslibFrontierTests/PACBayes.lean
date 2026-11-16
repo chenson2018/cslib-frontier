@@ -33,7 +33,7 @@ noncomputable def prior : Measure Bool :=
 
 instance : IsProbabilityMeasure prior := by
   constructor
-  simp only [prior, Measure.add_apply, Measure.smul_apply, measure_univ, smul_eq_mul, mul_one]
+  simp only [prior, add_apply, smul_apply, measure_univ, smul_eq_mul, mul_one]
   exact ENNReal.inv_two_add_inv_two
 
 theorem prior_singleton (b : Bool) : prior {b} = 2⁻¹ := by

@@ -128,7 +128,7 @@ private theorem volume_real_Ico_inter_eq_intervalIntegral {r : ℝ} (hr : 0 ≤ 
     (hS : MeasurableSet S) :
     volume.real (Set.Ico 0 r ∩ S) = ∫ b in (0 : ℝ)..r, S.indicator (fun _ => (1 : ℝ)) b := by
   have hcongr : volume (Set.Ico 0 r ∩ S) = volume (Set.Ioc 0 r ∩ S) :=
-    measure_congr (Ico_ae_eq_Ioc.inter Filter.EventuallyEq.rfl)
+    measure_congr (Ico_ae_eq_Ioc.inter .rfl)
   rw [measureReal_def, hcongr, ← measureReal_def, intervalIntegral.integral_of_le hr,
     setIntegral_indicator hS, setIntegral_const, smul_eq_mul, mul_one, Set.inter_comm]
 
