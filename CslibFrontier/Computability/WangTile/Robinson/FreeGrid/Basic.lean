@@ -30,12 +30,12 @@ comparison supplies sparse free lines, and sorting all free lines above the mark
 
 ## Main definitions
 
-* `FreeGrid.ConsecutiveMarkedFreeGrid`: consecutive free rows and columns with a marked
+* `MarkedFreeGrid`: consecutive free rows and columns with a marked
   southwest crossing, indexed by `Fin (n + 1)`.
 
 ## Main results
 
-* `FreeGrid.exists_markedGrid`: every scaffold plane contains such grids of every size
+* `exists_markedFreeGrid`: every scaffold plane contains such grids of every size
   inside uniformly light oriented boards.
 
 ## References
@@ -50,11 +50,13 @@ replace branch lists, and one shade comparison handles both parity phases.
 
 public section
 
-namespace Cslib.WangTile.Robinson.FreeGrid
+namespace Cslib.WangTile.Robinson
+
+open Canonical
 
 /-- Consecutive free rows and columns inside one board, with a marked southwest crossing.
 The parameter `n` denotes one less than the number of selected rows and columns. -/
-structure ConsecutiveMarkedFreeGrid (indexGrid : ℕ → ℕ → Index)
+structure MarkedFreeGrid (indexGrid : ℕ → ℕ → Index)
     (shadeGrid : ℕ → ℕ → ShadeState) (west east south north n : ℕ) where
   /-- Increasing quarter coordinates of columns. -/
   column : Fin (n + 1) → ℕ
@@ -137,7 +139,7 @@ private theorem select_lines {n lo hi : ℕ} {p : ℕ → Prop}
     omega
 
 /-- Fill all gaps in sparse free lines without moving their marked southwest crossing. -/
-private noncomputable def ConsecutiveMarkedFreeGrid.ofSparse
+private theorem MarkedFreeGrid.ofSparse
     {g : ℕ → ℕ → Index} {s : ℕ → ℕ → ShadeState}
     {west east south north n : ℕ}
     (columns rows : Fin (n + 1) → ℕ)
@@ -148,7 +150,7 @@ private noncomputable def ConsecutiveMarkedFreeGrid.ofSparse
       IsFreeRow g s west east (rows i))
     (marker : QuarterIndex.mk (g (columns 0 / 2) (rows 0 / 2))
       (quadrantAt (columns 0) (rows 0)) = ⟨0, .northeast⟩) :
-    ConsecutiveMarkedFreeGrid g s west east south north n := Classical.choice <| by
+    Nonempty (MarkedFreeGrid g s west east south north n) := by
   classical
   obtain ⟨c, hc, hc0, cmem, cnext⟩ := select_lines columns hcolumns column_mem
   obtain ⟨r, hr, hr0, rmem, rnext⟩ := select_lines rows hrows row_mem
@@ -165,9 +167,6 @@ private noncomputable def ConsecutiveMarkedFreeGrid.ofSparse
     noFreeRowBetween := rnext
     marker := by simpa only [hc0, hr0] using marker }⟩
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson
 private theorem crossing_ne {g : ℕ → ℕ → Index} {s : ℕ → ℕ → ShadeState}
     {w e b t w' e' b' t' x y : ℕ} {shade shade' : Shade}
     (valid : ValidShadeGrid g s) (c : CycleOn g w e b t) (d : CycleOn g w' e' b' t')
@@ -238,9 +237,6 @@ private theorem has_light_cycle (g : ℕ → ℕ → Index)
   · exact Or.inr hb
   · exact (neq rfl).elim
 
-end Cslib.WangTile.Robinson
-
-namespace Cslib.WangTile.Robinson
 private theorem exists_refined_zero (base : Plane) (depth : ℕ) :
     ∃ (g : ℕ → ℕ → Index) (u v : ℤ), g 0 0 = 0 ∧
       (fun x y : ℕ => base.index (u + x) (v + y)) = iterateRefine depth g := by
@@ -251,9 +247,6 @@ private theorem exists_refined_zero (base : Plane) (depth : ℕ) :
   · simpa using hab
   · simpa only [t.zero, Nat.zero_add] using h
 
-end Cslib.WangTile.Robinson
-
-namespace Cslib.WangTile.Robinson
 private theorem cell_cycle (g : ℕ → ℕ → Index) (bx by₀ : ℕ) :
     CycleOn (iterateRefine 2 g) (4 * bx + 1) (4 * bx + 3)
       (4 * by₀ + 1) (4 * by₀ + 3) := by
@@ -327,7 +320,7 @@ private theorem corner_shade_opposite
   all_goals
     have positive : 0 < 2 ^ depth := pow_pos (by decide) _
     fin_cases cx <;> fin_cases cy <;>
-      dsimp [x, y, quarterWest, quarterEast, quarterSouth, quarterNorth] <;>
+      dsimp only [x, y, quarterWest, quarterEast, quarterSouth, quarterNorth] <;>
       rw [pow_succ] <;> nlinarith
 
 private theorem cell_half {scale block cell : ℕ}
@@ -406,10 +399,6 @@ private theorem root_descendant_source (depth : ℕ) (g : ℕ → ℕ → Index)
   have cycle := cell_cycle (iterateRefine depth g) cellX cellY
   rw [iterateRefine_add, Nat.add_comm 2 depth] at cycle
   exact cell_source_value valid cellX cellY cycle shaded
-
-end Cslib.WangTile.Robinson
-
-namespace Cslib.WangTile.Robinson.FreeGrid
 
 /-- The sparse branch at index zero is even; every positive index is an odd branch. -/
 private def offset (depth index : ℕ) : ℕ :=
@@ -493,11 +482,6 @@ private theorem offset_children (depth index : ℕ) :
         pow_succ, hpow]
       omega
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
-
 private instance (predicate : Node → Prop) [DecidablePred predicate] :
     Decidable (∀ node : Node, predicate node) :=
   match (inferInstance : Decidable (∀ code : Fin 312, predicate ⟨code⟩)) with
@@ -552,14 +536,9 @@ private def EvenRules (node : Node) : Prop :=
     (∀ a : Fin 6, ∀ fixed : Fin 3, fineClear axis true node (a.val + 2) fixed) ∧
     (∀ a : Fin 2, clear axis true (node.child 10) a 1)
 
-private instance (node : Node) : Decidable (EvenRules node) := inferInstanceAs
-  (Decidable (∀ axis : LineAxis,
-    ((∀ a : Fin 2, clear axis true node a 0) →
-      ∀ a : Fin 8, fineClear axis true node a 0) ∧
-    ((∀ a : Fin 2, clear axis true node a 1) →
-      ∀ a : Fin 8, fineClear axis true node a 1 ∧ fineClear axis true node a 2) ∧
-    (∀ a : Fin 6, ∀ fixed : Fin 3, fineClear axis true node (a.val + 2) fixed) ∧
-    (∀ a : Fin 2, clear axis true (node.child 10) a 1)))
+private instance (node : Node) : Decidable (EvenRules node) := by
+  unfold EvenRules
+  infer_instance
 
 section
 
@@ -810,11 +789,6 @@ private theorem odd_cycle_colours :
 
 end
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
-
 private def canonicalStates (flipped : Bool) (level : ℕ) (root : Node) :
     ℕ → ℕ → ShadeState := fun x y =>
   if flipped then ShadeState.flip (supertileShadeGrid level root x y)
@@ -854,11 +828,6 @@ private theorem canonicalStates_block (flipped : Bool) (level : ℕ) (root : Nod
   | mk x y side =>
     cases side <;> simp [value, canonicalStates, translatePort,
       supertileShadeGrid_block level root bx by₀ x y hx hy]
-
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
 
 private def nodeAt (axis : LineAxis) (level : ℕ) (root : Node) (along fixed : ℕ) : Node :=
   if axis = .column then supertileNodeGrid level root fixed along
@@ -1003,11 +972,6 @@ private theorem even_free (axis : LineAxis) (root : Node) (depth index : ℕ)
       simp only [coordinate, Nat.one_mul] at hold ⊢
       exact even_child hold hchild
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
-
 private def stripNode (axis : LineAxis) (depth offset along : ℕ) : Node :=
   nodeAt axis (depth + 2) seedNode along (2 * 4 ^ depth + offset)
 
@@ -1107,9 +1071,6 @@ private theorem odd_free (axis : LineAxis) (depth index : ℕ) (hi : index ≤ d
     ⟨along % 2, Nat.mod_lt _ (by decide)⟩
   simpa only [clearAt, hd, hm, stripNode] using h
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
 private theorem state_eq_of_present_eq {grid other : ℕ → ℕ → Index}
     {actual canonical : ℕ → ℕ → ShadeState} {x y : ℕ}
     (valid : ValidShadeGrid grid actual)
@@ -1140,9 +1101,6 @@ private theorem state_eq_of_present_eq {grid other : ℕ → ℕ → Index}
   simp only [value, ha, hc] at hw he hs hn
   congr
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
 private theorem sparse_block {bx by₀ : ℕ} {p : Port} (hx : p.x < 2) (hy : p.y < 2) :
     sparsePort (translatePort p (2 * bx) (2 * by₀)) =
       translatePort (sparsePort p) (8 * bx) (8 * by₀) := by
@@ -1288,22 +1246,12 @@ private theorem RefinementComparison.agreement (C : RefinementComparison) :
         rw [← sourceGlobalEq]
         exact sparseActual.trans ((C.sparse d oldGlobal).symm.trans blockValue)
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
 private theorem canonical_source (flipped : Bool) (node : Node) :
     value (canonicalStates flipped 1 node) cycleSource =
       some (if flipped then .light else .dark) := by
   have dark := source_dark node
   cases flipped <;> simp [value, canonicalStates, ShadeState.flip, dark,
     cycleSource, Shade.opposite]
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
-
-
 
 private def initialLevel (flipped : Bool) : ℕ := if flipped then 1 else 2
 private def phaseScale (flipped : Bool) (depth : ℕ) : ℕ :=
@@ -1499,11 +1447,6 @@ private def phaseComparison (flipped : Bool) (coarse : ℕ → ℕ → Index)
     exact (phase_source flipped depth coarse actual bx by₀ valid shaded hX hY).trans
       (canonical_source flipped _).symm
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
-open Canonical
-
 private theorem phase_bound (flipped : Bool) (depth z : ℕ)
     (hz : z < 6 * phaseScale flipped depth) :
     z < 2 * 4 ^ (depth + initialLevel flipped) := by
@@ -1585,9 +1528,6 @@ private theorem phase_free (axis : LineAxis) (flipped : Bool) (depth index : ℕ
     simpa [LineFree, clearAt, nodeAt, clear, canonicalStates, initialLevel,
       supertileShadeGrid, supertileIndexGrid, componentAt, quadrantAt, Nat.mod_mod] using free
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
 private theorem marker_checks :
     iterateRefine 4 (fun _ _ => (0 : Index)) 4 4 = 0 ∧
     iterateRefine 4 (fun _ _ => (0 : Index)) 8 8 = 0 ∧
@@ -1663,16 +1603,16 @@ private theorem phase_marker (flipped : Bool) (depth : ℕ)
     simp [quadrantAt, Quadrant.ofBits, odd]
   rw [half, index, phase]
 
-private noncomputable def phase_marked (flipped : Bool) (depth n : ℕ) (hn : n ≤ depth)
+private theorem phase_marked (flipped : Bool) (depth n : ℕ) (hn : n ≤ depth)
     (positive : flipped = true → 0 < depth)
     (coarse : ℕ → ℕ → Index) (rootEq : coarse 0 0 = 0)
     (actual : ℕ → ℕ → ShadeState)
     (valid : ValidShadeGrid (phaseGrid flipped depth coarse) actual)
     (shaded : CycleShade actual (phaseScale flipped depth) (3 * phaseScale flipped depth)
       (phaseScale flipped depth) (3 * phaseScale flipped depth) .light) :
-    ConsecutiveMarkedFreeGrid (phaseGrid flipped depth coarse) actual
+    Nonempty (MarkedFreeGrid (phaseGrid flipped depth coarse) actual
       (phaseScale flipped depth) (3 * phaseScale flipped depth)
-      (phaseScale flipped depth) (3 * phaseScale flipped depth) n := by
+      (phaseScale flipped depth) (3 * phaseScale flipped depth) n) := by
   let lines : Fin (n + 1) → ℕ := fun i => coordinate (if flipped then 1 else 2) depth i
   have positiveScale : 0 < (if flipped then 1 else 2 : ℕ) := by cases flipped <;> decide
   have increasing : StrictMono lines := by
@@ -1681,7 +1621,7 @@ private noncomputable def phase_marked (flipped : Bool) (depth n : ℕ) (hn : n 
   have bounds (i : Fin (n + 1)) : 2 * phaseScale flipped depth + 1 < lines i ∧
       lines i < 6 * phaseScale flipped depth := coordinate_bounds positiveScale
     (show i.val ≤ depth by have := i.isLt; omega)
-  refine ConsecutiveMarkedFreeGrid.ofSparse lines lines increasing increasing ?_ ?_
+  refine MarkedFreeGrid.ofSparse lines lines increasing increasing ?_ ?_
     (phase_marker flipped depth positive coarse rootEq)
   · intro i
     refine ⟨(bounds i).1, ?_, ?_⟩
@@ -1704,19 +1644,16 @@ private noncomputable def phase_marked (flipped : Bool) (depth n : ℕ) (hn : n 
           dsimp only [quarterEast] at upper
           omega)
 
-end Cslib.WangTile.Robinson.FreeGrid
-
-namespace Cslib.WangTile.Robinson.FreeGrid
 /-- For each `n`, every scaffold plane contains a light board with `n + 1` consecutive
 marked free rows and columns. -/
-theorem exists_markedGrid {P : Cslib.WangTile.Plane scaffold.tiles}
+theorem exists_markedFreeGrid {P : Cslib.WangTile.Plane scaffold.tiles}
     (D : DecodedPlane P) (R : QuarterPlane.Regrouped D.quarterPlane) (n : ℕ) :
     ∃ (a b : ℤ) (scale : ℕ),
       CycleOn (fun i j => R.parent.index (a + i) (b + j))
         scale (3 * scale) scale (3 * scale) ∧
       CycleShade (fun x y => (D.siteGrid R a b x y).shade)
         scale (3 * scale) scale (3 * scale) .light ∧
-      Nonempty (ConsecutiveMarkedFreeGrid
+      Nonempty (MarkedFreeGrid
         (fun i j => R.parent.index (a + i) (b + j))
         (fun x y => (D.siteGrid R a b x y).shade)
         scale (3 * scale) scale (3 * scale) n) := by
@@ -1734,7 +1671,7 @@ theorem exists_markedGrid {P : Cslib.WangTile.Plane scaffold.tiles}
       ∃ scale, CycleOn (fun i j => R.parent.index (a + i) (b + j))
           scale (3 * scale) scale (3 * scale) ∧
         CycleShade states scale (3 * scale) scale (3 * scale) .light ∧
-        Nonempty (ConsecutiveMarkedFreeGrid
+        Nonempty (MarkedFreeGrid
           (fun i j => R.parent.index (a + i) (b + j)) states
           scale (3 * scale) scale (3 * scale) n) := by
     have phaseValid : ValidShadeGrid (phaseGrid flipped depth coarse) states := by
@@ -1744,7 +1681,7 @@ theorem exists_markedGrid {P : Cslib.WangTile.Plane scaffold.tiles}
     · rw [patch, ← gridEq]
       exact phase_cycle flipped depth coarse
     · rw [patch, ← gridEq]
-      exact ⟨phase_marked flipped depth n hn positive coarse rootEq states phaseValid shaded⟩
+      exact phase_marked flipped depth n hn positive coarse rootEq states phaseValid shaded
   have light := has_light_cycle coarse (2 * n + 2) (by omega)
     (s := states) (by simpa only [Nat.add_assoc] using valid)
   rcases light with large | small
@@ -1765,4 +1702,4 @@ theorem exists_markedGrid {P : Cslib.WangTile.Plane scaffold.tiles}
     apply finish false n le_rfl (by simp) gridEq
     simpa only [phaseScale, Bool.false_eq_true, ↓reduceIte, power] using small
 
-end Cslib.WangTile.Robinson.FreeGrid
+end Cslib.WangTile.Robinson
