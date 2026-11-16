@@ -314,8 +314,10 @@ theorem mvvOutput_iff {G : V × V → Bool} {w : V × V → ℕ} {i j : V} :
       weightedEdmonds G w i j * adjugate (weightedEdmonds G w) j i := by
   rw [mvvOutput]
 
-/-- The output of the procedure is decidable. -/
-instance (G : V × V → Bool) (w : V × V → ℕ) (i j : V) : Decidable (mvvOutput G w i j) :=
+/-- The output of the procedure is decidable. The instance is noncomputable because Mathlib's
+`padicValInt` is. -/
+noncomputable instance (G : V × V → Bool) (w : V × V → ℕ) (i j : V) :
+    Decidable (mvvOutput G w i j) :=
   inferInstanceAs (Decidable (¬ (2 : ℤ) ^ (padicValInt 2 (weightedEdmonds G w).det + 1) ∣
     weightedEdmonds G w i j * adjugate (weightedEdmonds G w) j i))
 
@@ -336,8 +338,8 @@ theorem mvvSucceeds_iff {G : V × V → Bool} {w : V × V → ℕ} :
     MVVSucceeds G w ↔ ∃ σ ∈ perfectMatchings G, ∀ i j, σ i = j ↔ mvvOutput G w i j := by
   rw [MVVSucceeds]
 
-/-- Success of the procedure is decidable. -/
-instance (G : V × V → Bool) (w : V × V → ℕ) : Decidable (MVVSucceeds G w) :=
+/-- Success of the procedure is decidable (noncomputably, as for `mvvOutput`). -/
+noncomputable instance (G : V × V → Bool) (w : V × V → ℕ) : Decidable (MVVSucceeds G w) :=
   inferInstanceAs (Decidable (∃ σ ∈ perfectMatchings G, ∀ i j, σ i = j ↔ mvvOutput G w i j))
 
 /-- The procedure succeeds whenever the minimum-weight perfect matching is unique. -/

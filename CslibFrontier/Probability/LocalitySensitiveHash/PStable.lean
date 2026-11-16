@@ -800,7 +800,7 @@ theorem measureCollisionProb_p1StableHash {ι : Type*} [Fintype ι] {r : ℝ} (h
   rw [hsub, pi_cauchyMeasure_map_dotProduct, cauchyMeasure_map_const_mul, mul_zero, mul_one]
   congr 1
   apply NNReal.coe_injective
-  simp only [NNReal.coe_sum, coe_nnnorm, Real.norm_eq_abs, Pi.sub_apply]
+  simp only [NNReal.coe_sum, coe_nnNorm, Real.norm_eq_abs, Pi.sub_apply]
   exact (abs_of_nonneg (Finset.sum_nonneg fun _ _ => abs_nonneg _)).symm
 
 /-- Cauchy `p = 1` LSH is `(d₁, d₂, p1StableProb r d₁, p1StableProb r d₂)`-sensitive for the

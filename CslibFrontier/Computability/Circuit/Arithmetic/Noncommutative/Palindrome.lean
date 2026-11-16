@@ -127,7 +127,8 @@ theorem coeff_pairedWordPoly [DecidableEq X] (σ : (Fin m → X) → (Fin m → 
 theorem isHomogeneous_pairedWordPoly (σ : (Fin m → X) → (Fin m → X)) :
     (pairedWordPoly (K := K) σ).IsHomogeneous (m + m) :=
   IsHomogeneous.sum _ _ fun u _ => by
-    simpa using isHomogeneous_lift_ι (R := K) (FreeMonoid.ofFn u * FreeMonoid.ofFn (σ u))
+    simpa [FreeMonoid.length_mul] using
+      isHomogeneous_lift_ι (R := K) (FreeMonoid.ofFn u * FreeMonoid.ofFn (σ u))
 
 /-- Over a nonempty alphabet, `∑_u u · σ(u)` is nonzero. -/
 theorem pairedWordPoly_ne_zero [Nontrivial K] [Nonempty X] (σ : (Fin m → X) → (Fin m → X)) :
