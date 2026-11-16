@@ -8,6 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Routing
+import Mathlib.Tactic.FinCases
 
 /-! Ordinary-module clients of routing: actual addressed squares, extraction from a constant
 corner grid, and an absent-seed example separating realization from forcing. -/
@@ -152,3 +153,41 @@ example :
 /-- Extraction crosses nonempty intervals of wires and retains the prescribed seed. -/
 example (n : ℕ) : Nonempty (SeededSquare ⟨[⟨0, 0, 0, 0⟩], ⟨0, 0, 0, 0⟩⟩ n) :=
   ⟨(spacedGrid n).seededSquare wirePayload⟩
+
+/-- The smallest wire patch contains one genuine corner and both outgoing carrier wires. -/
+private def spacedAddressing : AddressedSquare wireScaffold 1 where
+  base := {
+    tile := fun i j => wireTile i.val j.val
+    mem := by decide +kernel
+    horizontal := by decide +kernel
+    vertical := by decide +kernel }
+  point := fun _ _ => (0, 0)
+  horizontalSource := fun _ _ => (0, 0)
+  verticalSource := fun _ _ => (0, 0)
+  corner_zero := by decide +kernel
+  hstep := by
+    intro i j hi
+    have hi0 : i = 0 := Fin.ext
+      (Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ (Nat.lt_of_succ_lt_succ hi)))
+    subst i
+    fin_cases j <;> simp [wireScaffold, wireTile,
+      RouteRole.horizontalCarrier, RouteRole.horizontalOutgoing]
+  vstep := by
+    intro i j hj
+    have hj0 : j = 0 := Fin.ext
+      (Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ (Nat.lt_of_succ_lt_succ hj)))
+    subst j
+    fin_cases i <;> simp [wireScaffold, wireTile,
+      RouteRole.verticalCarrier, RouteRole.verticalOutgoing]
+
+/-- Corner placement and both address equations have actual carrier premises in this patch. -/
+example :
+    wireScaffold.role (spacedAddressing.base.tile 0 0) = .corner ∧
+    wireScaffold.role (spacedAddressing.base.tile 1 0) = .horizontal ∧
+    wireScaffold.role (spacedAddressing.base.tile 0 1) = .vertical ∧
+    spacedAddressing.point 0 0 = (0, 0) := by
+  exact ⟨rfl, rfl, rfl, spacedAddressing.corner_zero 0 0 rfl⟩
+
+/-- Cropping constructs a smaller matching rectangle through ordinary dot notation. -/
+example : Nonempty (Rectangle wireScaffold.tiles 1 1) :=
+  ⟨spacedAddressing.base.crop (by decide) (by decide)⟩

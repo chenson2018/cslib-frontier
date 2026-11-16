@@ -53,8 +53,6 @@ set_option Elab.async false
 
 namespace Cslib.WangTile.Robinson.Canonical
 
-open Quarters QuarterGeometry RedShadeGraphRefinement
-
 -- Halo rows retain source order. Child and border node entries use ranks in the source
 -- reachable-node enumeration. Halos encode absence/false/true as 0/1/2; packed target
 -- rows use sixteen base-376 digits, in child order x + 4*y. All are checked below.
@@ -346,17 +344,17 @@ private def borderTargetCodes : Array Nat := #[
 /-- The four quarter shade states of one decorated Robinson tile. -/
 structure ShadeBlock where
   /-- Southwest quarter. -/
-  southwest : RedShades.State
+  southwest : ShadeState
   /-- Southeast quarter. -/
-  southeast : RedShades.State
+  southeast : ShadeState
   /-- Northwest quarter. -/
-  northwest : RedShades.State
+  northwest : ShadeState
   /-- Northeast quarter. -/
-  northeast : RedShades.State
+  northeast : ShadeState
   deriving DecidableEq
 
 /-- Read a quarter; zero selects west/south and a nonzero offset east/north. -/
-@[expose] def ShadeBlock.at (block : ShadeBlock) (x y : ℕ) : RedShades.State :=
+@[expose] def ShadeBlock.at (block : ShadeBlock) (x y : ℕ) : ShadeState :=
   if x = 0 then if y = 0 then block.southwest else block.northwest
   else if y = 0 then block.southeast else block.northeast
 
@@ -428,11 +426,11 @@ end
     4540248, 19134792, 38269584, 183708, 2152008, 15943230, 38269584, 4304016, 4304016,
     4304016, 31886460, 31886460
   ]
-  let decodeShade : Nat → Option RedShades.Shade := fun
+  let decodeShade : Nat → Option Shade := fun
     | 0 => none
     | 1 => some .dark
     | _ => some .light
-  let decodeState (code : Nat) : RedShades.State :=
+  let decodeState (code : Nat) : ShadeState :=
     ⟨decodeShade (code % 3), decodeShade (code / 3 % 3),
       decodeShade (code / 9 % 3), decodeShade (code / 27 % 3)⟩
   let decodeBlock (code : Nat) : ShadeBlock :=
@@ -788,7 +786,7 @@ instance : DecidableRel VCompatible := fun lower upper =>
       lower.block.vMatches upper.block = true))
 
 private def nodeCheck (node : Node) : Bool := decide (
-  (∀ x y : Fin 2, RedShades.locallyAllowed ⟨node.parent, quadrantAt x y⟩
+  (∀ x y : Fin 2, locallyAllowed ⟨node.parent, quadrantAt x y⟩
     (node.block.at x y) = true) ∧
   (node.block.southwest.east = node.block.southeast.west ∧
     node.block.northwest.east = node.block.northeast.west ∧
@@ -899,7 +897,7 @@ private theorem node_chunks (chunk : Fin 39) : nodeChunk chunk.val = true := by
 -- Checked semantic seam caches and side refinement avoid enumerating every node pair.
 -- Every cached code and four-child expansion is validated against the actual decorated nodes.
 
-private def shadeCode : Option RedShades.Shade → Nat
+private def shadeCode : Option Shade → Nat
   | none => 0
   | some .dark => 1
   | some .light => 2
@@ -912,10 +910,10 @@ private theorem shadeCode_injective : Function.Injective shadeCode := by
   · cases a <;> simp [shadeCode] at h
   · cases a <;> cases b <;> simp_all [shadeCode]
 
-private def seamCode (edge : Nat) (low high : Option RedShades.Shade) : Nat :=
+private def seamCode (edge : Nat) (low high : Option Shade) : Nat :=
   Nat.pair edge (Nat.pair (shadeCode low) (shadeCode high))
 
-private theorem seamCode_eq_iff {a b : Nat} {lo hi lo' hi' : Option RedShades.Shade} :
+private theorem seamCode_eq_iff {a b : Nat} {lo hi lo' hi' : Option Shade} :
     seamCode a lo hi = seamCode b lo' hi' ↔ a = b ∧ lo = lo' ∧ hi = hi' := by
   simp [seamCode, Nat.pair_eq_pair, shadeCode_injective.eq_iff]
 
@@ -1275,7 +1273,7 @@ private theorem node_checked (node : Node) : nodeCheck node = true :=
 
 /-- Every quarter of a selected node satisfies the actual local shade rule. -/
 theorem Node.block_allowed (node : Node) (x y : Fin 2) :
-    RedShades.locallyAllowed ⟨node.parent, quadrantAt x.val y.val⟩
+    locallyAllowed ⟨node.parent, quadrantAt x.val y.val⟩
       (node.block.at x.val y.val) = true := by
   have h := node_checked node
   simp only [nodeCheck, decide_eq_true_eq] at h
@@ -1339,23 +1337,27 @@ theorem children_vCompatible_boundary {lower upper : Node}
 /-- The chosen canonical seed decorates corrected Robinson index zero. -/
 theorem seedNode_parent : seedNode.parent = 0 := by decide +kernel
 
-/-- Selected vertical-border orientation in a node's quarter; true means east interior. -/
+/-- Selected vertical-border orientation in a node's quarter: `false` is west interior,
+`true` is east interior, and `none` means no selected border. -/
 @[expose] def Node.rowInterior (node : Node) (x y : ℕ) : Option Bool :=
-  Signals.horizontalInteriorCode <|
-    ShadedSignals.selectedVerticalFor (components node.parent).thick
+  horizontalInteriorCode <|
+    selectedVerticalFor (components node.parent).thick
       (quadrantAt x y) (node.block.at x y)
 
-/-- Selected horizontal-border orientation in a node's quarter; true means north interior. -/
+/-- Selected horizontal-border orientation in a node's quarter: `false` is south interior,
+`true` is north interior, and `none` means no selected border. -/
 @[expose] def Node.columnInterior (node : Node) (x y : ℕ) : Option Bool :=
-  Signals.verticalInteriorCode <|
-    ShadedSignals.selectedHorizontalFor (components node.parent).thick
+  verticalInteriorCode <|
+    selectedHorizontalFor (components node.parent).thick
       (quadrantAt x y) (node.block.at x y)
 
-/-- The row and column observations on a three-by-three quarter halo. -/
+/-- The row and column observations on a three-by-three quarter halo. The axis-relative
+orientation is `false` toward decreasing coordinates and `true` toward increasing coordinates;
+`none` means no selected border. Sharing this convention lets both axes use one refinement rule. -/
 structure BorderHalo where
-  /-- Selected vertical boundaries, indexed by quarter x and y. -/
+  /-- Selected vertical boundaries: `false` faces west, `true` east, and `none` is absent. -/
   row : Fin 3 → Fin 3 → Option Bool
-  /-- Selected horizontal boundaries, indexed by quarter x and y. -/
+  /-- Selected horizontal boundaries: `false` faces south, `true` north, and `none` is absent. -/
   column : Fin 3 → Fin 3 → Option Bool
 
 /-- Decide extensional halo equality by its finite pointwise characterization. -/
@@ -1397,20 +1399,23 @@ instance : DecidableEq BorderState := fun first second =>
 /-- Round a coordinate up to the next multiple of four, then divide by four. -/
 @[expose] def ceilDivFour (coordinate : ℕ) : ℕ := (coordinate + 3) / 4
 
-/-- Lift a selected border through two substitutions, retaining its oriented child edge. -/
+/-- Lift a selected border through two substitutions. `false` faces decreasing coordinates
+(west or south), `true` faces increasing coordinates (east or north), and `none` is absent. -/
 @[expose] def liftBorder (coordinate : ℕ) : Option Bool → Option Bool
   | none => none
   | some true => if coordinate % 4 = 1 then some true else none
   | some false => if coordinate % 4 = 0 then some false else none
 
-/-- The newly created depth-zero frame: residues two and three inside a period of four. -/
+/-- The newly created depth-zero frame: residues two and three inside a period of four.
+`true` faces increasing coordinates, `false` decreasing coordinates, and `none` is absent. -/
 @[expose] def baseFrame (coordinate transverse : ℕ) : Option Bool :=
   if 2 ≤ transverse % 4 ∧ transverse % 4 ≤ 3 then
     if coordinate % 4 = 2 then some true
     else if coordinate % 4 = 3 then some false else none
   else none
 
-/-- The persistent opening on the west or south edge of a seed supertile. -/
+/-- The persistent opening on the west or south edge of a seed supertile, facing increasing
+coordinates (`some true`); all other positions have no selected border (`none`). -/
 @[expose] def outerBorder (coordinate transverse : ℕ) : Option Bool :=
   if coordinate = 1 ∧ 1 ≤ transverse then some true else none
 

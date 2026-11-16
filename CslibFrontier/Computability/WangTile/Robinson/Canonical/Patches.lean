@@ -36,16 +36,17 @@ public section
 
 namespace Cslib.WangTile.Robinson.Canonical
 
-open QuarterGeometry
-
 /-- The finite local shade rules needed when decorating a bounded square. -/
-private structure ShadeValidOn (indexGrid : ℕ → ℕ → Index)
-    (shadeGrid : ℕ → ℕ → RedShades.State) (width height : ℕ) : Prop where
+structure ShadeValidOn (indexGrid : ℕ → ℕ → Index)
+    (shadeGrid : ℕ → ℕ → ShadeState) (width height : ℕ) : Prop where
+  /-- Every quarter in the rectangle satisfies the local shade rule. -/
   allowed : ∀ x y, x < width → y < height →
-    RedShades.locallyAllowed ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩
+    locallyAllowed ⟨indexGrid (x / 2) (y / 2), quadrantAt x y⟩
       (shadeGrid x y) = true
+  /-- Adjacent horizontal quarters inside the rectangle carry matching shades. -/
   hmatch : ∀ x y, x + 1 < width → y < height →
     (shadeGrid x y).east = (shadeGrid (x + 1) y).west
+  /-- Adjacent vertical quarters inside the rectangle carry matching shades. -/
   vmatch : ∀ x y, x < width → y + 1 < height →
     (shadeGrid x y).north = (shadeGrid x (y + 1)).south
 
@@ -123,7 +124,7 @@ private theorem CompatibleOn.refine {grid : Nat → Nat → Node} {width height 
 
 /-- Flatten each corrected-tile shade block into its four quarter states. -/
 @[expose] def supertileShadeGrid (level : Nat) (root : Node) :
-    Nat → Nat → RedShades.State := fun x y =>
+    Nat → Nat → ShadeState := fun x y =>
   ((supertileNodeGrid level root (x / 2) (y / 2)).block).at (x % 2) (y % 2)
 
 private theorem supertileNodeGrid_compatible (level : Nat) (root : Node) :
@@ -136,7 +137,8 @@ private theorem supertileNodeGrid_compatible (level : Nat) (root : Node) :
         (4 ^ (level + 1)) (4 ^ (level + 1))
       simpa only [pow_succ, Nat.mul_comm] using ih.refine
 
-private theorem supertile_validShadeRectangle (level : Nat) (root : Node) :
+/-- Every canonical supertile obeys the shade rules throughout its finite square. -/
+theorem supertile_validShadeRectangle (level : Nat) (root : Node) :
     ShadeValidOn
       (supertileIndexGrid level root) (supertileShadeGrid level root)
       (2 * 4 ^ level) (2 * 4 ^ level) := by
@@ -290,7 +292,7 @@ theorem exists_interior_of_nextInterior_eq_some
 
 /-- Canonical edge flow determined by the nearest selected borders. The clear case is the
 interval before a closing border whose previous border is opening or absent. -/
-@[expose] def intervalEdge (interior : ℕ → Option Bool) (length position : ℕ) : Signals.Flow :=
+@[expose] def intervalEdge (interior : ℕ → Option Bool) (length position : ℕ) : SignalFlow :=
   match nextInterior interior position (length - position) with
   | none => .backward
   | some false =>
@@ -336,7 +338,7 @@ theorem intervalEdge_eq_none_of_between_borders
 /-- Nearest-border flows satisfy the one-dimensional local obstruction rule. -/
 theorem intervalEdge_allowed (interior : ℕ → Option Bool) (length position : ℕ)
     (hposition : position < length) :
-    Signals.flowAllowed (interior position) (intervalEdge interior length position)
+    flowAllowed (interior position) (intervalEdge interior length position)
       (intervalEdge interior length (position + 1)) = true := by
   have hlength : length - position = length - (position + 1) + 1 := by omega
   cases hcurrent : interior position with
@@ -347,25 +349,25 @@ theorem intervalEdge_allowed (interior : ℕ → Option Bool) (length position :
           nextInterior interior (position + 1) (length - (position + 1)) := by
         rw [hlength]
         simp [nextInterior, hcurrent]
-      simp [Signals.flowAllowed, intervalEdge, hprevious, hnext]
+      simp [flowAllowed, intervalEdge, hprevious, hnext]
   | some current =>
       cases current <;> cases hprevious : previousInterior interior position with
       | none =>
           cases hnext : nextInterior interior (position + 1) (length - (position + 1)) with
           | none =>
-              simp [Signals.flowAllowed, intervalEdge, hcurrent,
+              simp [flowAllowed, intervalEdge, hcurrent,
                 hprevious, hnext, hlength, nextInterior]
           | some next =>
-              cases next <;> simp [Signals.flowAllowed, intervalEdge, hcurrent,
+              cases next <;> simp [flowAllowed, intervalEdge, hcurrent,
                 hprevious, hnext, hlength, previousInterior, nextInterior]
       | some previous =>
           cases previous <;>
             cases hnext : nextInterior interior (position + 1) (length - (position + 1)) with
             | none =>
-                simp [Signals.flowAllowed, intervalEdge, hcurrent,
+                simp [flowAllowed, intervalEdge, hcurrent,
                   hprevious, hnext, hlength, nextInterior]
             | some next =>
-                cases next <;> simp [Signals.flowAllowed, intervalEdge, hcurrent,
+                cases next <;> simp [flowAllowed, intervalEdge, hcurrent,
                   hprevious, hnext, hlength, previousInterior, nextInterior]
 
 /-- A selected border cannot have clear canonical signal edges on both sides. -/
@@ -378,7 +380,7 @@ theorem interior_eq_none_of_adjacent_clear
   rw [hleft, hright] at allowed
   cases hcurrent : interior position with
   | none => rfl
-  | some current => cases current <;> simp [Signals.flowAllowed, hcurrent] at allowed
+  | some current => cases current <;> simp [flowAllowed, hcurrent] at allowed
 
 /-- Side length in quarter tiles of a decorated supertile. -/
 @[expose] def side (level : ℕ) : ℕ := 2 * 4 ^ level
@@ -392,7 +394,7 @@ theorem interior_eq_none_of_adjacent_clear
   (supertileNodeGrid level root (x / 2) (y / 2)).columnInterior (x % 2) (y % 2)
 
 /-- The three-layer canonical site. Its four signal edges use the nearest selected borders. -/
-@[expose] def site (level : ℕ) (root : Node) (x y : ℕ) : ShadedSignals.Site where
+@[expose] def site (level : ℕ) (root : Node) (x y : ℕ) : ShadedSite where
   quarter := ⟨supertileIndexGrid level root (x / 2) (y / 2), quadrantAt x y⟩
   shade := supertileShadeGrid level root x y
   signal := {
@@ -403,25 +405,25 @@ theorem interior_eq_none_of_adjacent_clear
 
 private theorem site_allowed (level : ℕ) (root : Node) (x y : ℕ)
     (hx : x < side level) (hy : y < side level) :
-    ShadedSignals.locallyAllowed (site level root x y).quarter (site level root x y).shade
+    signalsAllowed (site level root x y).quarter (site level root x y).shade
       (site level root x y).signal = true := by
   have hh := intervalEdge_allowed (fun x => rowInterior level root x y) (side level) x hx
   have hv := intervalEdge_allowed (fun y => columnInterior level root x y) (side level) y hy
-  simpa [ShadedSignals.locallyAllowed, Signals.horizontalAllowed, Signals.verticalAllowed,
+  simpa [signalsAllowed, SignalState.horizontalAllowed, SignalState.verticalAllowed,
     site, rowInterior, columnInterior, Node.rowInterior, Node.columnInterior,
     supertileIndexGrid, supertileShadeGrid, quadrantAt, Nat.mod_mod] using
     Bool.and_eq_true_iff.mpr ⟨hh, hv⟩
 
 private theorem quarter_hmatch (level : ℕ) (root : Node) (x y : ℕ)
     (hx : x + 1 < side level) (hy : y < side level) :
-    (Quarters.quarterTile (site level root x y).quarter).right =
-      (Quarters.quarterTile (site level root (x + 1) y).quarter).left := by
+    (quarterTile (site level root x y).quarter).right =
+      (quarterTile (site level root (x + 1) y).quarter).left := by
   have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
   have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
   have hyParent : y / 2 < 4 ^ level := by dsimp [side] at hy; omega
-  change (TileSubdivision.subdivideTileAt _ _).right =
-    (TileSubdivision.subdivideTileAt _ _).left
-  rw [TileSubdivision.horizontal_iff]
+  change (subdivideTileAt _ _).right =
+    (subdivideTileAt _ _).left
+  rw [subdivideTileAt_horizontal_iff]
   by_cases hboundary : x % 2 = 1
   · have hnextDiv : (x + 1) / 2 = x / 2 + 1 := by omega
     have hnextMod : (x + 1) % 2 = 0 := by omega
@@ -442,14 +444,14 @@ private theorem quarter_hmatch (level : ℕ) (root : Node) (x y : ℕ)
 
 private theorem quarter_vmatch (level : ℕ) (root : Node) (x y : ℕ)
     (hx : x < side level) (hy : y + 1 < side level) :
-    (Quarters.quarterTile (site level root x y).quarter).top =
-      (Quarters.quarterTile (site level root x (y + 1)).quarter).bottom := by
+    (quarterTile (site level root x y).quarter).top =
+      (quarterTile (site level root x (y + 1)).quarter).bottom := by
   have hxmod : x % 2 < 2 := Nat.mod_lt _ (by decide)
   have hymod : y % 2 < 2 := Nat.mod_lt _ (by decide)
   have hxParent : x / 2 < 4 ^ level := by dsimp [side] at hx; omega
-  change (TileSubdivision.subdivideTileAt _ _).top =
-    (TileSubdivision.subdivideTileAt _ _).bottom
-  rw [TileSubdivision.vertical_iff]
+  change (subdivideTileAt _ _).top =
+    (subdivideTileAt _ _).bottom
+  rw [subdivideTileAt_vertical_iff]
   by_cases hboundary : y % 2 = 1
   · have hnextDiv : (y + 1) / 2 = y / 2 + 1 := by omega
     have hnextMod : (y + 1) % 2 = 0 := by omega
@@ -472,17 +474,17 @@ private theorem quarter_vmatch (level : ℕ) (root : Node) (x y : ℕ)
 shade/signal allowance proved from the closed decorated substitution. -/
 @[expose] def canonicalPatch (level : ℕ) (root : Node) :
     Rectangle scaffold.tiles (side level) (side level) where
-  tile i j := ShadedSignals.tile (site level root i.val j.val)
+  tile i j := ShadedSite.tile (site level root i.val j.val)
   mem i j := by
-    exact ShadedSignals.tile_mem _
+    exact ShadedSite.tile_mem _
       ((supertile_validShadeRectangle level root).allowed i.val j.val i.isLt j.isLt)
       (site_allowed level root i.val j.val i.isLt j.isLt)
   horizontal i j hi := by
-    exact (ShadedSignals.horizontal_iff _ _).mpr
+    exact (ShadedSite.horizontal_iff _ _).mpr
       ⟨quarter_hmatch level root i.val j.val hi j.isLt,
         (supertile_validShadeRectangle level root).hmatch i.val j.val hi j.isLt, rfl⟩
   vertical i j hj := by
-    exact (ShadedSignals.vertical_iff _ _).mpr
+    exact (ShadedSite.vertical_iff _ _).mpr
       ⟨quarter_vmatch level root i.val j.val i.isLt hj,
         (supertile_validShadeRectangle level root).vmatch i.val j.val i.isLt hj, rfl⟩
 

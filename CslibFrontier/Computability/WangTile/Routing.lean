@@ -74,17 +74,6 @@ structure RoutedScaffold where
   ⟨Nat.pair base.top payload.top, Nat.pair base.bottom payload.bottom,
     Nat.pair base.left payload.left, Nat.pair base.right payload.right⟩
 
-/-- Layering retains both tile components. -/
-theorem layer_eq_layer_iff {a b c d : WangTile} :
-    layer a b = layer c d ↔ a = c ∧ b = d := by
-  cases a; cases b; cases c; cases d
-  simp only [layer, WangTile.mk.injEq, Nat.pair_eq_pair]
-  constructor
-  · rintro ⟨⟨ht, ht'⟩, ⟨hb, hb'⟩, ⟨hl, hl'⟩, ⟨hr, hr'⟩⟩
-    exact ⟨⟨ht, hb, hl, hr⟩, ⟨ht', hb', hl', hr'⟩⟩
-  · rintro ⟨⟨ht, hb, hl, hr⟩, ⟨ht', hb', hl', hr'⟩⟩
-    exact ⟨⟨ht, ht'⟩, ⟨hb, hb'⟩, ⟨hl, hl'⟩, ⟨hr, hr'⟩⟩
-
 private def palette (τ : List WangTile) : List ℕ :=
   0 :: τ.flatMap fun t => [t.top, t.bottom, t.left, t.right]
 
