@@ -271,21 +271,6 @@ theorem childBlock_thick_southwest (parent : Index) :
     indexThick (childBlock parent 0 0) = indexThick parent := by
   fin_cases parent <;> rfl
 
-/-- Simultaneous substitution of an index grid at the quotient and parity coordinates. -/
-@[expose] def refineIndexGrid (grid : Nat → Nat → Index) (x y : Nat) : Index :=
-  childBlock (grid (x / 2) (y / 2))
-    ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩
-
-/-- Substitution at an arbitrary child position. -/
-@[simp] theorem refineIndexGrid_child (grid : Nat → Nat → Index) (x y : Nat)
-    (dx dy : Fin 2) :
-    refineIndexGrid grid (2 * x + dx) (2 * y + dy) = childBlock (grid x y) dx dy := by
-  have hx : (2 * x + dx) / 2 = x := by omega
-  have hy : (2 * y + dy) / 2 = y := by omega
-  have hdx : (2 * x + dx) % 2 = dx := by omega
-  have hdy : (2 * y + dy) % 2 = dy := by omega
-  simp only [refineIndexGrid, hx, hy, hdx, hdy]
-
 @[simp] private theorem refineIndexGrid_even_even (grid : Nat → Nat → Index) (x y : Nat) :
     refineIndexGrid grid (2 * x) (2 * y) = childBlock (grid x y) 0 0 := by
   simpa using refineIndexGrid_child grid x y 0 0
@@ -297,11 +282,6 @@ theorem childBlock_thick_southwest (parent : Index) :
 @[simp] private theorem refineIndexGrid_even_odd (grid : Nat → Nat → Index) (x y : Nat) :
     refineIndexGrid grid (2 * x) (2 * y + 1) = childBlock (grid x y) 0 1 := by
   simpa using refineIndexGrid_child grid x y 0 1
-
-/-- Iterate simultaneous substitution. -/
-@[expose] def iterateRefine : Nat → (Nat → Nat → Index) → Nat → Nat → Index
-  | 0, grid => grid
-  | level + 1, grid => refineIndexGrid (iterateRefine level grid)
 
 end RedCycles
 
@@ -489,12 +469,12 @@ theorem fixed_cycle (parent : Index) :
 /-- Every further substitution preserves the board and scales its coordinates by two. -/
 theorem CycleOn.iterateRefine {grid : Nat → Nat → Index} {w e s n : Nat}
     (cycle : CycleOn grid w e s n) (level : Nat) :
-    CycleOn (RedCycles.iterateRefine level grid)
+    CycleOn (Robinson.iterateRefine level grid)
       (2 ^ level * w) (2 ^ level * e) (2 ^ level * s) (2 ^ level * n) := by
   induction level with
-  | zero => simpa only [RedCycles.iterateRefine, pow_zero, Nat.one_mul] using cycle
+  | zero => simpa only [Robinson.iterateRefine, pow_zero, Nat.one_mul] using cycle
   | succ level ih =>
-    simpa only [RedCycles.iterateRefine, pow_succ, Nat.mul_comm, Nat.mul_left_comm,
+    simpa only [Robinson.iterateRefine, pow_succ, Nat.mul_comm, Nat.mul_left_comm,
       Nat.mul_assoc] using ih.refine
 
 end OrientedRedCycles
