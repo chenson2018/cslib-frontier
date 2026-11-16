@@ -31,7 +31,7 @@ A bounded walk keeps every intermediate port inside its stated rectangle.
 
 ## References
 
-The red-wire construction follows [JeandelVanier2020], §3.2, Figures 16–18.
+The red-wire construction follows [JeandelVanier2020], §§3.2–3.3, Figures 16–18 (manuscript pp. 26–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, modules `Closed104.TileSubdivision`, `QuarterGeometry`,
 `OrientedRedCycles`, `RedShadeGraph` and `RedShadeGraphBoundedPath`.
@@ -41,6 +41,7 @@ The port and crossing parity semantics are unchanged; wire incidence is independ
 public section
 namespace Cslib.WangTile.Robinson
 
+@[expose] public section
 /-- The four quadrants of a subdivided Wang tile. -/
 inductive Quadrant where
   | southwest
@@ -48,6 +49,7 @@ inductive Quadrant where
   | northwest
   | northeast
 deriving DecidableEq, Repr
+end
 
 namespace Quadrant
 
@@ -165,6 +167,7 @@ end TileSubdivision
 
 namespace Quarters
 
+@[expose] public section
 /-- A quarter of one indexed tile of the corrected Robinson alphabet. -/
 structure QuarterIndex where
   /-- The parent tile. -/
@@ -172,6 +175,7 @@ structure QuarterIndex where
   /-- The quarter occupied in that parent. -/
   quadrant : Quadrant
   deriving DecidableEq
+end
 
 /-- The ordinary Wang tile encoding a quarter and its internal seams. -/
 @[expose] def quarterTile (site : QuarterIndex) : WangTile :=
@@ -179,10 +183,12 @@ structure QuarterIndex where
 
 end Quarters
 
+@[expose] public section
 /-- The four red lane atoms: east vertical, north horizontal, west vertical, south horizontal. -/
 inductive ThickLine where
   | r0 | r1 | r2 | r3
   deriving DecidableEq
+end
 
 namespace QuarterGeometry
 
@@ -218,23 +224,19 @@ namespace QuarterGeometry
 
 /-- Red corner path entering the west edge of this quarter. -/
 @[expose] def cornerWest (component : Thick) (quadrant : Quadrant) : Bool :=
-  decide ((component = .c ∧ quadrant = .northwest) ∨
-    (component = .d ∧ quadrant = .southwest))
+  (component, quadrant) matches (.c, .northwest) | (.d, .southwest)
 
 /-- Red corner path entering the east edge of this quarter. -/
 @[expose] def cornerEast (component : Thick) (quadrant : Quadrant) : Bool :=
-  decide ((component = .a ∧ quadrant = .southeast) ∨
-    (component = .b ∧ quadrant = .northeast))
+  (component, quadrant) matches (.a, .southeast) | (.b, .northeast)
 
 /-- Red corner path entering the south edge of this quarter. -/
 @[expose] def cornerSouth (component : Thick) (quadrant : Quadrant) : Bool :=
-  decide ((component = .a ∧ quadrant = .southeast) ∨
-    (component = .d ∧ quadrant = .southwest))
+  (component, quadrant) matches (.a, .southeast) | (.d, .southwest)
 
 /-- Red corner path entering the north edge of this quarter. -/
 @[expose] def cornerNorth (component : Thick) (quadrant : Quadrant) : Bool :=
-  decide ((component = .b ∧ quadrant = .northeast) ∨
-    (component = .c ∧ quadrant = .northwest))
+  (component, quadrant) matches (.b, .northeast) | (.c, .northwest)
 
 @[expose] def hasHorizontal (component : Thick) (quadrant : Quadrant) : Bool :=
   redHorizontalAt component quadrant.yBit
@@ -525,6 +527,7 @@ end OrientedRedCycles
 namespace RedShadeGraph
 open QuarterGeometry
 
+@[expose] public section
 /-- A quarter-tile edge at an absolute coordinate. -/
 inductive Side where
   | west
@@ -532,12 +535,15 @@ inductive Side where
   | south
   | north
 deriving DecidableEq, Repr
+end
 
+@[expose] public section
 structure Port where
   x : Nat
   y : Nat
   side : Side
 deriving DecidableEq, Repr
+end
 
 /-- Whether the unshaded quarter geometry carries a red wire at a port. -/
 @[expose] def portPresent (grid : Nat → Nat → Index) (port : Port) : Bool :=
