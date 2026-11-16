@@ -229,6 +229,8 @@ private theorem mem_all (f : SignalFlow) : f ∈ all := by cases f <;> decide
 
 end SignalFlow
 
+-- Expose the derived equality so clients can decide the clear-state role characterizations.
+@[expose] public section
 /-- Directed obstruction signals on the four edges of a quarter tile. -/
 structure SignalState where
   /-- West-edge flow. -/
@@ -240,6 +242,7 @@ structure SignalState where
   /-- North-edge flow. -/
   north : SignalFlow
   deriving DecidableEq
+end
 
 /-- The state with all four signal directions absent. -/
 @[expose] def SignalState.clear : SignalState := ⟨.none, .none, .none, .none⟩
