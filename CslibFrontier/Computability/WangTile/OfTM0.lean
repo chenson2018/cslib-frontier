@@ -1673,12 +1673,11 @@ private def machine (M : Turing.TM0.Machine Γ Λ) :
 private def foldedInput (source : List Γ) : List (TapeSymbol Γ) :=
   ⟨true, default, source.headI⟩ :: source.tail.map fun a => ⟨false, default, a⟩
 
-private def sourceAt (source : List Γ) (position : Nat) : Γ := source.getI position
 omit [DecidableEq Γ] [DecidableEq Λ] [Fintype Γ] [Fintype Λ] in
 private theorem symbolsAt_initial (source : List Γ) (position : Nat) :
     Folded.symbolsAt
         (Folded.Config.initial (Λ := Λ) source).source.Tape .right 0 position =
-      (default, sourceAt source position) := by
+      (default, source.getI position) := by
   cases position with
   | zero =>
       have hleft : Folded.sourceOffset .right 0
@@ -1694,7 +1693,7 @@ private theorem symbolsAt_initial (source : List Γ) (position : Nat) :
         (List.getI_zero_eq_headI (l := source)).symm
       simp [Folded.Config.initial, Turing.TM0.init,
         Turing.Tape.mk₁, Turing.Tape.mk₂, Turing.Tape.mk', Turing.Tape.nth,
-        sourceAt, hget]
+        hget]
   | succ position =>
       have hleft : Folded.sourceOffset .right 0
           (Folded.leftAbs (position + 1)) =
@@ -1712,7 +1711,7 @@ private theorem symbolsAt_initial (source : List Γ) (position : Nat) :
         cases source <;> rfl
       simp [Folded.Config.initial, Turing.TM0.init,
         Turing.Tape.mk₁, Turing.Tape.mk₂, Turing.Tape.mk', Turing.Tape.nth,
-        sourceAt, hget]
+        hget]
 
 /-- The folded target symbol represented by a semantic TM0 configuration. -/
 private def foldedSymbol (config : Folded.Config Γ Λ) (position : Nat) : TapeSymbol Γ :=
@@ -1740,9 +1739,9 @@ private theorem initialID_eq_toID (M : Turing.TM0.Machine Γ Λ) (source : List 
           .right 0 position).2
     rw [symbolsAt_initial]
     cases position with
-    | zero => simp [tape, foldedInput, sourceAt, List.getI_zero_eq_headI]
+    | zero => simp [tape, foldedInput, List.getI_zero_eq_headI]
     | succ position =>
-        simp [tape, foldedInput, sourceAt, TapeSymbol.blank, ← List.getI_eq_getElem?_getD]
+        simp [tape, foldedInput, TapeSymbol.blank, ← List.getI_eq_getElem?_getD]
   · rfl
   · rfl
 omit [DecidableEq Γ] [DecidableEq Λ] [Fintype Γ] [Fintype Λ] [Inhabited Λ] in
