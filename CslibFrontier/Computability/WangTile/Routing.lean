@@ -27,6 +27,8 @@ zero or a colour occurring in the payload palette.
 ## Main results
 
 * `primrec_combine`: the finite combination is primitive recursive.
+* `forces_of_routedGrids`: routed grids extract seeded payload squares.
+* `realizes_of_addressedSquares`: cofinal addressed squares realize pointed payload planes.
 * `tilesPlane_combine_pointedExtension_iff_of_forces_of_realizes`: the generic seed-removal
   step, conditional on both obligations. This is not the domino undecidability theorem.
 
@@ -320,6 +322,254 @@ structure AddressedSquare (S : RoutedScaffold) (n : ℕ) where
 /-- Every payload plane with the seed at the origin lifts to a combined plane. -/
 @[expose] def Realizes (S : RoutedScaffold) : Prop :=
   ∀ I, TilesAtOrigin I → TilesPlane (combine S I)
+
+private theorem transmit {incoming outgoing : ℤ → ℕ} (a b : ℤ) (hab : a < b)
+    (step : ∀ x, outgoing x = incoming (x + 1))
+    (wire : ∀ x, a < x → x < b → incoming x = outgoing x) :
+    outgoing a = incoming b := by
+  have h : ∀ x, a + 1 ≤ x → x ≤ b → outgoing a = incoming x := by
+    apply Int.leInduction
+    · intro _
+      exact step a
+    · intro x hx ih hxb
+      rw [← step x, ← wire x (by omega) (by omega)]
+      exact ih (by omega)
+  exact h b (by omega) le_rfl
+
+/-- Extract a seeded payload square by propagating colours along each interval of wires. -/
+def RoutedGrid.seededSquare {S : RoutedScaffold} {I : SeededInstance} {n : ℕ}
+    (P : RoutedPlane S I) (G : RoutedGrid S P.base n) : SeededSquare I n where
+  tile i j := P.payload (G.column i) (G.row j)
+  mem i j := by
+    have h := mem_routedPayloads.mp (P.allowed (G.column i) (G.row j))
+    rcases G.crossing i j with hr | hr
+    · simpa only [hr] using h
+    · exact (show _ ∧ _ from (by simpa only [hr] using h)).1
+  horizontal i j hi := by
+    let k : Fin n := ⟨i.val, by omega⟩
+    apply transmit (incoming := fun x => (P.payload x (G.row j)).left)
+      (outgoing := fun x => (P.payload x (G.row j)).right) (G.column k.castSucc) (G.column k.succ)
+      (G.column_strictMono Fin.castSucc_lt_succ) (fun x => P.horizontal x (G.row j))
+    intro x hleft hright
+    have h := mem_routedPayloads.mp (P.allowed x (G.row j))
+    rw [G.horizontal k j x hleft hright] at h
+    exact h.2
+  vertical i j hj := by
+    let k : Fin n := ⟨j.val, by omega⟩
+    apply transmit (incoming := fun y => (P.payload (G.column i) y).bottom)
+      (outgoing := fun y => (P.payload (G.column i) y).top) (G.row k.castSucc) (G.row k.succ)
+      (G.row_strictMono Fin.castSucc_lt_succ) (fun y => P.vertical (G.column i) y)
+    intro y hbottom htop
+    have h := mem_routedPayloads.mp (P.allowed (G.column i) y)
+    rw [G.vertical i k y hbottom htop] at h
+    exact h.2
+  corner := by
+    have h := mem_routedPayloads.mp (P.allowed (G.column 0) (G.row 0))
+    rw [G.corner] at h
+    exact h.2
+
+/-- Arbitrarily large routed grids in every scaffold plane imply forward forcing. -/
+theorem forces_of_routedGrids {S : RoutedScaffold}
+    (grids : ∀ (P : Plane S.tiles) n, Nonempty (RoutedGrid S P n)) : Forces S := by
+  intro I h n
+  obtain ⟨P⟩ := nonempty_routedPlane_of_tilesPlane h
+  obtain ⟨G⟩ := grids P.base n
+  exact ⟨G.seededSquare P⟩
+
+private def fillIncoming {n : ℕ} (carry : Fin n → Bool) (incoming outgoing : Fin n → ℕ)
+    (i : Fin n) : ℕ :=
+  if carry i then incoming i else
+    if hi : 0 < i.val then
+      let p : Fin n := ⟨i.val - 1, by omega⟩
+      if carry p then outgoing p else 0
+    else 0
+
+private def fillOutgoing {n : ℕ} (carry : Fin n → Bool) (incoming outgoing : Fin n → ℕ)
+    (i : Fin n) : ℕ :=
+  if carry i then outgoing i else
+    if hi : i.val + 1 < n then
+      let p : Fin n := ⟨i.val + 1, hi⟩
+      if carry p then incoming p else 0
+    else 0
+
+private theorem fill_match {n : ℕ} (carry : Fin n → Bool) (incoming outgoing : Fin n → ℕ)
+    (h : ∀ i (hi : i.val + 1 < n), carry i = true →
+      carry ⟨i.val + 1, hi⟩ = true → outgoing i = incoming ⟨i.val + 1, hi⟩)
+    (i : Fin n) (hi : i.val + 1 < n) :
+    fillOutgoing carry incoming outgoing i =
+      fillIncoming carry incoming outgoing ⟨i.val + 1, hi⟩ := by
+  by_cases hc : carry i = true <;>
+    by_cases hn : carry ⟨i.val + 1, hi⟩ = true
+  · simpa [fillOutgoing, fillIncoming, hc, hn] using h i hi hc hn
+  · simp [fillOutgoing, fillIncoming, hc, hn]
+  · simp [fillOutgoing, fillIncoming, hc, hn, hi]
+  · simp [fillOutgoing, fillIncoming, hc, hn, hi]
+
+private theorem fill_mem {n : ℕ} (carry : Fin n → Bool) (incoming outgoing : Fin n → ℕ)
+    (colors : List ℕ) (hz : 0 ∈ colors)
+    (hin : ∀ i, incoming i ∈ colors) (hout : ∀ i, outgoing i ∈ colors) (i : Fin n) :
+    fillIncoming carry incoming outgoing i ∈ colors ∧
+      fillOutgoing carry incoming outgoing i ∈ colors := by
+  constructor
+  · unfold fillIncoming
+    split
+    · exact hin _
+    · split
+      · dsimp only
+        split
+        · exact hout _
+        · exact hz
+      · exact hz
+  · unfold fillOutgoing
+    split
+    · exact hout _
+    · split
+      · dsimp only
+        split
+        · exact hin _
+        · exact hz
+      · exact hz
+
+private def addressedPayload {τ : List WangTile} (P : Plane τ) (role : RouteRole)
+    (point horizontalSource verticalSource : ℤ × ℤ) : WangTile :=
+  match role with
+  | .active | .corner => P.tile point.1 point.2
+  | .horizontal =>
+    let c := (P.tile horizontalSource.1 horizontalSource.2).right
+    ⟨0, 0, c, c⟩
+  | .vertical =>
+    let c := (P.tile verticalSource.1 verticalSource.2).top
+    ⟨c, c, 0, 0⟩
+  | .inactive => ⟨0, 0, 0, 0⟩
+
+private theorem addressedPayload_mem {τ : List WangTile} (P : Plane τ) (r : RouteRole)
+    (p h v : ℤ × ℤ) : addressedPayload P r p h v ∈ completePayloads τ := by
+  have ep := mem_completePayloads.mp (mem_completePayloads_of_mem (P.mem p.1 p.2))
+  have eh := mem_completePayloads.mp (mem_completePayloads_of_mem (P.mem h.1 h.2))
+  have ev := mem_completePayloads.mp (mem_completePayloads_of_mem (P.mem v.1 v.2))
+  have hz : 0 ∈ palette τ := List.mem_cons_self
+  cases r <;> simp [addressedPayload, mem_completePayloads, ep, eh, ev, hz]
+
+private def addressedRectangle {S : RoutedScaffold} {n : ℕ} (A : AddressedSquare S n)
+    {I : SeededInstance} (P : Plane I.tiles) (seed : P.tile 0 0 = I.seed) :
+    Rectangle (combine S I) (n + 1) (n + 1) := by
+  let role i j := S.role (A.base.tile i j)
+  let core i j := addressedPayload P (role i j)
+    (A.point i j) (A.horizontalSource i j) (A.verticalSource i j)
+  have core_mem i j := addressedPayload_mem P (role i j)
+    (A.point i j) (A.horizontalSource i j) (A.verticalSource i j)
+  have hmatch i j hi (hl : (role i j).horizontalCarrier = true)
+      (hr : (role ⟨i.val + 1, hi⟩ j).horizontalCarrier = true) :
+      (core i j).right = (core ⟨i.val + 1, hi⟩ j).left := by
+    have step := A.hstep i j hi hl hr
+    change (match role ⟨i.val + 1, hi⟩ j with
+      | .active | .corner => A.point ⟨i.val + 1, hi⟩ j =
+        (((role i j).horizontalOutgoing (A.point i j) (A.horizontalSource i j)).1 + 1,
+          ((role i j).horizontalOutgoing (A.point i j) (A.horizontalSource i j)).2)
+      | .horizontal => A.horizontalSource ⟨i.val + 1, hi⟩ j =
+        (role i j).horizontalOutgoing (A.point i j) (A.horizontalSource i j)
+      | _ => False) at step
+    cases hleft : role i j <;> cases hright : role ⟨i.val + 1, hi⟩ j <;>
+      simp_all only [Bool.false_eq_true, RouteRole.horizontalCarrier,
+        RouteRole.horizontalOutgoing, core, addressedPayload]
+    all_goals exact P.horizontal _ _
+  have vmatch i j hj (hl : (role i j).verticalCarrier = true)
+      (hr : (role i ⟨j.val + 1, hj⟩).verticalCarrier = true) :
+      (core i j).top = (core i ⟨j.val + 1, hj⟩).bottom := by
+    have step := A.vstep i j hj hl hr
+    change (match role i ⟨j.val + 1, hj⟩ with
+      | .active | .corner => A.point i ⟨j.val + 1, hj⟩ =
+        (((role i j).verticalOutgoing (A.point i j) (A.verticalSource i j)).1,
+          ((role i j).verticalOutgoing (A.point i j) (A.verticalSource i j)).2 + 1)
+      | .vertical => A.verticalSource i ⟨j.val + 1, hj⟩ =
+        (role i j).verticalOutgoing (A.point i j) (A.verticalSource i j)
+      | _ => False) at step
+    cases hlower : role i j <;> cases hupper : role i ⟨j.val + 1, hj⟩ <;>
+      simp_all only [Bool.false_eq_true, RouteRole.verticalCarrier,
+        RouteRole.verticalOutgoing, core, addressedPayload]
+    all_goals exact P.vertical _ _
+  let payload i j : WangTile :=
+    ⟨fillOutgoing (fun k => (role i k).verticalCarrier)
+        (fun k => (core i k).bottom) (fun k => (core i k).top) j,
+      fillIncoming (fun k => (role i k).verticalCarrier)
+        (fun k => (core i k).bottom) (fun k => (core i k).top) j,
+      fillIncoming (fun k => (role k j).horizontalCarrier)
+        (fun k => (core k j).left) (fun k => (core k j).right) i,
+      fillOutgoing (fun k => (role k j).horizontalCarrier)
+        (fun k => (core k j).left) (fun k => (core k j).right) i⟩
+  have colors i j : payload i j ∈ completePayloads I.tiles := by
+    have hc i j := mem_completePayloads.mp (core_mem i j)
+    have hh := fill_mem (fun k => (role k j).horizontalCarrier)
+      (fun k => (core k j).left) (fun k => (core k j).right)
+      (palette I.tiles) List.mem_cons_self (fun k => (hc k j).2.2.1)
+        (fun k => (hc k j).2.2.2) i
+    have hv := fill_mem (fun k => (role i k).verticalCarrier)
+      (fun k => (core i k).bottom) (fun k => (core i k).top)
+      (palette I.tiles) List.mem_cons_self (fun k => (hc i k).2.1) (fun k => (hc i k).1) j
+    exact mem_completePayloads.mpr ⟨hv.2, hv.1, hh.1, hh.2⟩
+  have allowed i j : payload i j ∈ routedPayloads S I (A.base.tile i j) := by
+    rw [mem_routedPayloads]
+    change match role i j with
+      | .inactive => payload i j ∈ completePayloads I.tiles
+      | .horizontal => payload i j ∈ completePayloads I.tiles ∧
+        (payload i j).left = (payload i j).right
+      | .vertical => payload i j ∈ completePayloads I.tiles ∧
+        (payload i j).bottom = (payload i j).top
+      | .active => payload i j ∈ I.tiles
+      | .corner => payload i j ∈ I.tiles ∧ payload i j = I.seed
+    have crossing (hr : role i j = .active ∨ role i j = .corner) :
+        payload i j = P.tile (A.point i j).1 (A.point i j).2 := by
+      rcases hr with hr | hr <;>
+        simp [payload, core, addressedPayload, hr, fillIncoming, fillOutgoing,
+          RouteRole.horizontalCarrier, RouteRole.verticalCarrier]
+    cases hr : role i j with
+    | inactive => exact colors i j
+    | horizontal =>
+      exact ⟨colors i j, by simp [payload, core, addressedPayload, hr, fillIncoming,
+        fillOutgoing, RouteRole.horizontalCarrier]⟩
+    | vertical =>
+      exact ⟨colors i j, by simp [payload, core, addressedPayload, hr, fillIncoming,
+        fillOutgoing, RouteRole.verticalCarrier]⟩
+    | active =>
+      rw [crossing (Or.inl hr)]
+      exact P.mem _ _
+    | corner =>
+      rw [crossing (Or.inr hr), A.corner_zero i j hr]
+      exact ⟨P.mem 0 0, seed⟩
+  refine {
+    tile := fun i j => layer (A.base.tile i j) (payload i j)
+    mem := fun i j => mem_combine.mpr
+      ⟨A.base.tile i j, A.base.mem i j, payload i j, allowed i j, rfl⟩
+    horizontal := ?_
+    vertical := ?_ }
+  · intro i j hi
+    change Nat.pair _ _ = Nat.pair _ _
+    rw [A.base.horizontal i j hi]
+    exact congrArg (Nat.pair _) (fill_match (fun k => (role k j).horizontalCarrier)
+      (fun k => (core k j).left) (fun k => (core k j).right) (fun k hk => hmatch k j hk) i hi)
+  · intro i j hj
+    change Nat.pair _ _ = Nat.pair _ _
+    rw [A.base.vertical i j hj]
+    exact congrArg (Nat.pair _) (fill_match (fun k => (role i k).verticalCarrier)
+      (fun k => (core i k).bottom) (fun k => (core i k).top) (fun k hk => vmatch i k hk) j hj)
+
+/-- Cofinal addressed squares realize every pointed payload plane. Flexible edges are filled
+from neighboring carriers or zero, then ordinary finite-square compactness gives the plane. -/
+theorem realizes_of_addressedSquares {S : RoutedScaffold}
+    (squares : ∀ n, ∃ m, n ≤ m ∧ Nonempty (AddressedSquare S m)) : Realizes S := by
+  rintro I ⟨f, hf, hm⟩
+  let P : Plane I.tiles := ⟨f, fun x y => (hm x y).1,
+    fun x y => (hm x y).2.1, fun x y => (hm x y).2.2⟩
+  apply (tilesPlane_iff_squares _).mpr
+  intro n
+  obtain ⟨m, hnm, ⟨A⟩⟩ := squares n
+  let R := addressedRectangle A P hf
+  let inc : Fin (n + 1) → Fin (m + 1) := Fin.castLE (by omega)
+  exact ⟨{
+    tile := fun i j => R.tile (inc i) (inc j)
+    mem := fun i j => R.mem (inc i) (inc j)
+    horizontal := fun i j hi => R.horizontal (inc i) (inc j) (by dsimp [inc]; omega)
+    vertical := fun i j hj => R.vertical (inc i) (inc j) (by dsimp [inc]; omega) }⟩
 
 /-- A generic seed-removal step, not the domino theorem: both geometric obligations remain
 hypotheses. Finite extended squares decode to source squares, while a source quadrant extends
