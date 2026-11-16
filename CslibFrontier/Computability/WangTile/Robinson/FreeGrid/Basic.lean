@@ -815,70 +815,6 @@ end Cslib.WangTile.Robinson.FreeGrid
 namespace Cslib.WangTile.Robinson.FreeGrid
 open Canonical
 
-private theorem canonical_index (level : ℕ) (root : Node) :
-    supertileIndexGrid level root = iterateRefine (2 * level) (coarseGrid root.parent) := by
-  funext x y
-  induction level generalizing x y with
-  | zero => rfl
-  | succ level ih =>
-      have hx : (childPosition x y).val % 4 = x % 4 := by
-        dsimp [childPosition, blockPosition]
-        omega
-      have hy : (childPosition x y).val / 4 = y % 4 := by
-        dsimp [childPosition, blockPosition]
-        omega
-      rw [show 2 * (level + 1) = 2 + 2 * level by omega, ← iterateRefine_add,
-        iterateRefine_two_local]
-      change ((supertileNodeGrid level root (x / 4) (y / 4)).child
-        (childPosition x y)).parent = _
-      rw [Node.child_parent, hx, hy]
-      exact congrArg (fun parent => fineGrid parent (x % 4) (y % 4)) (ih (x / 4) (y / 4))
-
-private theorem canonical_local (level : ℕ) (root : Node) (coarse : ℕ → ℕ → Index)
-    (rootEq : coarse 0 0 = root.parent) {x y : ℕ} (hx : x < 4 ^ level)
-    (hy : y < 4 ^ level) :
-    supertileIndexGrid level root x y = iterateRefine (2 * level) coarse x y := by
-  rw [canonical_index]
-  apply iterateRefine_eq_of_root_eq rootEq.symm
-  · simpa only [pow_mul, show (2 : ℕ) ^ 2 = 4 by decide] using hx
-  · simpa only [pow_mul, show (2 : ℕ) ^ 2 = 4 by decide] using hy
-
-/-- Quarter coordinates in a substituted block select the corresponding child node. -/
-private theorem canonical_node_block (level : ℕ) (root : Node)
-    (bx by₀ x y : ℕ) (hx : x < 8) (hy : y < 8) :
-    supertileNodeGrid (level + 1) root ((8 * bx + x) / 2) ((8 * by₀ + y) / 2) =
-      (supertileNodeGrid level root bx by₀).child (childPosition (x / 2) (y / 2)) := by
-  have hxd : ((8 * bx + x) / 2) / 4 = bx := by omega
-  have hyd : ((8 * by₀ + y) / 2) / 4 = by₀ := by omega
-  have hxm : ((8 * bx + x) / 2) % 4 = x / 2 % 4 := by omega
-  have hym : ((8 * by₀ + y) / 2) % 4 = y / 2 % 4 := by omega
-  simp only [supertileNodeGrid, hxd, hyd, childPosition, hxm, hym]
-
-private theorem canonical_sparse (level : ℕ) (root : Node) (x y : ℕ) :
-    supertileShadeGrid (level + 1) root (sparseCoordinate x) (sparseCoordinate y) =
-      supertileShadeGrid level root x y := by
-  have coords (z : ℕ) : sparseCoordinate z / 2 = 4 * (z / 2) ∧
-      sparseCoordinate z % 2 = z % 2 := by dsimp [sparseCoordinate]; omega
-  obtain ⟨hxd, hxm⟩ := coords x
-  obtain ⟨hyd, hym⟩ := coords y
-  have position : childPosition (4 * (x / 2)) (4 * (y / 2)) = 0 := by
-    apply Fin.ext
-    simp [childPosition, blockPosition]
-  have hx4 : 4 * (x / 2) / 4 = x / 2 := by omega
-  have hy4 : 4 * (y / 2) / 4 = y / 2 := by omega
-  simp only [supertileShadeGrid, hxd, hyd, hxm, hym, supertileNodeGrid,
-    position, Node.child_zero_block, hx4, hy4]
-
-private theorem canonical_block (level : ℕ) (root : Node)
-    (bx by₀ x y : ℕ) (hx : x < 8) (hy : y < 8) :
-    supertileShadeGrid (level + 1) root (8 * bx + x) (8 * by₀ + y) =
-      supertileShadeGrid 1 (supertileNodeGrid level root bx by₀) x y := by
-  have hxm : (8 * bx + x) % 2 = x % 2 := by omega
-  have hym : (8 * by₀ + y) % 2 = y % 2 := by omega
-  dsimp only [supertileShadeGrid]
-  rw [canonical_node_block level root bx by₀ x y hx hy, hxm, hym]
-  rfl
-
 private def canonicalStates (flipped : Bool) (level : ℕ) (root : Node) :
     ℕ → ℕ → ShadeState := fun x y =>
   if flipped then ShadeState.flip (supertileShadeGrid level root x y)
@@ -907,7 +843,7 @@ private theorem canonicalStates_sparse (flipped : Bool) (level : ℕ) (root : No
       value (canonicalStates flipped level root) p := by
   cases p with
   | mk x y side =>
-    cases side <;> simp [value, canonicalStates, sparsePort, canonical_sparse]
+    cases side <;> simp [value, canonicalStates, sparsePort, supertileShadeGrid_sparse]
 
 private theorem canonicalStates_block (flipped : Bool) (level : ℕ) (root : Node)
     (bx by₀ : ℕ) (p : Port) (hx : p.x < 8) (hy : p.y < 8) :
@@ -917,7 +853,7 @@ private theorem canonicalStates_block (flipped : Bool) (level : ℕ) (root : Nod
   cases p with
   | mk x y side =>
     cases side <;> simp [value, canonicalStates, translatePort,
-      canonical_block level root bx by₀ x y hx hy]
+      supertileShadeGrid_block level root bx by₀ x y hx hy]
 
 end Cslib.WangTile.Robinson.FreeGrid
 
@@ -947,10 +883,14 @@ private theorem clearAt_succ_block (axis : LineAxis) (flipped : Bool) (level : �
   have hf2 : (8 * blockFixed + fixed) % 2 = fixed % 2 := by omega
   cases axis
   · simp only [clearAt, nodeAt]
-    rw [canonical_node_block _ _ _ _ _ _ ha hf]
+    rw [show (8 * blockAlong + along) / 2 = 4 * blockAlong + along / 2 by omega,
+      show (8 * blockFixed + fixed) / 2 = 4 * blockFixed + fixed / 2 by omega,
+      supertileNodeGrid_block _ _ _ _ _ _ (by omega) (by omega)]
     simp [fineClear, fineNode, clear, ha2, hf2, quadrantAt]
   · simp only [clearAt, nodeAt, ↓reduceIte]
-    rw [canonical_node_block _ _ _ _ _ _ hf ha]
+    rw [show (8 * blockFixed + fixed) / 2 = 4 * blockFixed + fixed / 2 by omega,
+      show (8 * blockAlong + along) / 2 = 4 * blockAlong + along / 2 by omega,
+      supertileNodeGrid_block _ _ _ _ _ _ (by omega) (by omega)]
     simp [fineClear, fineNode, clear, ha2, hf2, quadrantAt]
 
 private theorem even_base (axis : LineAxis) (root : Node) :
@@ -1418,7 +1358,7 @@ private theorem phase_base (flipped : Bool) (coarse : ℕ → ℕ → Index)
             (by simpa [pow_mul] using (show y / 2 < 4 ^ level by omega))]
   have canonicalValid : ShadeValidOn baseGrid canonical (2 * 4 ^ level) (2 * 4 ^ level) := by
     have h := canonical_valid flipped level seedNode
-    rw [canonical_index, seedNode_parent] at h
+    rw [supertileIndexGrid_eq_iterateRefine, seedNode_parent] at h
     exact h
   have targetBounds : target.x < 2 * 4 ^ level ∧ target.y < 2 * 4 ^ level := by
     cases flipped <;> norm_num [phaseScale, initialLevel, level] at * <;> omega
@@ -1541,10 +1481,10 @@ private def phaseComparison (flipped : Bool) (coarse : ℕ → ℕ → Index)
         z < 4 ^ (depth + initialLevel flipped) := by
       cases flipped <;> simp [phaseScale, initialLevel, pow_add] at * <;> omega
     have parentEq : node.parent = phaseGrid flipped depth coarse bx by₀ :=
-      canonical_local (depth + initialLevel flipped) seedNode coarse
+      supertileIndexGrid_eq_of_root_eq (depth + initialLevel flipped) seedNode coarse
         (rootEq.trans seedNode_parent.symm) (bound bx hx) (bound by₀ hy)
     have finiteValid := canonical_valid flipped 1 node
-    rw [canonical_index, parentEq] at finiteValid
+    rw [supertileIndexGrid_eq_iterateRefine, parentEq] at finiteValid
     exact path.sound finiteValid.allowed finiteValid.hmatch finiteValid.vmatch
   block := by
     intro depth bx by₀ p hx hy
@@ -1577,7 +1517,7 @@ private theorem phase_component (flipped : Bool) (depth : ℕ) (coarse : ℕ →
   have hX := phase_bound flipped depth x hx
   have hY := phase_bound flipped depth y hy
   unfold componentAt
-  rw [canonical_local (depth + initialLevel flipped) seedNode coarse
+  rw [supertileIndexGrid_eq_of_root_eq (depth + initialLevel flipped) seedNode coarse
     (rootEq.trans seedNode_parent.symm) (by omega) (by omega)]
   rfl
 
