@@ -44,7 +44,8 @@ obligations.
 public section
 
 -- These finite certificates normalize the same tables. Serial elaboration avoids retaining
--- several large normalization tasks at once, while keeping the default proof limits.
+-- several large normalization tasks at once. Six-node batches keep peak memory moderate
+-- while staying below the default proof limits.
 set_option Elab.async false
 
 namespace Cslib.WangTile.Robinson.Canonical
@@ -677,8 +678,8 @@ private def seamCheck (node : Node) : Bool := decide (
     seamExpansion (cachedSeams node).north x))
 
 private def seamChunk (chunk : Nat) : Bool :=
-  (List.range 8).all fun offset =>
-    seamCheck ⟨⟨(8 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
+  (List.range 6).all fun offset =>
+    seamCheck ⟨⟨(6 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
 
 private theorem seam_0 : seamChunk 0 = true := by decide +kernel
 private theorem seam_1 : seamChunk 1 = true := by decide +kernel
@@ -719,8 +720,21 @@ private theorem seam_35 : seamChunk 35 = true := by decide +kernel
 private theorem seam_36 : seamChunk 36 = true := by decide +kernel
 private theorem seam_37 : seamChunk 37 = true := by decide +kernel
 private theorem seam_38 : seamChunk 38 = true := by decide +kernel
+private theorem seam_39 : seamChunk 39 = true := by decide +kernel
+private theorem seam_40 : seamChunk 40 = true := by decide +kernel
+private theorem seam_41 : seamChunk 41 = true := by decide +kernel
+private theorem seam_42 : seamChunk 42 = true := by decide +kernel
+private theorem seam_43 : seamChunk 43 = true := by decide +kernel
+private theorem seam_44 : seamChunk 44 = true := by decide +kernel
+private theorem seam_45 : seamChunk 45 = true := by decide +kernel
+private theorem seam_46 : seamChunk 46 = true := by decide +kernel
+private theorem seam_47 : seamChunk 47 = true := by decide +kernel
+private theorem seam_48 : seamChunk 48 = true := by decide +kernel
+private theorem seam_49 : seamChunk 49 = true := by decide +kernel
+private theorem seam_50 : seamChunk 50 = true := by decide +kernel
+private theorem seam_51 : seamChunk 51 = true := by decide +kernel
 
-private theorem seam_chunks (chunk : Fin 39) : seamChunk chunk.val = true := by
+private theorem seam_chunks (chunk : Fin 52) : seamChunk chunk.val = true := by
   fin_cases chunk
   · exact seam_0
   · exact seam_1
@@ -761,16 +775,29 @@ private theorem seam_chunks (chunk : Fin 39) : seamChunk chunk.val = true := by
   · exact seam_36
   · exact seam_37
   · exact seam_38
+  · exact seam_39
+  · exact seam_40
+  · exact seam_41
+  · exact seam_42
+  · exact seam_43
+  · exact seam_44
+  · exact seam_45
+  · exact seam_46
+  · exact seam_47
+  · exact seam_48
+  · exact seam_49
+  · exact seam_50
+  · exact seam_51
 
 private theorem checked_from_chunks (check : Node → Bool)
-    (chunks : ∀ chunk : Fin 39, (List.range 8).all (fun offset =>
-      check ⟨⟨(8 * chunk.val + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩) = true)
+    (chunks : ∀ chunk : Fin 52, (List.range 6).all (fun offset =>
+      check ⟨⟨(6 * chunk.val + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩) = true)
     (node : Node) : check node = true := by
-  let chunk : Fin 39 := ⟨node.code.val / 8, by omega⟩
-  have checked := List.all_eq_true.mp (chunks chunk) (node.code.val % 8)
+  let chunk : Fin 52 := ⟨node.code.val / 6, by omega⟩
+  have checked := List.all_eq_true.mp (chunks chunk) (node.code.val % 6)
     (List.mem_range.mpr (Nat.mod_lt _ (by decide)))
   have reconstructed :
-      (⟨⟨(8 * chunk.val + node.code.val % 8) % 312,
+      (⟨⟨(6 * chunk.val + node.code.val % 6) % 312,
         Nat.mod_lt _ (by decide)⟩⟩ : Node) = node := by
     cases node with
     | mk code =>
@@ -816,8 +843,8 @@ private def nodeCheck (node : Node) : Bool := decide (
     (cachedSeams (node.child (blockPosition x ⟨y.val + 1, by omega⟩))).south))
 
 private def nodeChunk (chunk : ℕ) : Bool :=
-  (List.range 8).all fun offset =>
-    nodeCheck ⟨⟨(8 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
+  (List.range 6).all fun offset =>
+    nodeCheck ⟨⟨(6 * chunk + offset) % 312, Nat.mod_lt _ (by decide)⟩⟩
 
 private theorem node_0 : nodeChunk 0 = true := by decide +kernel
 private theorem node_1 : nodeChunk 1 = true := by decide +kernel
@@ -858,8 +885,21 @@ private theorem node_35 : nodeChunk 35 = true := by decide +kernel
 private theorem node_36 : nodeChunk 36 = true := by decide +kernel
 private theorem node_37 : nodeChunk 37 = true := by decide +kernel
 private theorem node_38 : nodeChunk 38 = true := by decide +kernel
+private theorem node_39 : nodeChunk 39 = true := by decide +kernel
+private theorem node_40 : nodeChunk 40 = true := by decide +kernel
+private theorem node_41 : nodeChunk 41 = true := by decide +kernel
+private theorem node_42 : nodeChunk 42 = true := by decide +kernel
+private theorem node_43 : nodeChunk 43 = true := by decide +kernel
+private theorem node_44 : nodeChunk 44 = true := by decide +kernel
+private theorem node_45 : nodeChunk 45 = true := by decide +kernel
+private theorem node_46 : nodeChunk 46 = true := by decide +kernel
+private theorem node_47 : nodeChunk 47 = true := by decide +kernel
+private theorem node_48 : nodeChunk 48 = true := by decide +kernel
+private theorem node_49 : nodeChunk 49 = true := by decide +kernel
+private theorem node_50 : nodeChunk 50 = true := by decide +kernel
+private theorem node_51 : nodeChunk 51 = true := by decide +kernel
 
-private theorem node_chunks (chunk : Fin 39) : nodeChunk chunk.val = true := by
+private theorem node_chunks (chunk : Fin 52) : nodeChunk chunk.val = true := by
   fin_cases chunk
   · exact node_0
   · exact node_1
@@ -900,6 +940,19 @@ private theorem node_chunks (chunk : Fin 39) : nodeChunk chunk.val = true := by
   · exact node_36
   · exact node_37
   · exact node_38
+  · exact node_39
+  · exact node_40
+  · exact node_41
+  · exact node_42
+  · exact node_43
+  · exact node_44
+  · exact node_45
+  · exact node_46
+  · exact node_47
+  · exact node_48
+  · exact node_49
+  · exact node_50
+  · exact node_51
 
 private theorem pair_checked (left right : Node) :
     (HCompatible left right → ∀ y : Fin 4, HCompatible
