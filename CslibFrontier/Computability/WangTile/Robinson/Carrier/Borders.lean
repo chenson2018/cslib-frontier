@@ -41,6 +41,20 @@ seed removal, not a proof of domino undecidability.
 
 public section
 
+namespace Cslib.WangTile.Robinson.Canonical
+
+/-- The persistent outer opening occurs precisely at coordinate one with positive transverse
+coordinate, and points toward increasing coordinates. -/
+theorem outerBorder_eq_some_iff (coordinate transverse : ℕ) (orientation : Bool) :
+    outerBorder coordinate transverse = some orientation ↔
+      coordinate = 1 ∧ 1 ≤ transverse ∧ orientation = true := by
+  by_cases h : coordinate = 1 ∧ 1 ≤ transverse
+  · rcases h with ⟨hc, ht⟩
+    simp [outerBorder, hc, ht, eq_comm]
+  · simp [outerBorder, h, ← and_assoc]
+
+end Cslib.WangTile.Robinson.Canonical
+
 namespace Cslib.WangTile.Robinson.Carrier
 
 open Canonical
@@ -600,6 +614,21 @@ theorem frameBorder_eq_some_false_iff (depth coordinate transverse : ℕ) :
         simp [inside, opening, closing, Ne.symm distinct]
   · simp [inside]
 
+private theorem frameBorder_residue_gt_one
+    {depth coordinate transverse : ℕ} {orientation : Bool}
+    (border : frameBorder depth coordinate transverse = some orientation) :
+    1 < coordinate % period depth := by
+  have positive := scale_pos depth
+  cases orientation with
+  | false =>
+    have boundary := ((frameBorder_eq_some_false_iff _ _ _).1 border).2
+    simp only [frameEndResidue] at boundary
+    omega
+  | true =>
+    have boundary := ((frameBorder_eq_some_true_iff _ _ _).1 border).2
+    simp only [frameStartResidue] at boundary
+    omega
+
 private theorem frameBorders_disjoint_of_lt
     {small large coordinate transverse : ℕ} (h : small < large)
     {smallOrientation largeOrientation : Bool}
@@ -617,52 +646,23 @@ private theorem frameBorders_disjoint_of_lt
         right
         exact largeOpening_mod_small h
           ((frameBorder_eq_some_true_iff _ _ _).1 largeBorder).2
-  have smallResidue : coordinate % period small = frameStartResidue small ∨
-      coordinate % period small = frameEndResidue small := by
-    cases smallOrientation with
-    | false =>
-        exact Or.inr ((frameBorder_eq_some_false_iff _ _ _).1 smallBorder).2
-    | true =>
-        exact Or.inl ((frameBorder_eq_some_true_iff _ _ _).1 smallBorder).2
-  have startLarge : 1 < frameStartResidue small := by
-    simp [frameStartResidue, scale_pos]
-  have endLarge : 1 < frameEndResidue small := by
-    simp only [frameEndResidue]
-    have := scale_pos small
-    omega
-  rcases largeResidue with zero | one <;>
-    rcases smallResidue with start | finish <;> omega
+  have smallResidue := frameBorder_residue_gt_one smallBorder
+  omega
 
 private theorem outerBorder_frameBorder_disjoint
     {depth coordinate transverse : ℕ} {outerOrientation frameOrientation : Bool}
     (outer : outerBorder coordinate transverse = some outerOrientation)
     (frame : frameBorder depth coordinate transverse = some frameOrientation) :
     False := by
-  have coordinateOne : coordinate = 1 := by
-    unfold outerBorder at outer
-    split at outer
-    · exact ‹coordinate = 1 ∧ 1 ≤ transverse›.1
-    · simp at outer
+  have coordinateOne := (outerBorder_eq_some_iff _ _ _).mp outer |>.1
   have oneLtPeriod : 1 < period depth := by
     rw [period_eq_four_mul_scale]
     have := scale_pos depth
     omega
   have coordinateMod : coordinate % period depth = 1 := by
     rw [coordinateOne, Nat.mod_eq_of_lt oneLtPeriod]
-  have boundary : coordinate % period depth = frameStartResidue depth ∨
-      coordinate % period depth = frameEndResidue depth := by
-    cases frameOrientation with
-    | false =>
-        exact Or.inr ((frameBorder_eq_some_false_iff _ _ _).1 frame).2
-    | true =>
-        exact Or.inl ((frameBorder_eq_some_true_iff _ _ _).1 frame).2
-  have startLarge : 1 < frameStartResidue depth := by
-    simp [frameStartResidue, scale_pos]
-  have endLarge : 1 < frameEndResidue depth := by
-    simp only [frameEndResidue]
-    have := scale_pos depth
-    omega
-  rcases boundary with start | finish <;> omega
+  have boundary := frameBorder_residue_gt_one frame
+  omega
 
 private theorem liftBorder_eq_some_imp
     {coordinate : ℕ} {border : Option Bool} {orientation : Bool}
@@ -964,30 +964,30 @@ theorem supertileIndexGrid_zero_cases
   · exact Or.inr (Or.inr ⟨congrArg Fin.val hi, congrArg Fin.val hj,
       congrArg Fin.val hpx, congrArg Fin.val hpy⟩)
 
+private theorem interiors_seed_eq_selectedBorder
+    (level x y : ℕ) (hx : x < side level) (hy : y < side level) :
+    rowInterior level seedNode x y = selectedBorder level x y ∧
+      columnInterior level seedNode x y = selectedBorder level y x := by
+  have hx' : x / 2 < 4 ^ level := by dsimp only [side] at hx; omega
+  have hy' : y / 2 < 4 ^ level := by dsimp only [side] at hy; omega
+  have observation := BorderState.observations
+    (arithmeticState_admissible level _ _ hx' hy')
+    ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩
+  have xeq : 2 * (x / 2) + x % 2 = x := by omega
+  have yeq : 2 * (y / 2) + y % 2 = y := by omega
+  simpa only [arithmeticState, Fin.val_castSucc, xeq, yeq, rowInterior, columnInterior] using
+    And.intro observation.1.symm observation.2.symm
+
 /-- Actual selected vertical borders of the seed patch are precisely the arithmetic borders. -/
 theorem rowInterior_seed_eq_selectedBorder
     (level x y : ℕ) (hx : x < side level) (hy : y < side level) :
-    rowInterior level seedNode x y = selectedBorder level x y := by
-  have hx' : x / 2 < 4 ^ level := by dsimp only [side] at hx; omega
-  have hy' : y / 2 < 4 ^ level := by dsimp only [side] at hy; omega
-  have observation := (BorderState.observations
-    (arithmeticState_admissible level _ _ hx' hy')
-    ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩).1
-  have xeq : 2 * (x / 2) + x % 2 = x := by omega
-  have yeq : 2 * (y / 2) + y % 2 = y := by omega
-  simpa only [arithmeticState, Fin.val_castSucc, xeq, yeq, rowInterior] using observation.symm
+    rowInterior level seedNode x y = selectedBorder level x y :=
+  (interiors_seed_eq_selectedBorder level x y hx hy).1
 
 /-- Actual selected horizontal borders of the seed patch are the transposed arithmetic borders. -/
 theorem columnInterior_seed_eq_selectedBorder
     (level x y : ℕ) (hx : x < side level) (hy : y < side level) :
-    columnInterior level seedNode x y = selectedBorder level y x := by
-  have hx' : x / 2 < 4 ^ level := by dsimp only [side] at hx; omega
-  have hy' : y / 2 < 4 ^ level := by dsimp only [side] at hy; omega
-  have observation := (BorderState.observations
-    (arithmeticState_admissible level _ _ hx' hy')
-    ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩).2
-  have xeq : 2 * (x / 2) + x % 2 = x := by omega
-  have yeq : 2 * (y / 2) + y % 2 = y := by omega
-  simpa only [arithmeticState, Fin.val_castSucc, xeq, yeq, columnInterior] using observation.symm
+    columnInterior level seedNode x y = selectedBorder level y x :=
+  (interiors_seed_eq_selectedBorder level x y hx hy).2
 
 end Cslib.WangTile.Robinson.Carrier
