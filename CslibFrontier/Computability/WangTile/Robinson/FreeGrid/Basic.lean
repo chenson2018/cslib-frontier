@@ -237,7 +237,7 @@ private theorem has_light_cycle (g : ℕ → ℕ → Index)
   · exact Or.inr hb
   · exact (neq rfl).elim
 
-private theorem exists_refined_zero (base : Plane) (depth : ℕ) :
+private theorem exists_refined_zero (base : IndexPlane) (depth : ℕ) :
     ∃ (g : ℕ → ℕ → Index) (u v : ℤ), g 0 0 = 0 ∧
       (fun x y : ℕ => base.index (u + x) (v + y)) = iterateRefine depth g := by
   let t := tower base
