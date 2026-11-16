@@ -1094,7 +1094,7 @@ Marker transport follows
 the arbitrary-plane assembly and gap filling follow
 [SparseFreeLineDecodedMarkedGrid, line 43](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/SparseFreeLineDecodedMarkedGrid.lean#L43)
 and [ShadedConsecutiveFreeGrid, line 220](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedConsecutiveFreeGrid.lean#L220).
-The `RedPaths/OddCoverage` module supplies the odd-phase finite base after
+The `RedPaths/Certificates` module supplies the odd-phase finite base after
 [CanonicalOddShadeBase.exists_boundedPath, line 22](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalOddShadeBase.lean#L22),
 using the [oddNodes witnesses, line 5412](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/RedShadeGraphPathWitnesses.lean#L5412)
 with shared path prefixes and semantic-side certificates.

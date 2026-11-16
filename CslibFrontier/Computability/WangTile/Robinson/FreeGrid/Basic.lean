@@ -10,7 +10,7 @@ module
 public import CslibFrontier.Computability.WangTile.Robinson.Shading.Geometry
 public import CslibFrontier.Computability.WangTile.Robinson.Signals
 import CslibFrontier.Computability.WangTile.Robinson.Canonical.Patches
-import CslibFrontier.Computability.WangTile.Robinson.RedPaths.OddCoverage
+import CslibFrontier.Computability.WangTile.Robinson.RedPaths.Certificates
 import Mathlib.Algebra.Order.Monoid.Unbundled.Pow
 import Mathlib.Algebra.Ring.Parity
 import Mathlib.Data.Finset.Sort
@@ -195,23 +195,9 @@ private theorem crossing_ne {g : ℕ → ℕ → Index} {s : ℕ → ℕ → Sha
   intro eq
   exact (valid.rules x y).crossing_opposite horizontal vertical (by rw [first, second, eq])
 
-private theorem cycle_congr {g h : ℕ → ℕ → Index} {w e b t : ℕ}
-    (c : CycleOn g w e b t) (eq : ∀ x y, x ≤ e → y ≤ t → g x y = h x y) :
-    CycleOn h w e b t where
-  west_lt_east := c.west_lt_east
-  south_lt_north := c.south_lt_north
-  southwest := by rw [← eq w b c.west_lt_east.le c.south_lt_north.le]; exact c.southwest
-  southeast := by rw [← eq e b le_rfl c.south_lt_north.le]; exact c.southeast
-  northwest := by rw [← eq w t c.west_lt_east.le le_rfl]; exact c.northwest
-  northeast := by rw [← eq e t le_rfl le_rfl]; exact c.northeast
-  southLane x hl hu := by rw [← eq x b hu.le c.south_lt_north.le]; exact c.southLane x hl hu
-  northLane x hl hu := by rw [← eq x t hu.le le_rfl]; exact c.northLane x hl hu
-  westLane y hl hu := by rw [← eq w y c.west_lt_east.le hu.le]; exact c.westLane y hl hu
-  eastLane y hl hu := by rw [← eq e y le_rfl hu.le]; exact c.eastLane y hl hu
-
 private theorem root_cycle (g : ℕ → ℕ → Index) :
     CycleOn (iterateRefine 2 g) 1 3 1 3 :=
-  cycle_congr (fixed_cycle (g 0 0)) (fun x y hx hy =>
+  CycleOn.congr (fixed_cycle (g 0 0)) (fun x y hx hy =>
     iterateRefine_eq_of_root_eq (g := fun _ _ => g 0 0) (h := g) rfl 2 x y (by omega) (by omega))
 
 private theorem large_cycle (g : ℕ → ℕ → Index) (level : ℕ) :
@@ -518,13 +504,6 @@ private instance (predicate : Node → Prop) [DecidablePred predicate] :
   | .isTrue valid => .isTrue (fun node => valid node.code)
   | .isFalse invalid => .isFalse (fun valid => invalid (fun code => valid ⟨code⟩))
 
-/-- Swap the two wire shades without changing port incidence. -/
-private def flipShade (state : ShadeState) : ShadeState :=
-  { west := state.west.map Shade.opposite
-    east := state.east.map Shade.opposite
-    south := state.south.map Shade.opposite
-    north := state.north.map Shade.opposite }
-
 /-- The geometric axis of a free-line scan. -/
 private inductive LineAxis where
   | row
@@ -539,7 +518,7 @@ private def clear (axis : LineAxis) (flipped : Bool) (node : Node) (along fixed 
   let x := if axis = .column then fixed else along
   let y := if axis = .column then along else fixed
   let raw := node.block.at (x % 2) (y % 2)
-  let state := if flipped then flipShade raw else raw
+  let state := if flipped then ShadeState.flip raw else raw
   if axis = .column then
     selectedHorizontalFor (components node.parent).thick
       (quadrantAt x y) state = none
@@ -836,15 +815,6 @@ end Cslib.WangTile.Robinson.FreeGrid
 namespace Cslib.WangTile.Robinson.FreeGrid
 open Canonical
 
-private theorem two_local (grid : ℕ → ℕ → Index) (x y : ℕ) :
-    iterateRefine 2 grid x y = fineGrid (grid (x / 4) (y / 4)) (x % 4) (y % 4) := by
-  have coords (z : ℕ) : z / 2 / 2 = z / 4 ∧
-      (z % 4) / 2 = z / 2 % 2 ∧ (z % 4) % 2 = z % 2 := by omega
-  obtain ⟨hx₀, hx₁, hx₂⟩ := coords x
-  obtain ⟨hy₀, hy₁, hy₂⟩ := coords y
-  simp only [iterateRefine, refineIndexGrid, fineGrid, coarseGrid,
-    hx₀, hx₁, hx₂, hy₀, hy₁, hy₂, Nat.mod_mod]
-
 private theorem canonical_index (level : ℕ) (root : Node) :
     supertileIndexGrid level root = iterateRefine (2 * level) (coarseGrid root.parent) := by
   funext x y
@@ -858,7 +828,7 @@ private theorem canonical_index (level : ℕ) (root : Node) :
         dsimp [childPosition, blockPosition]
         omega
       rw [show 2 * (level + 1) = 2 + 2 * level by omega, ← iterateRefine_add,
-        two_local]
+        iterateRefine_two_local]
       change ((supertileNodeGrid level root (x / 4) (y / 4)).child
         (childPosition x y)).parent = _
       rw [Node.child_parent, hx, hy]
@@ -909,18 +879,9 @@ private theorem canonical_block (level : ℕ) (root : Node)
   rw [canonical_node_block level root bx by₀ x y hx hy, hxm, hym]
   rfl
 
-private theorem flip_allowed {component : Thick} {quadrant : Quadrant}
-    {state : ShadeState} (allowed : allowedFor component quadrant state = true) :
-    allowedFor component quadrant (flipShade state) = true := by
-  have flip_eq (a b : Option Shade) :
-      a.map Shade.opposite = b.map Shade.opposite ↔ a = b :=
-    (Option.map_injective
-      (show Function.Involutive Shade.opposite from Shade.opposite_opposite).injective).eq_iff
-  simpa [allowedFor, flipShade, flip_eq] using allowed
-
 private def canonicalStates (flipped : Bool) (level : ℕ) (root : Node) :
     ℕ → ℕ → ShadeState := fun x y =>
-  if flipped then flipShade (supertileShadeGrid level root x y)
+  if flipped then ShadeState.flip (supertileShadeGrid level root x y)
     else supertileShadeGrid level root x y
 
 private theorem canonical_valid (flipped : Bool) (level : ℕ) (root : Node) :
@@ -931,7 +892,7 @@ private theorem canonical_valid (flipped : Bool) (level : ℕ) (root : Node) :
   · exact valid
   · constructor
     · intro x y hx hy
-      exact flip_allowed (valid.allowed x y hx hy)
+      exact ShadeState.flip_allowed (valid.allowed x y hx hy)
     · intro x y hx hy
       change (supertileShadeGrid level root x y).east.map Shade.opposite =
         (supertileShadeGrid level root (x + 1) y).west.map Shade.opposite
@@ -1242,23 +1203,6 @@ private theorem state_eq_of_present_eq {grid other : ℕ → ℕ → Index}
 end Cslib.WangTile.Robinson.FreeGrid
 
 namespace Cslib.WangTile.Robinson.FreeGrid
-private theorem related_unique {parity : Bool} {a b c : Option Shade}
-    (hab : Related parity a b) (hac : Related parity a c) : b = c := by
-  cases parity
-  · exact hab.symm.trans hac
-  · obtain ⟨s, hs, hb⟩ := hab
-    obtain ⟨t, ht, hc⟩ := hac
-    have hst : s = t := Option.some.inj (hs.symm.trans ht)
-    subst t
-    exact hb.trans hc.symm
-
-private theorem mem_ports {width height : ℕ} {p : Port}
-    (hx : p.x < width) (hy : p.y < height) : p ∈ portsIn width height := by
-  rcases p with ⟨x, y, side⟩
-  simp only [portsIn, List.mem_flatMap, List.mem_range]
-  refine ⟨y, hy, x, hx, ?_⟩
-  cases side <;> simp
-
 private theorem sparse_block {bx by₀ : ℕ} {p : Port} (hx : p.x < 2) (hy : p.y < 2) :
     sparsePort (translatePort p (2 * bx) (2 * by₀)) =
       translatePort (sparsePort p) (8 * bx) (8 * by₀) := by
@@ -1337,7 +1281,7 @@ private theorem RefinementComparison.agreement (C : RefinementComparison) :
         rw [portPresent_two_block (C.grid d) bx by₀ localPort hx hy, C.grid_succ, hlocation]
         exact present
       obtain ⟨source, hsource, parity, path⟩ :=
-        exists_boundedPath (C.grid d bx by₀) (mem_ports hx hy) localPresent
+        exists_boundedPath (C.grid d bx by₀) (mem_portsIn_iff.mpr ⟨hx, hy⟩) localPresent
       have actualPath := boundedPath_two_block (C.grid d) bx by₀ path
       rw [C.grid_succ, hlocation] at actualPath
       have hbx : C.scale d ≤ bx := by
@@ -1365,7 +1309,7 @@ private theorem RefinementComparison.agreement (C : RefinementComparison) :
         have relation := actualPath.sound valid
         rw [h] at relation
         rw [← targetEq] at canonicalRelation
-        exact related_unique relation canonicalRelation
+        exact Related.right_unique relation canonicalRelation
       rcases source_cases hsource with heq | ⟨old, _, oldPresent, heq⟩
       · subst source
         exact finish (C.new_source d actual bx by₀ valid shaded hbx hbX hby hbY)
@@ -1412,7 +1356,7 @@ private theorem canonical_source (flipped : Bool) (node : Node) :
     value (canonicalStates flipped 1 node) cycleSource =
       some (if flipped then .light else .dark) := by
   have dark := source_dark node
-  cases flipped <;> simp [value, canonicalStates, flipShade, dark,
+  cases flipped <;> simp [value, canonicalStates, ShadeState.flip, dark,
     cycleSource, Shade.opposite]
 end Cslib.WangTile.Robinson.FreeGrid
 
@@ -1501,7 +1445,7 @@ private theorem phase_base (flipped : Bool) (coarse : ℕ → ℕ → Index)
       (fun x y hx hy => canonicalValid.hmatch x y (by omega) (by omega))
       (fun x y hx hy => canonicalValid.vmatch x y (by omega) (by omega))
     rw [canonicalSource] at canonicalRelation
-    exact related_unique actualRelation canonicalRelation
+    exact Related.right_unique actualRelation canonicalRelation
   cases flipped
   · obtain ⟨source, parity, sourceMem, path⟩ := odd_base_exists_boundedPath
       west east south north basePresent

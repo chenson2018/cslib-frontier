@@ -8,7 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Robinson.Forcing
-public import CslibFrontier.Computability.WangTile.Robinson.RedPaths.OddCoverage
+public import CslibFrontier.Computability.WangTile.Robinson.RedPaths.Certificates
 import CslibFrontier.Computability.WangTile.Robinson.Canonical.Patches
 
 /-!
