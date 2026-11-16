@@ -566,6 +566,14 @@ private def addressedRectangle {S : RoutedScaffold} {n : ℕ} (A : AddressedSqua
     exact congrArg (Nat.pair _) (fill_match (fun k => (role i k).verticalCarrier)
       (fun k => (core i k).bottom) (fun k => (core i k).top) (fun k hk => vmatch i k hk) j hj)
 
+/-- Restrict a matching patch to a smaller rectangle at the same southwest corner. -/
+def Rectangle.crop {τ : List WangTile} {w h w' h' : ℕ} (R : Rectangle τ w h)
+    (hw : w' ≤ w) (hh : h' ≤ h) : Rectangle τ w' h' where
+  tile i j := R.tile (i.castLE hw) (j.castLE hh)
+  mem i j := R.mem (i.castLE hw) (j.castLE hh)
+  horizontal i j hi := R.horizontal (i.castLE hw) (j.castLE hh) (lt_of_lt_of_le hi hw)
+  vertical i j hj := R.vertical (i.castLE hw) (j.castLE hh) (lt_of_lt_of_le hj hh)
+
 /-- Cofinal addressed squares realize every pointed payload plane. Flexible edges are filled
 from neighboring carriers or zero, then ordinary finite-square compactness gives the plane. -/
 theorem realizes_of_addressedSquares {S : RoutedScaffold}
@@ -576,13 +584,7 @@ theorem realizes_of_addressedSquares {S : RoutedScaffold}
   apply (tilesPlane_iff_squares _).mpr
   intro n
   obtain ⟨m, hnm, ⟨A⟩⟩ := squares n
-  let R := addressedRectangle A P hf
-  let inc : Fin (n + 1) → Fin (m + 1) := Fin.castLE (by omega)
-  exact ⟨{
-    tile := fun i j => R.tile (inc i) (inc j)
-    mem := fun i j => R.mem (inc i) (inc j)
-    horizontal := fun i j hi => R.horizontal (inc i) (inc j) (by dsimp [inc]; omega)
-    vertical := fun i j hj => R.vertical (inc i) (inc j) (by dsimp [inc]; omega) }⟩
+  exact ⟨(addressedRectangle A P hf).crop (by omega) (by omega)⟩
 
 /-- A generic seed-removal step, not the domino theorem: both geometric obligations remain
 hypotheses. Finite extended squares decode to source squares, while a source quadrant extends
