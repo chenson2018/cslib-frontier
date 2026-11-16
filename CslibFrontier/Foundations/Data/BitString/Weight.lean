@@ -46,7 +46,6 @@ words of weight at most `e` form a Hamming ball of size `B(n, e) = ∑ j ∈ ran
   weight is the Hamming norm.
 * `Cslib.BitString.weight_le`, `Cslib.BitString.weight_le_length`: the weight is at most the number
   of coordinates.
-* `Cslib.BitString.count_true_ofFn`: `(List.ofFn x).count true = weight x`.
 * `Cslib.BitString.monotone_weight`: the weight is monotone.
 * `Cslib.BitString.card_weightLayer`: there are `n.choose k` strings of `n` bits of weight `k`.
 * `Cslib.BitString.card_filter_weight_le`, `Cslib.BitString.card_filter_weight_le_eq_ballSize`: the
