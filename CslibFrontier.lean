@@ -4294,6 +4294,7 @@ public import CslibFrontier.Computability.WangTile.Robinson.Hierarchy
 public import CslibFrontier.Computability.WangTile.Robinson.Recognizability
 public import CslibFrontier.Computability.WangTile.Robinson.RedPaths.Basic
 public import CslibFrontier.Computability.WangTile.Robinson.RedPaths.Certificates
+public import CslibFrontier.Computability.WangTile.Robinson.Shading.Basic
 public import CslibFrontier.Computability.WangTile.Robinson.Tiles
 public import CslibFrontier.Computability.WangTile.SeededUndecidable
 public import CslibFrontier.Computability.WordRAM.Admission
