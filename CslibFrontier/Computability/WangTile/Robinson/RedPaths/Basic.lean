@@ -592,4 +592,15 @@ theorem BoundedPath.path
   | ofLink link _ _ => exact Path.ofLink link
   | trans _ _ firstIH secondIH => exact Path.trans firstIH secondIH
 
+/-- The first endpoint of a bounded red walk lies in its bounding rectangle. -/
+theorem BoundedPath.first_inBounds
+    {indexGrid : Nat → Nat → Index} {width height : Nat}
+    {first second : Port} {parity : Bool}
+    (path : BoundedPath indexGrid width height first second parity) :
+    PortInBounds first width height := by
+  induction path with
+  | refl _ hport => exact hport
+  | ofLink _ hfirst _ => exact hfirst
+  | trans _ _ firstIH _ => exact firstIH
+
 end Cslib.WangTile.Robinson

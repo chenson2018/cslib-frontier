@@ -726,7 +726,7 @@ private theorem link_translate
   | symm _ ih => exact Link.symm (ih hsecond hfirst)
 
 /-- Transport a bounded path to any even translate with the same local components. -/
-private theorem boundedPath_translate
+theorem boundedPath_translate
     {grid other : Nat → Nat → Index} {width height offsetX offsetY : Nat}
     (hx : offsetX % 2 = 0) (hy : offsetY % 2 = 0)
     (componentsEq : ∀ x y, x < width → y < height →
@@ -804,7 +804,8 @@ private theorem exitCoordinate_succ (coordinate : Nat) :
   unfold exitCoordinate sparseCoordinate
   split <;> omega
 
-private theorem portPresent_local (grid : Nat → Nat → Index) (port : Port) :
+/-- Port incidence depends only on the containing tile and its local quarter. -/
+theorem portPresent_local (grid : Nat → Nat → Index) (port : Port) :
     portPresent (coarseGrid (grid (port.x / 2) (port.y / 2)))
       ⟨port.x % 2, port.y % 2, port.side⟩ = portPresent grid port := by
   cases port with
