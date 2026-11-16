@@ -19,7 +19,7 @@ import Mathlib.Data.Set.Finite.Basic
 
 A finite relation algebra is the complex algebra of its atom structure, which is given by finitely
 much data: the number of atoms, the converse of each, which of them lie below the identity, and
-the triples `(a, b, c)` with `c ≤ a ; b`. An `AtomTable` records these as numbers and lists of
+the triples `(a, b, c)` with `c ≤ a;b`. An `AtomTable` records these as numbers and lists of
 numbers, so that finite relation algebras become the instances of decision problems in the sense
 of Mathlib's `ComputablePred` and many-one reducibility.
 
@@ -55,7 +55,7 @@ structure AtomTable where
   conv : List ℕ
   /-- The identity atoms. -/
   id : List ℕ
-  /-- The consistent triples: `(a, b, c)` says `c ≤ a ; b`. -/
+  /-- The consistent triples: `(a, b, c)` says `c ≤ a;b`. -/
   cycles : List (ℕ × ℕ × ℕ)
 
 namespace AtomTable

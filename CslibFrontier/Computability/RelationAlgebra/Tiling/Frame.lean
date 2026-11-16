@@ -27,8 +27,8 @@ the definition.
 
 ## Conventions
 
-A cycle `(r, s, t)` of a frame means `t ≤ r ; s`, whereas the source's triangle `(a, b, c)` is
-consistent when `c˘ ≤ a ; b`. The source's triangle `(a, b, c)` is therefore the triple
+A cycle `(r, s, t)` of a frame means `t ≤ r;s`, whereas the source's triangle `(a, b, c)` is
+consistent when `c˘ ≤ a;b`. The source's triangle `(a, b, c)` is therefore the triple
 `(a, b, c˘)` here, and its six Peircean transforms are the triples
 `(r, s, t)`, `(s, t˘, r˘)`, `(t˘, r, s˘)`, `(r˘, t, s)`, `(t, s˘, r)` and `(s˘, r˘, t˘)`.
 
@@ -203,7 +203,7 @@ def Forbidden (L : List WangTile) (r s t : Atom (Fin L.length)) : Prop :=
 instance (L : List WangTile) (r s t : Atom (Fin L.length)) : Decidable (Forbidden L r s t) :=
   inferInstanceAs (Decidable (_ ∨ _))
 
-/-- The consistent triangles of `RA(τ)`, as triples `(r, s, t)` with `t ≤ r ; s`
+/-- The consistent triangles of `RA(τ)`, as triples `(r, s, t)` with `t ≤ r;s`
 [HirschHodkinson2001], Section 4.2: the kinds of node match, a triangle with an identity atom is
 degenerate, and the triangle is not forbidden. -/
 structure Cycle (L : List WangTile) (r s t : Atom (Fin L.length)) : Prop where
