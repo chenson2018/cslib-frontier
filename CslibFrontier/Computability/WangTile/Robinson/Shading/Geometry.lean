@@ -18,6 +18,8 @@ A matching shade assignment gives a discrete signed face height inside every uni
 light oriented red cycle. The local shade rules conserve flow and forbid right turns;
 the outer cycle has height one. The resulting minimum principle forces the nearest
 selected boundary on each side of a free row or column to face outwards.
+The free-line predicates are provided for the subsequent free-grid construction;
+this module does not establish the existence of free rows or columns.
 
 ## Main definitions
 
@@ -32,12 +34,13 @@ selected boundary on each side of a free row or column to face outwards.
 
 ## References
 
-The outward-facing boundary construction follows [JeandelVanier2020], §3.3,
+The outward-facing boundary construction is after [JeandelVanier2020], §3.3,
 Figure 18 (manuscript pp. 27–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, modules `Closed104.OrientedLightHeightWeights`, `OrientedLightHeight`,
-`OrientedLightFreeHeight`, `OrientedLightBoundarySearch`, `OrientedLightHorizontalGeometry`
-and `OrientedLightVerticalGeometry`. The hypotheses, quarter-coordinate conventions and
+`OrientedLightFreeHeight`, `OrientedLightBoundarySearch`, `OrientedLightHorizontalGeometry`,
+`OrientedLightVerticalGeometry`, `ShadedObstructionGeometry` and
+`ShadedLightBoardFreeLines`. The hypotheses, quarter-coordinate conventions and
 nearest-boundary conclusion agree with `OrientedLightGeometry.CycleShade.geometry` there.
 -/
 
@@ -135,16 +138,6 @@ structure Geometry
 
 end ShadedObstructionGeometry
 
-private theorem quadrantAt_xBit (x y : Nat) :
-    (quadrantAt x y).xBit = (x % 2 == 1) := by
-  cases hx : (x % 2 == 1) <;> cases hy : (y % 2 == 1) <;>
-    simp [quadrantAt, hx, hy, Quadrant.ofBits, Quadrant.xBit]
-
-private theorem quadrantAt_yBit (x y : Nat) :
-    (quadrantAt x y).yBit = (y % 2 == 1) := by
-  cases hx : (x % 2 == 1) <;> cases hy : (y % 2 == 1) <;>
-    simp [quadrantAt, hx, hy, Quadrant.ofBits, Quadrant.yBit]
-
 namespace OrientedLightHeightWeights
 
 /-- Weight of a directed light edge.  `positive` specifies which of the two
@@ -173,7 +166,6 @@ change from its left face to its right face. -/
 private def downWeight (quadrant : Quadrant) (state : RedShades.State) : Int :=
   edgeWeight state.south quadrant.xBit
 
-
 private theorem neg_one_le_edgeWeight (value : Option RedShades.Shade)
     (positive : Bool) : (-1 : Int) ≤ edgeWeight value positive := by
   unfold edgeWeight
@@ -186,9 +178,6 @@ private theorem neg_one_le_rightWeight (quadrant : Quadrant)
 private theorem neg_one_le_upWeight (quadrant : Quadrant)
     (state : RedShades.State) : (-1 : Int) ≤ upWeight quadrant state :=
   neg_one_le_edgeWeight _ _
-
-local instance : Fintype RedShades.Shade :=
-  Fintype.ofList RedShades.Shade.all RedShades.Shade.mem_all
 
 /-- The signed light flow has zero divergence at every allowed quarter tile. -/
 private theorem balance_of_allowed (component : Thick) (quadrant : Quadrant)
@@ -205,7 +194,7 @@ right turn, so they cannot meet at an allowed quarter tile. -/
 private theorem not_right_negative_and_up_negative_of_allowed
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true) :
-    Not (rightWeight quadrant state = -1 ∧ upWeight quadrant state = -1) := by
+    ¬ (rightWeight quadrant state = -1 ∧ upWeight quadrant state = -1) := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -214,7 +203,7 @@ private theorem horizontal_none_weights_zero
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = none) :
-    And (rightWeight quadrant state = 0) (leftWeight quadrant state = 0) := by
+    rightWeight quadrant state = 0 ∧ leftWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -223,7 +212,7 @@ private theorem vertical_none_weights_zero
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedVerticalFor component quadrant state = none) :
-    And (upWeight quadrant state = 0) (downWeight quadrant state = 0) := by
+    upWeight quadrant state = 0 ∧ downWeight quadrant state = 0 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -232,7 +221,7 @@ private theorem horizontal_south_has_negative_weight
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = some .south) :
-    Or (rightWeight quadrant state = -1) (leftWeight quadrant state = -1) := by
+    rightWeight quadrant state = -1 ∨ leftWeight quadrant state = -1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -241,7 +230,7 @@ private theorem horizontal_north_has_positive_weight
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedHorizontalFor component quadrant state = some .north) :
-    Or (rightWeight quadrant state = 1) (leftWeight quadrant state = 1) := by
+    rightWeight quadrant state = 1 ∨ leftWeight quadrant state = 1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -250,7 +239,7 @@ private theorem vertical_west_has_negative_weight
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedVerticalFor component quadrant state = some .west) :
-    Or (upWeight quadrant state = -1) (downWeight quadrant state = -1) := by
+    upWeight quadrant state = -1 ∨ downWeight quadrant state = -1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -259,7 +248,7 @@ private theorem vertical_east_has_positive_weight
     (component : Thick) (quadrant : Quadrant) (state : RedShades.State)
     (allowed : RedShades.allowedFor component quadrant state = true)
     (hselected : ShadedSignals.selectedVerticalFor component quadrant state = some .east) :
-    Or (upWeight quadrant state = 1) (downWeight quadrant state = 1) := by
+    upWeight quadrant state = 1 ∨ downWeight quadrant state = 1 := by
   rcases state with ⟨w, e, s, n⟩
   revert w e s n
   cases component <;> cases quadrant <;> decide
@@ -547,8 +536,7 @@ private theorem ValidShadeGrid.horizontal_none_weightsAt_zero
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
     (hselected : ShadedSignals.selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) = none) :
-    And (rightWeightAt stateGrid x y = 0)
-      (leftWeightAt stateGrid x y = 0) := by
+    rightWeightAt stateGrid x y = 0 ∧ leftWeightAt stateGrid x y = 0 := by
   simpa [rightWeightAt, leftWeightAt] using
     horizontal_none_weights_zero _ _ _ (valid.allowed x y) hselected
 
@@ -556,8 +544,7 @@ private theorem ValidShadeGrid.vertical_none_weightsAt_zero
     (valid : ValidShadeGrid indexGrid stateGrid) {x y : Nat}
     (hselected : ShadedSignals.selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) = none) :
-    And (upWeightAt stateGrid x y = 0)
-      (downWeightAt stateGrid x y = 0) := by
+    upWeightAt stateGrid x y = 0 ∧ downWeightAt stateGrid x y = 0 := by
   simpa [upWeightAt, downWeightAt] using
     vertical_none_weights_zero _ _ _ (valid.allowed x y) hselected
 
@@ -777,19 +764,9 @@ private theorem positive_step_before_false
   rw [stable.symm, positiveWeight] at boundaryStep
   omega
 
-/-- A weight seen on either side of a coordinate can be represented on the
-primary side of that coordinate or its predecessor. -/
-private structure AdjacentWeightWitness
-    (primary secondary : Nat → Nat → Int)
-    (coordinate position : Nat) (weight : Int) where
-  scan : Nat
-  scan_eq : scan = coordinate ∨ scan + 1 = coordinate
-  boundaryWeight : primary scan position = weight
-  zero_of_pair : ∀ other,
-    primary coordinate other = 0 → secondary coordinate other = 0 →
-      primary scan other = 0
-
-private noncomputable def adjacentWeightWitness
+/-- A weight seen on either side of a coordinate occurs on the primary side
+of that coordinate or its predecessor. -/
+private theorem exists_adjacent_weight
     {primary secondary : Nat → Nat → Int}
     {coordinate position : Nat} {weight : Int}
     (coordinatePositive : 0 < coordinate)
@@ -797,27 +774,16 @@ private noncomputable def adjacentWeightWitness
       primary scan other = secondary (scan + 1) other)
     (atCoordinate : primary coordinate position = weight ∨
       secondary coordinate position = weight) :
-    AdjacentWeightWitness primary secondary coordinate position weight := by
-  classical
-  by_cases primaryWeight : primary coordinate position = weight
-  · exact {
-      scan := coordinate
-      scan_eq := Or.inl rfl
-      boundaryWeight := primaryWeight
-      zero_of_pair := fun _ primaryZero _ => primaryZero
-    }
-  · have secondaryWeight := atCoordinate.resolve_left primaryWeight
-    refine {
-      scan := coordinate - 1
-      scan_eq := Or.inr (by omega)
-      boundaryWeight := ?_
-      zero_of_pair := ?_
-    }
-    · rw [shared, show coordinate - 1 + 1 = coordinate by omega,
-        secondaryWeight]
+    ∃ scan, (scan = coordinate ∨ scan + 1 = coordinate) ∧
+      primary scan position = weight ∧
+      ∀ other, primary coordinate other = 0 → secondary coordinate other = 0 →
+        primary scan other = 0 := by
+  rcases atCoordinate with primaryWeight | secondaryWeight
+  · exact ⟨coordinate, Or.inl rfl, primaryWeight, fun _ primaryZero _ => primaryZero⟩
+  · refine ⟨coordinate - 1, Or.inr (by omega), ?_, ?_⟩
+    · rw [shared, show coordinate - 1 + 1 = coordinate by omega, secondaryWeight]
     · intro other _ secondaryZero
-      rw [shared, show coordinate - 1 + 1 = coordinate by omega,
-        secondaryZero]
+      rw [shared, show coordinate - 1 + 1 = coordinate by omega, secondaryZero]
 
 /-- An oriented selected boundary after a unit-height point cannot be the
 direction whose local weight is `-1`. The potential, weights, and choice of
@@ -854,19 +820,19 @@ private theorem selected_after_eq_of_negative_rejected
       rcases directions direction with rfl | rfl
       · rfl
       · exfalso
-        let witness := adjacentWeightWitness coordinatePositive shared
-          (rejectedWeight value)
+        obtain ⟨scan, scanEq, boundaryWeight, zeroOfPair⟩ :=
+          exists_adjacent_weight coordinatePositive shared (rejectedWeight value)
         apply negative_step_after_false
-          (potential := potential witness.scan)
-          (weight := primary witness.scan) startBoundary
-          (startHeight witness.scan witness.scan_eq)
+          (potential := potential scan)
+          (weight := primary scan) startBoundary
+          (startHeight scan scanEq)
           (fun position lower upper =>
-            step witness.scan position witness.scan_eq lower upper)
+            step scan position scanEq lower upper)
           (fun position lower upper =>
             let pair := zero position lower upper
-            witness.zero_of_pair position pair.1 pair.2)
-          witness.boundaryWeight
-          (positive witness.scan witness.scan_eq)
+            zeroOfPair position pair.1 pair.2)
+          boundaryWeight
+          (positive scan scanEq)
 
 /-- An oriented selected boundary before a unit-height point cannot be the
 direction whose local weight is `+1`. This is the reverse scan dual of
@@ -903,71 +869,45 @@ private theorem selected_before_eq_of_positive_rejected
       rcases directions direction with rfl | rfl
       · rfl
       · exfalso
-        let witness := adjacentWeightWitness coordinatePositive shared
-          (rejectedWeight value)
+        obtain ⟨scan, scanEq, boundaryWeight, zeroOfPair⟩ :=
+          exists_adjacent_weight coordinatePositive shared (rejectedWeight value)
         apply positive_step_before_false
-          (potential := potential witness.scan)
-          (weight := primary witness.scan) boundaryFinish
-          (finishHeight witness.scan witness.scan_eq)
-          (step witness.scan boundary witness.scan_eq le_rfl boundaryFinish)
+          (potential := potential scan)
+          (weight := primary scan) boundaryFinish
+          (finishHeight scan scanEq)
+          (step scan boundary scanEq le_rfl boundaryFinish)
           (fun position lower upper =>
-            step witness.scan position witness.scan_eq (by omega) upper)
+            step scan position scanEq (by omega) upper)
           (fun position lower upper =>
             let pair := zero position lower upper
-            witness.zero_of_pair position pair.1 pair.2)
-          witness.boundaryWeight
-          (positiveBefore witness.scan witness.scan_eq)
+            zeroOfPair position pair.1 pair.2)
+          boundaryWeight
+          (positiveBefore scan scanEq)
 
 private theorem exists_first_after
     {P : Nat → Prop} {start finish : Nat}
     (hstart : start < finish) (hfinish : P finish) :
-    exists first, start < first ∧ first ≤ finish ∧ P first /\
-      ∀ value, start < value → value < first → Not (P value) := by
+    ∃ first, start < first ∧ first ≤ finish ∧ P first ∧
+      ∀ value, start < value → value < first → ¬ P value := by
   classical
-  let Q : Nat → Prop := fun distance =>
-    0 < distance ∧ start + distance ≤ finish ∧ P (start + distance)
-  have existsQ : exists distance, Q distance := by
-    refine ⟨finish - start, ?_⟩
-    dsimp [Q]
-    have hsum : start + (finish - start) = finish := by omega
-    exact ⟨by omega, by omega, by simpa [hsum] using hfinish⟩
-  let distance := Nat.find existsQ
-  have found : Q distance := Nat.find_spec existsQ
-  refine ⟨start + distance, by simpa [Q] using found.1,
-    found.2.1, found.2.2, ?_⟩
-  intro value hvalueStart hvalueFirst hvalue
-  have candidate : Q (value - start) := by
-    dsimp [Q]
-    have hsum : start + (value - start) = value := by omega
-    exact ⟨by omega, by omega, by simpa [hsum] using hvalue⟩
-  have minimal := Nat.find_min' existsQ candidate
-  dsimp [distance] at hvalueFirst
-  omega
+  have witness : ∃ value, start < value ∧ P value := ⟨finish, hstart, hfinish⟩
+  refine ⟨Nat.find witness, (Nat.find_spec witness).1,
+    Nat.find_min' witness ⟨hstart, hfinish⟩, (Nat.find_spec witness).2, ?_⟩
+  intro value lower upper present
+  exact Nat.find_min witness upper ⟨lower, present⟩
 
 private theorem exists_last_before
     {P : Nat → Prop} {first finish : Nat}
     (hfirst : first < finish) (hfirstP : P first) :
-    exists last, first ≤ last ∧ last < finish ∧ P last /\
-      ∀ value, last < value → value < finish → Not (P value) := by
+    ∃ last, first ≤ last ∧ last < finish ∧ P last ∧
+      ∀ value, last < value → value < finish → ¬ P value := by
   classical
-  let Q : Nat → Prop := fun distance =>
-    0 < distance ∧ distance ≤ finish - first ∧ P (finish - distance)
-  have existsQ : exists distance, Q distance := by
-    refine ⟨finish - first, ?_⟩
-    dsimp [Q]
-    have hsub : finish - (finish - first) = first := by omega
-    exact ⟨by omega, le_rfl, by simpa [hsub] using hfirstP⟩
-  let distance := Nat.find existsQ
-  have found : Q distance := Nat.find_spec existsQ
-  refine ⟨finish - distance, by omega, by omega, found.2.2, ?_⟩
-  intro value hlastValue hvalueFinish hvalue
-  have candidate : Q (finish - value) := by
-    dsimp [Q]
-    have hsub : finish - (finish - value) = value := by omega
-    exact ⟨by omega, by omega, by simpa [hsub] using hvalue⟩
-  have minimal := Nat.find_min' existsQ candidate
-  dsimp [distance] at hlastValue
-  omega
+  have bound : first ≤ finish - 1 := by omega
+  have greatestBound := Nat.findGreatest_le (P := P) (finish - 1)
+  refine ⟨Nat.findGreatest P (finish - 1), Nat.le_findGreatest bound hfirstP,
+    by omega, Nat.findGreatest_spec bound hfirstP, ?_⟩
+  intro value lower upper
+  exact Nat.findGreatest_is_greatest lower (by omega)
 
 /-- Given any selected point in an open interval, expose the current point or
 the nearest selected point on one side.  The two callbacks provide the
@@ -975,7 +915,7 @@ domain-specific orientation of those nearest points. -/
 private theorem boundary_of_exists_selected
     {Direction : Type} {selected : Nat → Option Direction}
     {lower coordinate upper : Nat} {after before : Direction}
-    (witness : exists boundary, lower < boundary ∧ boundary < upper /\
+    (witness : ∃ boundary, lower < boundary ∧ boundary < upper ∧
       selected boundary ≠ none)
     (orientAfter : ∀ boundary, coordinate < boundary → boundary < upper →
       selected boundary ≠ none →
@@ -988,13 +928,13 @@ private theorem boundary_of_exists_selected
         selected value = none) →
       selected coordinate = none →
       selected boundary = some before) :
-    selected coordinate ≠ none \/
-      (exists boundary, coordinate < boundary ∧ boundary < upper /\
-        selected boundary = some after /\
+    selected coordinate ≠ none ∨
+      (∃ boundary, coordinate < boundary ∧ boundary < upper ∧
+        selected boundary = some after ∧
         ∀ value, coordinate < value → value < boundary →
-          selected value = none) \/
-      (exists boundary, lower < boundary ∧ boundary < coordinate /\
-        selected boundary = some before /\
+          selected value = none) ∨
+      (∃ boundary, lower < boundary ∧ boundary < coordinate ∧
+        selected boundary = some before ∧
         ∀ value, boundary < value → value < coordinate →
           selected value = none) := by
   by_cases atCoordinate : selected coordinate ≠ none
@@ -1034,12 +974,12 @@ private theorem boundary_of_unit_height
     {primary secondary potential : Nat → Nat → Int}
     {lower point upper scanCoordinate beforeFinish : Nat}
     {after before rejectedAfter rejectedBefore : Direction}
-    (witness : exists boundary, lower < boundary ∧ boundary < upper /\
+    (witness : ∃ boundary, lower < boundary ∧ boundary < upper ∧
       selected boundary ≠ none)
     (directionsAfter : ∀ direction,
-      direction = after \/ direction = rejectedAfter)
+      direction = after ∨ direction = rejectedAfter)
     (directionsBefore : ∀ direction,
-      direction = before \/ direction = rejectedBefore)
+      direction = before ∨ direction = rejectedBefore)
     (scanPositive : 0 < scanCoordinate)
     (pointInside : lower < point ∧ point < upper)
     (beforeFinishLe : beforeFinish ≤ point)
@@ -1048,38 +988,38 @@ private theorem boundary_of_unit_height
       lower < boundary → boundary < point → boundary ≤ beforeFinish)
     (rejectedAfterWeight : ∀ boundary,
       selected boundary = some rejectedAfter →
-        primary scanCoordinate boundary = -1 \/
+        primary scanCoordinate boundary = -1 ∨
           secondary scanCoordinate boundary = -1)
     (rejectedBeforeWeight : ∀ boundary,
       selected boundary = some rejectedBefore →
-        primary scanCoordinate boundary = 1 \/
+        primary scanCoordinate boundary = 1 ∨
           secondary scanCoordinate boundary = 1)
     (shared : ∀ scan position,
       primary scan position = secondary (scan + 1) position)
     (pointHeight : ∀ scan,
-      scan = scanCoordinate \/ scan + 1 = scanCoordinate →
+      scan = scanCoordinate ∨ scan + 1 = scanCoordinate →
         potential scan point = 1)
     (beforeHeight : ∀ scan,
-      scan = scanCoordinate \/ scan + 1 = scanCoordinate →
+      scan = scanCoordinate ∨ scan + 1 = scanCoordinate →
         potential scan beforeFinish = 1)
     (step : ∀ scan position,
-      scan = scanCoordinate \/ scan + 1 = scanCoordinate →
+      scan = scanCoordinate ∨ scan + 1 = scanCoordinate →
       lower < position → position < upper →
         potential scan position =
           potential scan (position - 1) + primary scan position)
     (zeroWeights : ∀ position, selected position = none →
-      primary scanCoordinate position = 0 /\
+      primary scanCoordinate position = 0 ∧
         secondary scanCoordinate position = 0)
     (positive : ∀ scan position,
-      scan = scanCoordinate \/ scan + 1 = scanCoordinate →
+      scan = scanCoordinate ∨ scan + 1 = scanCoordinate →
       lower ≤ position → position < upper → 1 ≤ potential scan position) :
-    selected point ≠ none \/
-      (exists boundary, point < boundary ∧ boundary < upper /\
-        selected boundary = some after /\
+    selected point ≠ none ∨
+      (∃ boundary, point < boundary ∧ boundary < upper ∧
+        selected boundary = some after ∧
         ∀ value, point < value → value < boundary →
-          selected value = none) \/
-      (exists boundary, lower < boundary ∧ boundary < point /\
-        selected boundary = some before /\
+          selected value = none) ∨
+      (∃ boundary, lower < boundary ∧ boundary < point ∧
+        selected boundary = some before ∧
         ∀ value, boundary < value → value < point →
           selected value = none) := by
   apply boundary_of_exists_selected witness
@@ -1123,8 +1063,7 @@ private theorem ValidShadeGrid.vertical_west_has_negative_weightAt
     (hselected : ShadedSignals.selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .west) :
-    Or (upWeightAt stateGrid x y = -1)
-      (downWeightAt stateGrid x y = -1) := by
+    upWeightAt stateGrid x y = -1 ∨ downWeightAt stateGrid x y = -1 := by
   simpa [upWeightAt, downWeightAt] using
     vertical_west_has_negative_weight _ _ _
       (valid.allowed x y) hselected
@@ -1134,8 +1073,7 @@ private theorem ValidShadeGrid.vertical_east_has_positive_weightAt
     (hselected : ShadedSignals.selectedVerticalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .east) :
-    Or (upWeightAt stateGrid x y = 1)
-      (downWeightAt stateGrid x y = 1) := by
+    upWeightAt stateGrid x y = 1 ∨ downWeightAt stateGrid x y = 1 := by
   simpa [upWeightAt, downWeightAt] using
     vertical_east_has_positive_weight _ _ _
       (valid.allowed x y) hselected
@@ -1158,95 +1096,6 @@ private theorem faceHeight_step_right
     at difference
   omega
 
-/-- Horizontal half of the Robinson obstruction geometry. -/
-private theorem CycleShade.horizontalBoundary
-    (shaded : CycleShade stateGrid west east south north .light)
-    (cycle : CycleOn indexGrid west east south north)
-    (valid : ValidShadeGrid indexGrid stateGrid) :
-    ∀ {column row : Nat},
-      quarterWest west < column → column < quarterEast east →
-      quarterSouth south < row → row < quarterNorth north →
-      IsFreeColumn indexGrid stateGrid south north column →
-      Not (IsFreeRow indexGrid stateGrid west east row) →
-        ShadedSignals.selectedVerticalFor
-            (componentAt indexGrid column row) (quadrantAt column row)
-            (stateGrid column row) ≠ none \/
-        (exists boundary, column < boundary ∧ boundary < quarterEast east /\
-          ShadedSignals.selectedVerticalFor
-            (componentAt indexGrid boundary row) (quadrantAt boundary row)
-            (stateGrid boundary row) = some .east /\
-          ∀ x, column < x → x < boundary →
-            ShadedSignals.selectedVerticalFor
-              (componentAt indexGrid x row) (quadrantAt x row)
-              (stateGrid x row) = none) \/
-        (exists boundary, quarterWest west < boundary ∧ boundary < column /\
-          ShadedSignals.selectedVerticalFor
-            (componentAt indexGrid boundary row) (quadrantAt boundary row)
-            (stateGrid boundary row) = some .west /\
-          ∀ x, boundary < x → x < column →
-            ShadedSignals.selectedVerticalFor
-              (componentAt indexGrid x row) (quadrantAt x row)
-              (stateGrid x row) = none) := by
-  intro column row hwest heast hsouth hnorth free notFree
-  let selected := fun x => ShadedSignals.selectedVerticalFor
-    (componentAt indexGrid x row) (quadrantAt x row) (stateGrid x row)
-  have witness : exists boundary,
-      quarterWest west < boundary ∧ boundary < quarterEast east /\
-        selected boundary ≠ none := by
-    simp only [IsFreeRow] at notFree
-    push Not at notFree
-    exact notFree
-  apply OrientedLightBoundarySearch.boundary_of_unit_height
-    (selected := selected)
-    (primary := fun scan x => upWeightAt stateGrid x scan)
-    (secondary := fun scan x => downWeightAt stateGrid x scan)
-    (potential := fun scan x => faceHeight stateGrid x (quarterSouth south)
-      (scan - quarterSouth south))
-    (lower := quarterWest west) (point := column)
-    (upper := quarterEast east) (scanCoordinate := row)
-    (beforeFinish := column - 1)
-    (after := .east) (before := .west)
-    (rejectedAfter := .west) (rejectedBefore := .east) witness
-  · intro direction
-    cases direction <;> simp
-  · intro direction
-    cases direction <;> simp
-  · omega
-  · exact ⟨hwest, heast⟩
-  · omega
-  · omega
-  · omega
-  · intro boundary rejected
-    exact ValidShadeGrid.vertical_west_has_negative_weightAt valid rejected
-  · intro boundary rejected
-    exact ValidShadeGrid.vertical_east_has_positive_weightAt valid rejected
-  · exact fun scan x =>
-      OrientedLightHeight.ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
-        valid x scan
-  · intro scan scanEq
-    exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_right_of_freeColumn
-      shaded cycle valid (column := column) (row := scan)
-      (le_of_lt hwest) heast
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega) free
-  · intro scan scanEq
-    exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_left_of_freeColumn
-      shaded cycle valid (column := column) (row := scan)
-      hwest heast
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega) free
-  · intro scan position scanEq positionWest positionEast
-    exact faceHeight_step_right shaded cycle valid
-      (by rcases scanEq with h | h <;> omega) positionWest positionEast
-  · intro position clear
-    exact ValidShadeGrid.vertical_none_weightsAt_zero valid clear
-  · intro scan position scanEq positionWest positionEast
-    exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
-      shaded cycle valid (column := position) (row := scan)
-      positionWest positionEast
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega)
-
 end OrientedLightHorizontalGeometry
 
 namespace OrientedLightVerticalGeometry
@@ -1263,8 +1112,7 @@ private theorem ValidShadeGrid.horizontal_south_has_negative_weightAt
     (hselected : ShadedSignals.selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .south) :
-    Or (rightWeightAt stateGrid x y = -1)
-      (leftWeightAt stateGrid x y = -1) := by
+    rightWeightAt stateGrid x y = -1 ∨ leftWeightAt stateGrid x y = -1 := by
   simpa [rightWeightAt, leftWeightAt] using
     horizontal_south_has_negative_weight _ _ _
       (valid.allowed x y) hselected
@@ -1274,8 +1122,7 @@ private theorem ValidShadeGrid.horizontal_north_has_positive_weightAt
     (hselected : ShadedSignals.selectedHorizontalFor
       (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) =
         some .north) :
-    Or (rightWeightAt stateGrid x y = 1)
-      (leftWeightAt stateGrid x y = 1) := by
+    rightWeightAt stateGrid x y = 1 ∨ leftWeightAt stateGrid x y = 1 := by
   simpa [rightWeightAt, leftWeightAt] using
     horizontal_north_has_positive_weight _ _ _
       (valid.allowed x y) hselected
@@ -1293,102 +1140,14 @@ private theorem faceHeight_step_up {scan position : Nat}
   congr 2
   omega
 
-/-- Vertical half of the Robinson obstruction geometry, now derived directly
-from the height minimum principle. -/
-private theorem CycleShade.verticalBoundary
-    (shaded : CycleShade stateGrid west east south north .light)
-    (cycle : CycleOn indexGrid west east south north)
-    (valid : ValidShadeGrid indexGrid stateGrid) :
-    ∀ {column row : Nat},
-      quarterWest west < column → column < quarterEast east →
-      quarterSouth south < row → row < quarterNorth north →
-      IsFreeRow indexGrid stateGrid west east row →
-      Not (IsFreeColumn indexGrid stateGrid south north column) →
-        ShadedSignals.selectedHorizontalFor
-            (componentAt indexGrid column row) (quadrantAt column row)
-            (stateGrid column row) ≠ none \/
-        (exists boundary, row < boundary ∧ boundary < quarterNorth north /\
-          ShadedSignals.selectedHorizontalFor
-            (componentAt indexGrid column boundary) (quadrantAt column boundary)
-            (stateGrid column boundary) = some .north /\
-          ∀ y, row < y → y < boundary →
-            ShadedSignals.selectedHorizontalFor
-              (componentAt indexGrid column y) (quadrantAt column y)
-              (stateGrid column y) = none) \/
-        (exists boundary, quarterSouth south < boundary ∧ boundary < row /\
-          ShadedSignals.selectedHorizontalFor
-            (componentAt indexGrid column boundary) (quadrantAt column boundary)
-            (stateGrid column boundary) = some .south /\
-          ∀ y, boundary < y → y < row →
-            ShadedSignals.selectedHorizontalFor
-              (componentAt indexGrid column y) (quadrantAt column y)
-              (stateGrid column y) = none) := by
-  intro column row hwest heast hsouth hnorth free notFree
-  let selected := fun y =>
-    ShadedSignals.selectedHorizontalFor
-      (componentAt indexGrid column y) (quadrantAt column y)
-      (stateGrid column y)
-  have witness : exists boundary,
-      quarterSouth south < boundary ∧ boundary < quarterNorth north /\
-        selected boundary ≠ none := by
-    simp only [IsFreeColumn] at notFree
-    push Not at notFree
-    exact notFree
-  apply OrientedLightBoundarySearch.boundary_of_unit_height
-    (selected := selected)
-    (primary := fun scan y => rightWeightAt stateGrid scan y)
-    (secondary := fun scan y => leftWeightAt stateGrid scan y)
-    (potential := fun scan y => faceHeight stateGrid scan (quarterSouth south)
-      (y - quarterSouth south))
-    (lower := quarterSouth south) (point := row)
-    (upper := quarterNorth north) (scanCoordinate := column)
-    (beforeFinish := row)
-    (after := .north) (before := .south)
-    (rejectedAfter := .south) (rejectedBefore := .north) witness
-  · intro direction
-    cases direction <;> simp
-  · intro direction
-    cases direction <;> simp
-  · omega
-  · exact ⟨hsouth, hnorth⟩
-  · omega
-  · exact hnorth
-  · omega
-  · intro boundary rejected
-    exact ValidShadeGrid.horizontal_south_has_negative_weightAt valid rejected
-  · intro boundary rejected
-    exact ValidShadeGrid.horizontal_north_has_positive_weightAt valid rejected
-  · exact fun scan y =>
-      OrientedLightHeight.ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
-        valid scan y
-  · intro scan scanEq
-    exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
-      shaded cycle valid (column := scan) (row := row)
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega)
-      (le_of_lt hsouth) hnorth free
-  · intro scan scanEq
-    exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
-      shaded cycle valid (column := scan) (row := row)
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega)
-      (le_of_lt hsouth) hnorth free
-  · intro scan position scanEq positionSouth positionNorth
-    exact faceHeight_step_up positionSouth
-  · intro position clear
-    exact ValidShadeGrid.horizontal_none_weightsAt_zero valid clear
-  · intro scan position scanEq positionSouth positionNorth
-    exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
-      shaded cycle valid
-      (by rcases scanEq with h | h <;> omega)
-      (by rcases scanEq with h | h <;> omega)
-      (row := position) positionSouth positionNorth
-
 end OrientedLightVerticalGeometry
 
 namespace OrientedLightGeometry
 
 open OrientedRedCycles RedShadeCycles RedShadePaths ShadedPlaneSignalGrid
+  OrientedLightHeightWeights OrientedLightHeight OrientedLightFreeHeight
+  OrientedLightHorizontalGeometry
+  OrientedLightVerticalGeometry
 
 variable {indexGrid : Nat → Nat → Index}
   {stateGrid : Nat → Nat → RedShades.State}
@@ -1402,12 +1161,127 @@ theorem CycleShade.geometry
     (valid : ValidShadeGrid indexGrid stateGrid) :
     ShadedObstructionGeometry.Geometry
       indexGrid stateGrid west east south north where
-  verticalBoundary :=
-    OrientedLightVerticalGeometry.CycleShade.verticalBoundary
-      shaded cycle valid
-  horizontalBoundary :=
-    OrientedLightHorizontalGeometry.CycleShade.horizontalBoundary
-      shaded cycle valid
+  verticalBoundary := by
+    intro column row hwest heast hsouth hnorth free notFree
+    let selected := fun y =>
+      ShadedSignals.selectedHorizontalFor
+        (componentAt indexGrid column y) (quadrantAt column y)
+        (stateGrid column y)
+    have witness : ∃ boundary,
+        quarterSouth south < boundary ∧ boundary < quarterNorth north ∧
+          selected boundary ≠ none := by
+      simp only [IsFreeColumn] at notFree
+      push Not at notFree
+      exact notFree
+    apply OrientedLightBoundarySearch.boundary_of_unit_height
+      (selected := selected)
+      (primary := fun scan y => rightWeightAt stateGrid scan y)
+      (secondary := fun scan y => leftWeightAt stateGrid scan y)
+      (potential := fun scan y => faceHeight stateGrid scan (quarterSouth south)
+        (y - quarterSouth south))
+      (lower := quarterSouth south) (point := row)
+      (upper := quarterNorth north) (scanCoordinate := column)
+      (beforeFinish := row)
+      (after := .north) (before := .south)
+      (rejectedAfter := .south) (rejectedBefore := .north) witness
+    · intro direction
+      cases direction <;> simp
+    · intro direction
+      cases direction <;> simp
+    · omega
+    · exact ⟨hsouth, hnorth⟩
+    · omega
+    · exact hnorth
+    · omega
+    · intro boundary rejected
+      exact ValidShadeGrid.horizontal_south_has_negative_weightAt valid rejected
+    · intro boundary rejected
+      exact ValidShadeGrid.horizontal_north_has_positive_weightAt valid rejected
+    · exact fun scan y =>
+        OrientedLightHeight.ValidShadeGrid.rightWeightAt_eq_leftWeightAt_succ
+          valid scan y
+    · intro scan scanEq
+      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
+        shaded cycle valid (column := scan) (row := row)
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega)
+        (le_of_lt hsouth) hnorth free
+    · intro scan scanEq
+      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_of_freeRow
+        shaded cycle valid (column := scan) (row := row)
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega)
+        (le_of_lt hsouth) hnorth free
+    · intro scan position scanEq positionSouth positionNorth
+      exact faceHeight_step_up positionSouth
+    · intro position clear
+      exact ValidShadeGrid.horizontal_none_weightsAt_zero valid clear
+    · intro scan position scanEq positionSouth positionNorth
+      exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
+        shaded cycle valid
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega)
+        (row := position) positionSouth positionNorth
+  horizontalBoundary := by
+    intro column row hwest heast hsouth hnorth free notFree
+    let selected := fun x => ShadedSignals.selectedVerticalFor
+      (componentAt indexGrid x row) (quadrantAt x row) (stateGrid x row)
+    have witness : ∃ boundary,
+        quarterWest west < boundary ∧ boundary < quarterEast east ∧
+          selected boundary ≠ none := by
+      simp only [IsFreeRow] at notFree
+      push Not at notFree
+      exact notFree
+    apply OrientedLightBoundarySearch.boundary_of_unit_height
+      (selected := selected)
+      (primary := fun scan x => upWeightAt stateGrid x scan)
+      (secondary := fun scan x => downWeightAt stateGrid x scan)
+      (potential := fun scan x => faceHeight stateGrid x (quarterSouth south)
+        (scan - quarterSouth south))
+      (lower := quarterWest west) (point := column)
+      (upper := quarterEast east) (scanCoordinate := row)
+      (beforeFinish := column - 1)
+      (after := .east) (before := .west)
+      (rejectedAfter := .west) (rejectedBefore := .east) witness
+    · intro direction
+      cases direction <;> simp
+    · intro direction
+      cases direction <;> simp
+    · omega
+    · exact ⟨hwest, heast⟩
+    · omega
+    · omega
+    · omega
+    · intro boundary rejected
+      exact ValidShadeGrid.vertical_west_has_negative_weightAt valid rejected
+    · intro boundary rejected
+      exact ValidShadeGrid.vertical_east_has_positive_weightAt valid rejected
+    · exact fun scan x =>
+        OrientedLightHeight.ValidShadeGrid.upWeightAt_eq_downWeightAt_succ
+          valid x scan
+    · intro scan scanEq
+      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_right_of_freeColumn
+        shaded cycle valid (column := column) (row := scan)
+        (le_of_lt hwest) heast
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega) free
+    · intro scan scanEq
+      exact OrientedLightFreeHeight.CycleShade.faceHeight_eq_one_left_of_freeColumn
+        shaded cycle valid (column := column) (row := scan)
+        hwest heast
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega) free
+    · intro scan position scanEq positionWest positionEast
+      exact faceHeight_step_right shaded cycle valid
+        (by rcases scanEq with h | h <;> omega) positionWest positionEast
+    · intro position clear
+      exact ValidShadeGrid.vertical_none_weightsAt_zero valid clear
+    · intro scan position scanEq positionWest positionEast
+      exact OrientedLightFreeHeight.CycleShade.one_le_faceHeight_at
+        shaded cycle valid (column := position) (row := scan)
+        positionWest positionEast
+        (by rcases scanEq with h | h <;> omega)
+        (by rcases scanEq with h | h <;> omega)
 
 end OrientedLightGeometry
 end Cslib.WangTile.Robinson
