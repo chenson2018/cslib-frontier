@@ -21,13 +21,13 @@ reversing an edge takes the converse, and every triangle is a cycle
 [HirschHodkinson2001], Section 2.1. Networks need only the converse, the identity atoms and the
 cycles, so they are defined over an `AtomFrame`, the data of an `AtomStructure` without its laws.
 
-A network is *saturated* when every way of writing an edge label below a product of two atoms is
-witnessed by a third node. Saturated networks over an atom structure are the homomorphisms from
-its complex algebra to the algebra of all relations on the nodes, each sending an element to the
-edges whose labels lie in it; for finitely many atoms every such homomorphism arises this way.
-This is the equivalence of conditions (a) and (b) in [HirschHodkinson1997], Lemma 4(1), for the
-strict networks of [HirschHodkinson2001] (where loops are the only edges with identity labels), and
-without the completeness of the homomorphism, which is automatic for finitely many atoms.
+A network is *saturated* when every way of placing an edge label below a product of two atoms is
+witnessed by a third node. A saturated network over an atom structure defines a homomorphism from
+the complex algebra to the algebra of all relations on its nodes, sending an element to the set of
+edges whose labels lie in it ([HirschHodkinson1997], Lemma 4(1), (b) implies (a)). Over finitely
+many atoms every homomorphism from the complex algebra to the relations on a type arises in this
+way, because every pair of points then lies in the image of exactly one atom, as in the proof of
+[HirschHodkinson1997], Lemma 6.
 
 ## Main definitions
 
@@ -114,8 +114,8 @@ def comap (N : AtomicNetwork F D) (f : D' ↪ D) : AtomicNetwork F D' where
 
 /-- A network is saturated when, for every edge `(m, n)` and atoms `a`, `b` whose product lies
 above its label, some node `p` has `N m p = a` and `N p n = b`. This is condition (b) of
-[HirschHodkinson1997], Lemma 4(1), there attributed to Maddux under the name *complete
-labelling*; "saturated" is our name for it. -/
+[HirschHodkinson1997], Lemma 4(1), which notes that Maddux calls such a network a *complete
+labelling*; the name "saturated" is ours. -/
 @[expose]
 def Saturated (N : AtomicNetwork F D) : Prop :=
   ∀ ⦃m n a b⦄, (a, b, N m n) ∈ F.cycles → ∃ p, N m p = a ∧ N p n = b

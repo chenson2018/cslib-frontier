@@ -10,11 +10,73 @@ module
 public import CslibFrontier.Foundations.RelationAlgebra.AtomicNetwork
 public import Mathlib.Basic.Countable.Defs
 import Mathlib.Basic.Countable.Basic
+import Mathlib.Data.Fintype.Order
 import Mathlib.Data.Nat.Pairing
 
 /-!
-# The representation game of a finite relation algebra
+# The representation game on atomic networks
 
+The game `G(A)` of [HirschHodkinson2001], Definition 1, is played by ∀ and ∃ on the atomic
+networks of a finite relation algebra `A`. ∀ opens with an atom, and ∃ answers with a network
+having an edge labelled by it. In each later round ∀ picks an edge `(m, n)` of the current network
+`N` and atoms `a`, `b` with `N(m, n) ≤ a ; b`, and ∃ answers with a network extending `N` that has
+a node `p` with `N(m, p) = a` and `N(p, n) = b`. ∃ wins a play when she answers in every round.
+Theorem 1 of the source states that `A` is representable if and only if ∃ has a winning strategy.
+
+## Formalization
+
+* The rules mention only the converse, the identity atoms and the cycles, so the game is defined
+  for an `AtomFrame`. For the frame of an `AtomStructure A` it is the game of the complex algebra
+  of `A`, and every finite relation algebra is the complex algebra of its atom structure. No law
+  of an atom structure is assumed: they all hold on a frame on which ∃ has a winning strategy
+  (`AtomStructure.ofHasWinningStrategy`).
+* A `Position` is a network on `Fin n`, and `P ≤ Q` means that `P` is the restriction of `Q` to
+  its first `P.size` nodes. A chain `N₀ ⊆ N₁ ⊆ ⋯` of finite networks as in the source becomes a
+  chain of positions when its nodes are numbered in the order in which they appear, and the rules
+  do not depend on the names of the nodes.
+* A `Strategy` gives ∃'s network as a function of the current network and the move of ∀, and it
+  is winning when it answers legally at every network reachable in a play that follows it. Whether
+  a move or an answer is legal depends only on the current network, so ∃ gains nothing from
+  strategies that depend on the whole play: the networks arising when she follows a winning one
+  form a set as in `hasWinningStrategy_iff`, which yields a winning strategy in the present sense.
+* The source's Convention 1 is not part of the definition: ∃ may add any number of nodes, and ∀
+  may make a move that already has a witness. That ∃ loses nothing by following parts (1) and (2)
+  of the convention is `HasWinningStrategy.of_forall_exists_comap_castSucc`.
+* `Representable` asks for an injective homomorphism into a product of algebras of all relations
+  on a set. The source's representations are isomorphisms onto an algebra of relations on one set
+  whose unit is an equivalence relation; restricting to the classes of the unit turns one into the
+  other [HirschHodkinson1997], Section 3.2.
+
+## Main definitions
+
+* `Cslib.RelationAlgebra.AtomFrame.Position`, `Position.Move`, `Position.Answers`: the finite
+  networks, the moves of ∀ and the legal answers of ∃.
+* `Cslib.RelationAlgebra.AtomFrame.Strategy`, `Strategy.IsWinning`, `HasWinningStrategy`: the
+  strategies of ∃.
+* `Cslib.RelationAlgebra.AtomStructure.ofHasWinningStrategy`: the atom structure on a frame on
+  which ∃ has a winning strategy; its associativity is [HirschHodkinson2001], Lemma 7.
+
+## Main results
+
+* `Cslib.RelationAlgebra.AtomFrame.hasWinningStrategy_iff`: ∃ has a winning strategy if and only
+  if some set of networks realizes every atom and is closed under answering the moves of ∀.
+* `Cslib.RelationAlgebra.AtomFrame.HasWinningStrategy.exists_saturated`, `.of_saturated`: over
+  countably many atoms, ∃ has a winning strategy if and only if every atom labels an edge of a
+  saturated network.
+* `Cslib.RelationAlgebra.representable_complexAlgebra_iff`,
+  `Cslib.RelationAlgebra.representable_iff_hasWinningStrategy`: Theorem 1 of
+  [HirschHodkinson2001], for the complex algebra of a finite atom structure and for a finite
+  relation algebra. The two directions are
+  `Cslib.RelationAlgebra.Representation.hasWinningStrategy`, for representations in any universes,
+  and `Cslib.RelationAlgebra.AtomFrame.HasWinningStrategy.representable`, which needs only
+  countably many atoms. The proof is that of [HirschHodkinson1997], Lemma 6.
+
+## References
+
+* [R. Hirsch, I. Hodkinson, *Step by step — building representations in algebraic
+  logic*][HirschHodkinson1997]
+* [R. Hirsch, I. Hodkinson, *Representability is not decidable for finite relation
+  algebras*][HirschHodkinson2001]
 -/
 
 public section
@@ -29,7 +91,8 @@ namespace AtomFrame
 
 variable (F : AtomFrame α)
 
-/-- A position of the game `G(F)`: a finite atomic network, with nodes `0, …, size - 1`. -/
+/-- A position of the game `G(F)`: a finite atomic network, with its nodes numbered
+`0, …, size - 1`. -/
 structure Position where
   /-- The number of nodes. -/
   size : ℕ
@@ -89,7 +152,9 @@ namespace Strategy
 
 /-- The networks that arise in the plays of `G(F)` in which ∃ follows the strategy `σ`. -/
 inductive Reachable (σ : F.Strategy) : F.Position → Prop
+  /-- Her network in round zero, for each atom ∀ may pick. -/
   | opening (a : α) : σ.Reachable (σ.opening a)
+  /-- Her network after a move of ∀ at a network that has arisen. -/
   | answer {P : F.Position} (v : P.Move) : σ.Reachable P → σ.Reachable (σ.answer P v)
 
 /-- A strategy is winning when it gives a legal response in every round of every play in which ∃
@@ -253,8 +318,8 @@ private theorem exists_answer {F : AtomFrame α} {W : Set F.Position}
 
 /-- A frame on which ∃ has a winning strategy is an atom structure. Associativity is
 [HirschHodkinson2001], Lemma 7: ∀ opens with `p ≤ r ; q`, then demands `r`, `q` on that edge and
-`s`, `t` on the new edge labelled `q`, and the fourth edge of the resulting network is the atom
-required. The other laws follow in the same way from at most one move. -/
+`s`, `t` on the new edge labelled `q`, and the remaining edge of the resulting network is the atom
+required. The source assumes the other laws; they follow in the same way from at most one move. -/
 @[expose, simps]
 def AtomStructure.ofHasWinningStrategy (F : AtomFrame α) (h : F.HasWinningStrategy) :
     AtomStructure α where
@@ -287,6 +352,10 @@ def AtomStructure.ofHasWinningStrategy (F : AtomFrame α) (h : F.HasWinningStrat
     rw [← hf m n, Q.network.conv_label]
     exact Q.network.label_mem_cycles _ _ _
 
+@[simp]
+theorem AtomStructure.frame_ofHasWinningStrategy (F : AtomFrame α) (h : F.HasWinningStrategy) :
+    (AtomStructure.ofHasWinningStrategy F h).frame = F := rfl
+
 variable {A : AtomStructure α}
 
 /-- If ∃ has a winning strategy in the game of an atom structure with countably many atoms, then
@@ -316,5 +385,16 @@ representable if and only if ∃ has a winning strategy in its game. -/
 theorem representable_complexAlgebra_iff [Finite α] (A : AtomStructure α) :
     Representable (ComplexAlgebra A) ↔ A.frame.HasWinningStrategy :=
   ⟨fun ⟨_, _, ⟨r⟩⟩ => r.hasWinningStrategy, fun h => h.representable⟩
+
+/-- **Theorem 1 of [HirschHodkinson2001]**, as stated there: a finite relation algebra is
+representable if and only if ∃ has a winning strategy in the game on its atoms. -/
+theorem representable_iff_hasWinningStrategy (α : Type u) [RelationAlgebra α] [Finite α] :
+    Representable α ↔ (atomStructure α).frame.HasWinningStrategy := by
+  cases nonempty_fintype α
+  let : CompleteAtomicRelationAlgebra α :=
+    { ‹RelationAlgebra α›, Fintype.toCompleteAtomicBooleanAlgebra α with }
+  have e : RelationAlgebraEquiv α (ComplexAlgebra (atomStructure α)) := complexAlgebraEquiv
+  exact Iff.trans ⟨.of_injective e.symm.toHom (EquivLike.injective e.symm),
+    .of_injective e.toHom (EquivLike.injective e)⟩ (representable_complexAlgebra_iff _)
 
 end Cslib.RelationAlgebra
