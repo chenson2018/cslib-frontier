@@ -28,7 +28,7 @@ open Cslib.RelationAlgebra
 /-! ### A yes-instance: the group of order two -/
 
 /-- The table of the group of order two: the identity `0` and one other atom `1`, with
-`1 ; 1 = 0`. -/
+`1;1 = 0`. -/
 def cyclicTwo : AtomTable := ⟨2, [0, 1], [0], [(0, 0, 0), (0, 1, 1), (1, 0, 1), (1, 1, 0)]⟩
 
 /-- The atom structure of the group of order two, with its atoms numbered. -/
@@ -62,8 +62,8 @@ proof here does not rely on the source: it is by Theorem 1 of [HirschHodkinson20
 the game in three rounds. -/
 
 /-- The table of `14₃₇`. Writing `r`, `r˘`, `a` for the atoms `1`, `2`, `3`, the cycles other than
-those with the identity are the Peircean transforms of `r ≤ r ; r`, `r ≤ a ; r`, `r ≤ r ; a` and
-`a ≤ r ; a`. -/
+those with the identity are the Peircean transforms of `r ≤ r;r`, `r ≤ a;r`, `r ≤ r;a` and
+`a ≤ r;a`. -/
 def fourAtoms : AtomTable := ⟨4, [0, 2, 1, 3], [0],
   [(0, 0, 0), (0, 1, 1), (0, 2, 2), (0, 3, 3), (1, 0, 1), (1, 1, 1), (1, 2, 0), (1, 2, 1),
     (1, 2, 2), (1, 2, 3), (1, 3, 1), (1, 3, 3), (2, 0, 2), (2, 1, 0), (2, 1, 1), (2, 1, 2),
