@@ -4287,6 +4287,10 @@ public import CslibFrontier.Computability.USTCON.Reader.Defs
 public import CslibFrontier.Computability.USTCON.Reader.Encode
 public import CslibFrontier.Computability.USTCON.Reader.Invariant
 public import CslibFrontier.Computability.USTCON.Space
+public import CslibFrontier.Computability.WangTile.Basic
+public import CslibFrontier.Computability.WangTile.Compactness
+public import CslibFrontier.Computability.WangTile.OfTM0
+public import CslibFrontier.Computability.WangTile.SeededUndecidable
 public import CslibFrontier.Computability.WordRAM.Admission
 public import CslibFrontier.Computability.WordRAM.Allocation
 public import CslibFrontier.Computability.WordRAM.ArrayAppend
@@ -4740,6 +4744,7 @@ public import CslibFrontier.Crypto.Computational.OneWay.LiuPassConverse
 public import CslibFrontier.Crypto.Computational.OneWay.MCSP
 public import CslibFrontier.Crypto.Computational.OneWay.NP
 public import CslibFrontier.Crypto.Computational.OneWay.Normalize
+public import CslibFrontier.Crypto.Computational.OneWay.Repeated
 public import CslibFrontier.Crypto.Computational.OneWay.Weak
 public import CslibFrontier.Crypto.Computational.OneWayToPRF
 public import CslibFrontier.Crypto.Computational.OneWayToPRG
@@ -4920,6 +4925,7 @@ public import CslibFrontier.Crypto.Game.Inversion
 public import CslibFrontier.Crypto.Game.Order
 public import CslibFrontier.Crypto.Game.Quantum
 public import CslibFrontier.Crypto.Game.RepeatedInversion
+public import CslibFrontier.Crypto.Game.RepeatedInversion.SlotBound
 public import CslibFrontier.Crypto.Game.Retry
 public import CslibFrontier.Crypto.Game.SecondPreimage
 public import CslibFrontier.Crypto.Game.Statistical
