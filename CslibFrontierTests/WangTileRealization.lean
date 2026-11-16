@@ -19,6 +19,15 @@ set_option linter.privateModule false
 open Cslib Cslib.WangTile Cslib.WangTile.Robinson
 open Cslib.WangTile.Robinson.Canonical Cslib.WangTile.Robinson.Carrier
 
+example : (BorderState.seed.refine 2 3).Admissible :=
+  BorderState.refine_admissible BorderState.seed_admissible 2 3
+
+example (x y : Fin 2) :
+    (BorderState.seed.refine 2 3).halo.row x.castSucc y.castSucc =
+      (BorderState.seed.refine 2 3).node.rowInterior x y :=
+  (BorderState.observations
+    (BorderState.refine_admissible BorderState.seed_admissible 2 3) x y).1
+
 example : rowInterior 2 seedNode 5 6 = some true := by
   rw [rowInterior_seed_eq_selectedBorder 2 5 6 (by decide) (by decide)]
   decide +kernel

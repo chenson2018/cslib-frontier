@@ -8,6 +8,7 @@ module
 -- upstream: candidate
 
 public import CslibFrontier.Computability.WangTile.Robinson.Canonical.Patches
+public import CslibFrontier.Computability.WangTile.Robinson.Carrier.BorderCertificates
 import Mathlib.Data.Nat.Periodic
 
 /-!
