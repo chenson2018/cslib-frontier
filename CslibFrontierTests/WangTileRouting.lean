@@ -22,7 +22,6 @@ private def zeroTile : WangTile := ⟨0, 0, 0, 0⟩
 private def uniformScaffold (role : RouteRole) : RoutedScaffold where
   tiles := [zeroTile]
   role := fun _ => role
-  role_primrec := Primrec.const _
 
 private def uniformPlane (role : RouteRole) : Plane (uniformScaffold role).tiles where
   tile := fun _ _ => zeroTile
@@ -98,11 +97,6 @@ private def wireScaffold : RoutedScaffold where
   role t := if t.bottom = 0 then
     if t.left = 0 then .corner else .horizontal
     else if t.left = 0 then .vertical else .inactive
-  role_primrec := Primrec.ite (Primrec.eq.comp primrec_bottom (Primrec.const 0))
-    (Primrec.ite (Primrec.eq.comp primrec_left (Primrec.const 0))
-      (Primrec.const RouteRole.corner) (Primrec.const RouteRole.horizontal))
-    (Primrec.ite (Primrec.eq.comp primrec_left (Primrec.const 0))
-      (Primrec.const RouteRole.vertical) (Primrec.const RouteRole.inactive))
 
 private def wirePlane : Plane wireScaffold.tiles where
   tile := wireTile

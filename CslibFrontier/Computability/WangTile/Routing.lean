@@ -52,29 +52,6 @@ inductive RouteRole where
   | inactive | horizontal | vertical | active | corner
   deriving DecidableEq
 
-/-- Finite role coding: no role, or two bits selecting a wire or crossing. -/
-def RouteRole.equivCode : RouteRole ≃ Option (Bool × Bool) where
-  toFun
-    | .inactive => none
-    | .horizontal => some (false, false)
-    | .vertical => some (false, true)
-    | .active => some (true, false)
-    | .corner => some (true, true)
-  invFun
-    | none => .inactive
-    | some (false, false) => .horizontal
-    | some (false, true) => .vertical
-    | some (true, false) => .active
-    | some (true, true) => .corner
-  left_inv r := by cases r <;> rfl
-  right_inv c := by
-    rcases c with _ | ⟨a, b⟩
-    · rfl
-    · cases a <;> cases b <;> rfl
-
-/-- Primitive recursive coding of the five routing roles. -/
-instance : Primcodable RouteRole := Primcodable.ofEquiv _ RouteRole.equivCode
-
 /-- Whether the role prescribes horizontal payload data. -/
 @[expose] def RouteRole.horizontalCarrier : RouteRole → Bool
   | .horizontal | .active | .corner => true
@@ -85,14 +62,12 @@ instance : Primcodable RouteRole := Primcodable.ofEquiv _ RouteRole.equivCode
   | .vertical | .active | .corner => true
   | _ => false
 
-/-- A finite scaffold with a primitive-recursive routing-role decoder. -/
+/-- A finite scaffold with an assigned payload role at each tile. -/
 structure RoutedScaffold where
   /-- The finite scaffold alphabet. -/
   tiles : List WangTile
   /-- The payload role attached to a scaffold tile. -/
   role : WangTile → RouteRole
-  /-- The decoder is effective on natural-number tile codes. -/
-  role_primrec : Primrec role
 
 /-- Pair scaffold and payload colours on each edge, in that order. -/
 @[expose] def layer (base payload : WangTile) : WangTile :=
@@ -179,7 +154,8 @@ private theorem primrec_completePayloads : Primrec completePayloads := by
     (Primrec.snd.comp (Primrec.fst.comp Primrec.fst))
     (Primrec.snd.comp Primrec.fst) Primrec.snd
 
-/-- The combination can be computed by primitive recursion on the seeded instance code. -/
+/-- The combination is primitive recursive on the seeded instance code: only the finitely many
+roles on the fixed scaffold alphabet matter, so no computability premise on `S.role` is needed. -/
 theorem primrec_combine (S : RoutedScaffold) : Primrec (combine S) := by
   have hp (b : WangTile) : Primrec (fun I => routedPayloads S I b) := by
     cases h : S.role b

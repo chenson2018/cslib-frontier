@@ -25,7 +25,7 @@ the clear northeast quarter of index zero additionally marks a seeded crossing.
 
 * `Signals.flowAllowed`: the common one-dimensional transmission and border rule.
 * `ShadedSignals.Site`: a quarter with a shade state and an obstruction state.
-* `scaffold`: the finite shaded Robinson scaffold with its effective routing decoder.
+* `scaffold`: the finite shaded Robinson scaffold with its routing decoder.
 * `ShadedSignals.Decoded`: the semantic sites of an ordinary scaffold plane.
 
 ## Main results
@@ -482,40 +482,12 @@ theorem crossing_iff (s : Site) :
   simp only [Signals.clearState, Signals.State.mk.injEq]
   split_ifs <;> simp_all
 
-/-- The role decoder is primitive recursive on the given Wang-tile coding. -/
-theorem primrec_routeRole : Primrec routeRole := by
-  have unpairLeft : Primrec (fun n : ℕ => (Nat.unpair n).1) :=
-    Primrec.fst.comp Primrec.unpair
-  have unpairRight : Primrec (fun n : ℕ => (Nat.unpair n).2) :=
-    Primrec.snd.comp Primrec.unpair
-  have hc : Primrec horizontalClear := by
-    apply PrimrecPred.decide
-    exact (Primrec.eq.comp (unpairRight.comp primrec_left) (Primrec.const 0)).and
-      (Primrec.eq.comp (unpairRight.comp primrec_right) (Primrec.const 0))
-  have vc : Primrec verticalClear := by
-    apply PrimrecPred.decide
-    exact (Primrec.eq.comp (unpairRight.comp primrec_bottom) (Primrec.const 0)).and
-      (Primrec.eq.comp (unpairRight.comp primrec_top) (Primrec.const 0))
-  have hq : Primrec quarterLayer :=
-    primrec_mk (unpairLeft.comp (unpairLeft.comp primrec_top))
-      (unpairLeft.comp (unpairLeft.comp primrec_bottom))
-      (unpairLeft.comp (unpairLeft.comp primrec_left))
-      (unpairLeft.comp (unpairLeft.comp primrec_right))
-  exact Primrec.ite (Primrec.eq.comp hc (Primrec.const true))
-    (Primrec.ite (Primrec.eq.comp vc (Primrec.const true))
-      (Primrec.ite (Primrec.eq.comp hq (Primrec.const _))
-        (Primrec.const RouteRole.corner) (Primrec.const RouteRole.active))
-      (Primrec.const RouteRole.horizontal))
-    (Primrec.ite (Primrec.eq.comp vc (Primrec.const true))
-      (Primrec.const RouteRole.vertical) (Primrec.const RouteRole.inactive))
-
 end ShadedSignals
 
-/-- The corrected shaded Robinson obstruction scaffold with its effective payload roles. -/
+/-- The corrected shaded Robinson obstruction scaffold with its payload roles. -/
 def scaffold : RoutedScaffold where
   tiles := ShadedSignals.allSites.map ShadedSignals.tile
   role := ShadedSignals.routeRole
-  role_primrec := ShadedSignals.primrec_routeRole
 
 /-- The scaffold uses the concrete clear-edge role decoder. -/
 @[simp] theorem scaffold_role : scaffold.role = ShadedSignals.routeRole := by rfl
