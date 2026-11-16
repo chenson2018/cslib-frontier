@@ -218,10 +218,12 @@ private theorem expansion_occurs {base : Plane} (t : Tower base) :
     exact ⟨_, _, by rw [← t.children level u v ⟨i % 2, Nat.mod_lt _ (by decide)⟩
         ⟨j % 2, Nat.mod_lt _ (by decide)⟩, huv]; rfl⟩
 
-private theorem zero_descends : ∀ p : Index, ∃ i j : Fin 8, iterateRefine 3 (fun _ _ => p) i j = 0 := by
+private theorem zero_descends :
+    ∀ p : Index, ∃ i j : Fin 8, iterateRefine 3 (fun _ _ => p) i j = 0 := by
   decide +kernel
 
-private theorem descends_zero : ∀ p : Index, ∃ i j : Fin 32, iterateRefine 5 (fun _ _ => 0) i j = p := by
+private theorem descends_zero :
+    ∀ p : Index, ∃ i j : Fin 32, iterateRefine 5 (fun _ _ => 0) i j = p := by
   decide +kernel
 
 /-- Every corrected tile type occurs at every level of every parent tower. -/
@@ -249,7 +251,8 @@ private theorem expansion_horizontal (n : ℕ) (p : Index) (x y : ℕ)
     · simp only [iterateRefine, refineIndexGrid, h.1, h.2.1, h.2.2]
       exact child_horizontal _ _
     · simp only [iterateRefine, refineIndexGrid, h.1, h.2.1, h.2.2]
-      apply (horizontal_iff_children _ _).mp (ih (x / 2) (y / 2) ?_) ⟨y % 2, Nat.mod_lt _ (by decide)⟩
+      apply (horizontal_iff_children _ _).mp (ih (x / 2) (y / 2) ?_)
+        ⟨y % 2, Nat.mod_lt _ (by decide)⟩
       rw [pow_succ] at hx
       omega
 
