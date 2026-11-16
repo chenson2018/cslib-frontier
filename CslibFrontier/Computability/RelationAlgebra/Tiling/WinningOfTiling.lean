@@ -1852,6 +1852,54 @@ private theorem v_class_aux {h y a' : D} {d : Axis} (hh : M.ext T h = green d .f
     simpa using hy₁
 
 include hS in
+/-- The case of `Good.v_class` for the response in which tile edges join the new node to two nodes
+of one class under `h`, and ∀ has labelled the edge from `h` to the new node. Were the label not
+green, another node would see the new node and the two nodes of the class, against
+`Good.apex_unique`. -/
+private theorem v_class_par {h a a' : D} {d : Axis} (hh : M.IsPar h)
+    (ha₁ : S.lab h a = green d .forward) (ha₂ : S.lab h a' = green d .forward) (hne' : a ≠ a')
+    (hroot' : S.root h a = S.root h a') (ht₁ : (M.ext T a).IsTile)
+    (ht₂ : (M.ext T a').IsTile) : M.par h = green d.other .forward := by
+  by_contra hng
+  have aux (a a' : D) (ha₁ : S.lab h a = green d .forward)
+      (ha₂ : S.lab h a' = green d .forward) (hne' : a ≠ a')
+      (hroot' : S.root h a = S.root h a') (ht₁ : (M.ext T a).IsTile)
+      (ht₂ : (M.ext T a').IsTile) (hna : ¬M.IsPar a) : False := by
+    obtain ⟨i, o, hi⟩ := Atom.isTile_iff.mp ht₁
+    rcases M.ext_tile hi with hp | ⟨-, ⟨h₁, d₁, hy₁, hh₁⟩, -⟩
+    · exact hna (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))
+    obtain rfl : d = d₁ :=
+      Axis.kind_inj.mp ((hS.typed.tgt_of_eq ha₁).symm.trans (hS.typed.tgt_of_eq hy₁))
+    have hh₁' : h₁ ≠ h := fun e => hng (e ▸ hh₁)
+    have hna' : ¬M.IsPar a' := fun hpa' => by
+      rcases M.isPar_three hh (M.isPar_of_green hh₁) hpa' with e | e | e
+      · exact hh₁' e.symm
+      · exact hS.ne_of_green ha₂ e
+      · subst e
+        have k₁ : (S.lab h₁ h₁).src = .zero := hS.typed.src_of_eq hy₁
+        have k₂ : (S.lab h₁ h₁).src = d.kind := hS.typed.tgt_of_eq ha₂
+        exact absurd (k₂.symm.trans k₁) (by simp)
+    obtain ⟨i', o', hi'⟩ := Atom.isTile_iff.mp ht₂
+    rcases M.ext_tile hi' with hp | ⟨-, ⟨h₂, d₂, hy₂, hh₂⟩, -⟩
+    · exact hna' (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))
+    obtain rfl : d = d₂ :=
+      Axis.kind_inj.mp ((hS.typed.tgt_of_eq ha₂).symm.trans (hS.typed.tgt_of_eq hy₂))
+    obtain rfl : h₁ = h₂ := by
+      rcases M.isPar_three hh (M.isPar_of_green hh₁) (M.isPar_of_green hh₂) with e | e | e
+      · exact (hh₁' e.symm).elim
+      · exact (hng (e ▸ hh₂)).elim
+      · exact e
+    exact hh₁' (hS.apex_unique ⟨hne', ha₁, ha₂, hroot'⟩ hy₁ hy₂).symm
+  by_cases hna : M.IsPar a
+  · by_cases hna' : M.IsPar a'
+    · rcases M.isPar_three hh hna hna' with e | e | e
+      · exact hS.ne_of_green ha₁ e
+      · exact hS.ne_of_green ha₂ e
+      · exact hne' e
+    · exact aux a' a ha₂ ha₁ hne'.symm hroot'.symm ht₂ ht₁ hna'
+  · exact aux a a' ha₁ ha₂ hne' hroot' ht₁ ht₂ hna
+
+include hS in
 private theorem v_class_next {h y : Option D} {d : Axis}
     (hV : VCond (M.next T).lab M.newRoot (fun a y => ((M.next T).lab a y).IsTile) d h y) :
     (M.next T).lab h y = green d.other .forward ∨ (M.next T).lab h y = v d.other .forward := by
@@ -1909,44 +1957,7 @@ private theorem v_class_next {h y : Option D} {d : Axis}
     · left
       change M.ext T h = green d.other .forward
       rw [M.ext_of_isPar hh]
-      by_contra hng
-      have aux (a a' : D) (ha₁ : S.lab h a = green d .forward)
-          (ha₂ : S.lab h a' = green d .forward) (hne' : a ≠ a')
-          (hroot' : S.root h a = S.root h a') (ht₁ : (M.ext T a).IsTile)
-          (ht₂ : (M.ext T a').IsTile) (hna : ¬M.IsPar a) : False := by
-        obtain ⟨i, o, hi⟩ := Atom.isTile_iff.mp ht₁
-        rcases M.ext_tile hi with hp | ⟨-, ⟨h₁, d₁, hy₁, hh₁⟩, -⟩
-        · exact hna (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))
-        obtain rfl : d = d₁ :=
-          Axis.kind_inj.mp ((hS.typed.tgt_of_eq ha₁).symm.trans (hS.typed.tgt_of_eq hy₁))
-        have hh₁' : h₁ ≠ h := fun e => hng (e ▸ hh₁)
-        have hna' : ¬M.IsPar a' := fun hpa' => by
-          rcases M.isPar_three hh (M.isPar_of_green hh₁) hpa' with e | e | e
-          · exact hh₁' e.symm
-          · exact hS.ne_of_green ha₂ e
-          · subst e
-            have k₁ : (S.lab h₁ h₁).src = .zero := hS.typed.src_of_eq hy₁
-            have k₂ : (S.lab h₁ h₁).src = d.kind := hS.typed.tgt_of_eq ha₂
-            exact absurd (k₂.symm.trans k₁) (by simp)
-        obtain ⟨i', o', hi'⟩ := Atom.isTile_iff.mp ht₂
-        rcases M.ext_tile hi' with hp | ⟨-, ⟨h₂, d₂, hy₂, hh₂⟩, -⟩
-        · exact hna' (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))
-        obtain rfl : d = d₂ :=
-          Axis.kind_inj.mp ((hS.typed.tgt_of_eq ha₂).symm.trans (hS.typed.tgt_of_eq hy₂))
-        obtain rfl : h₁ = h₂ := by
-          rcases M.isPar_three hh (M.isPar_of_green hh₁) (M.isPar_of_green hh₂) with e | e | e
-          · exact (hh₁' e.symm).elim
-          · exact (hng (e ▸ hh₂)).elim
-          · exact e
-        exact hh₁' (hS.apex_unique ⟨hne', ha₁, ha₂, hroot'⟩ hy₁ hy₂).symm
-      by_cases hna : M.IsPar a
-      · by_cases hna' : M.IsPar a'
-        · rcases M.isPar_three hh hna hna' with e | e | e
-          · exact hS.ne_of_green ha₁ e
-          · exact hS.ne_of_green ha₂ e
-          · exact hne' e
-        · exact aux a' a ha₂ ha₁ hne'.symm hroot'.symm ht₂ ht₁ hna'
-      · exact aux a a' ha₁ ha₂ hne' hroot' ht₁ ht₂ hna
+      exact M.v_class_par hS hh ha₁ ha₂ hne' hroot' ht₁ ht₂
     · right
       change M.ext T h = v d.other .forward
       obtain ⟨i, o, hi⟩ := Atom.isTile_iff.mp ht₁
@@ -2179,11 +2190,11 @@ end Tiling
 
 open Tiling
 
-/-- Theorem 4 of [HirschHodkinson2001]: if every position of `L` is at the origin of a tiling by
-positions of `L`, and the tile at position `0` matches itself horizontally and vertically, then ∃
-has a winning strategy in the game on `tilingFrame L`. The source asks that the tile `T₀` have one
-colour on its four edges, used by no other tile; the strategy labels with `T₀` the tile edges
-that it does not place in a tiling, for which the two equations suffice. -/
+/-- Theorem 4 of [HirschHodkinson2001], Section 6: if every position of `L` is at the origin of a
+tiling by positions of `L`, and the tile at position `0` matches itself horizontally and
+vertically, then ∃ has a winning strategy in the game on `tilingFrame L`. The source asks that the
+tile `T₀` have one colour on its four edges, used by no other tile; the strategy labels with `T₀`
+the tile edges that it does not place in a tiling, for which the two equations suffice. -/
 public theorem hasWinningStrategy_tilingFrame {L : List WangTile} (hL : 0 < L.length)
     (hrow : L[0].right = L[0].left) (hcol : L[0].top = L[0].bottom) (h : EveryIndexOccurs L) :
     (tilingFrame L).HasWinningStrategy := by
