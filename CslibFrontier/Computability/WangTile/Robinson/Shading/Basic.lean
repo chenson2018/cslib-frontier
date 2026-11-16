@@ -17,6 +17,10 @@ corners preserve shades; crossings require opposite shades. A locally allowed ma
 assignment therefore respects the parity of each red-graph path, and every rectangular
 oriented red cycle carries one shade around its boundary.
 
+The coarsening results assume `ValidShadeGrid (iterateRefine 2 grid) fine`.
+Existence of such a decoration is established only by the later `Canonical/*`
+construction; this module proves preservation conditional on that hypothesis.
+
 ## Main definitions
 
 * `RedShades.State` and `RedShades.allowedFor`: quarter shades and the local decoration rule.
@@ -36,7 +40,7 @@ oriented red cycle carries one shade around its boundary.
 
 ## References
 
-The shading rules follow [JeandelVanier2020], §3.3, Figures 17–18 (manuscript pp. 24, 26–28).
+The shading rules are after [JeandelVanier2020], §3.3, Figures 17–18 (manuscript pp. 24, 26–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, modules `Closed104.RedShades`, `RedShadePaths`, `RedShadeCycles` and
 `RedShadeGraph`, `RedShadeGraphCoarsening`, `SignalCorridors`, `Signals` and `ShadedSignals`.
@@ -65,18 +69,24 @@ namespace Shade
 /-- Both shades, in light/dark order for finite enumeration. -/
 @[expose] def all : List Shade := [.light, .dark]
 
+/-- Every shade occurs in the finite enumeration. -/
 @[simp] theorem mem_all (shade : Shade) : shade ∈ all := by
   cases shade <;> decide
+
+/-- The two wire shades form a finite type. -/
+instance : Fintype Shade := Fintype.ofList all mem_all
 
 /-- Exchange the two red-wire shades. -/
 @[expose] def opposite : Shade → Shade
   | .light => .dark
   | .dark => .light
 
+/-- Exchanging the shade twice is the identity. -/
 @[simp] theorem opposite_opposite (shade : Shade) :
     shade.opposite.opposite = shade := by
   cases shade <;> rfl
 
+/-- Distinct shades are opposites. -/
 theorem eq_opposite_of_ne {first second : Shade} (hne : first ≠ second) :
     second = first.opposite := by
   cases first <;> cases second <;> simp_all [opposite]
@@ -107,12 +117,13 @@ namespace State
       edgeValues.flatMap fun south =>
         edgeValues.map fun north => ⟨west, east, south, north⟩
 
-@[simp] private theorem mem_edgeValues (value : Option Shade) :
+private theorem mem_edgeValues (value : Option Shade) :
     value ∈ (none :: Shade.all.map some) := by
   rcases value with _ | shade
   · simp
   · simp
 
+/-- Every four-edge shade state occurs in the enumeration. -/
 @[simp] theorem mem_all (state : State) : state ∈ all := by
   rcases state with ⟨west, east, south, north⟩
   simp only [all, List.mem_flatMap, List.mem_map]
@@ -142,128 +153,50 @@ end State
     (if hasHorizontal component quadrant && hasVertical component quadrant then
       decide (state.west ≠ state.south) else true)
 
-/-- Constructor form of the local red-shade rule. -/
-theorem allowedFor_of {component : Thick} {quadrant : Quadrant} {state : State}
-    (hwest : state.west.isSome = hasWest component quadrant)
-    (heast : state.east.isSome = hasEast component quadrant)
-    (hsouth : state.south.isSome = hasSouth component quadrant)
-    (hnorth : state.north.isSome = hasNorth component quadrant)
-    (hhorizontal : hasHorizontal component quadrant = true →
-      state.west = state.east)
-    (hvertical : hasVertical component quadrant = true →
-      state.south = state.north)
-    (heastSouth : cornerEast component quadrant = true →
-      cornerSouth component quadrant = true → state.east = state.south)
-    (heastNorth : cornerEast component quadrant = true →
-      cornerNorth component quadrant = true → state.east = state.north)
-    (hwestSouth : cornerWest component quadrant = true →
-      cornerSouth component quadrant = true → state.west = state.south)
-    (hwestNorth : cornerWest component quadrant = true →
-      cornerNorth component quadrant = true → state.west = state.north)
-    (hcrossing : hasHorizontal component quadrant = true →
-      hasVertical component quadrant = true → state.west ≠ state.south) :
-    allowedFor component quadrant state = true := by
-  simp only [allowedFor, Bool.and_eq_true, decide_eq_true_eq]
-  refine ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hwest, heast⟩, hsouth⟩, hnorth⟩, ?_⟩, ?_⟩,
-    ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
-  · split <;> simp_all
-  · split <;> simp_all
-  · split <;> simp_all
-  · split <;> simp_all
-  · split <;> simp_all
-  · split <;> simp_all
-  · split <;> simp_all
+/-- The incidence, transmission and crossing conditions of one allowed quarter. -/
+structure Allowed (component : Thick) (quadrant : Quadrant) (state : State) : Prop where
+  /-- West labels are present exactly where the red wire meets the west edge. -/
+  west_present : state.west.isSome = hasWest component quadrant
+  /-- East labels have exactly the prescribed incidence. -/
+  east_present : state.east.isSome = hasEast component quadrant
+  /-- South labels have exactly the prescribed incidence. -/
+  south_present : state.south.isSome = hasSouth component quadrant
+  /-- North labels have exactly the prescribed incidence. -/
+  north_present : state.north.isSome = hasNorth component quadrant
+  /-- A horizontal wire preserves its shade. -/
+  horizontal_eq : hasHorizontal component quadrant = true → state.west = state.east
+  /-- A vertical wire preserves its shade. -/
+  vertical_eq : hasVertical component quadrant = true → state.south = state.north
+  /-- A southeast corner preserves its shade. -/
+  east_south_corner_eq : cornerEast component quadrant = true →
+    cornerSouth component quadrant = true → state.east = state.south
+  /-- A northeast corner preserves its shade. -/
+  east_north_corner_eq : cornerEast component quadrant = true →
+    cornerNorth component quadrant = true → state.east = state.north
+  /-- A southwest corner preserves its shade. -/
+  west_south_corner_eq : cornerWest component quadrant = true →
+    cornerSouth component quadrant = true → state.west = state.south
+  /-- A northwest corner preserves its shade. -/
+  west_north_corner_eq : cornerWest component quadrant = true →
+    cornerNorth component quadrant = true → state.west = state.north
+  /-- The two wires at a crossing have opposite shades. -/
+  crossing_opposite : hasHorizontal component quadrant = true →
+    hasVertical component quadrant = true → state.west ≠ state.south
+
+/-- The Boolean local checker expresses exactly the named shading conditions. -/
+theorem allowedFor_iff {component : Thick} {quadrant : Quadrant} {state : State} :
+    allowedFor component quadrant state = true ↔ Allowed component quadrant state := by
+  simp only [allowedFor, Bool.and_eq_true, decide_eq_true_eq,
+    Bool.ite_eq_true_distrib, ite_true_right, and_imp]
+  constructor
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hw, he⟩, hs⟩, hn⟩, hh⟩, hv⟩, hes⟩, hen⟩, hws⟩, hwn⟩, hc⟩
+    exact ⟨hw, he, hs, hn, hh, hv, hes, hen, hws, hwn, hc⟩
+  · rintro ⟨hw, he, hs, hn, hh, hv, hes, hen, hws, hwn, hc⟩
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hw, he⟩, hs⟩, hn⟩, hh⟩, hv⟩, hes⟩, hen⟩, hws⟩, hwn⟩, hc⟩
 
 /-- Local red-path incidence, propagation, corner, and crossing rules. -/
 @[expose] def locallyAllowed (site : QuarterIndex) (state : State) : Bool :=
   allowedFor (components site.index).thick site.quadrant state
-
-theorem horizontal_eq_of_allowedFor {component : Thick} {quadrant : Quadrant}
-    {state : State} (hallowed : allowedFor component quadrant state = true)
-    (hhorizontal : hasHorizontal component quadrant = true) :
-    state.west = state.east := by
-  simp only [allowedFor, hhorizontal, Bool.and_eq_true,
-    decide_eq_true_eq, Bool.true_and, ite_true] at hallowed
-  aesop
-
-theorem vertical_eq_of_allowedFor {component : Thick} {quadrant : Quadrant}
-    {state : State} (hallowed : allowedFor component quadrant state = true)
-    (hvertical : hasVertical component quadrant = true) :
-    state.south = state.north := by
-  simp only [allowedFor, hvertical, Bool.and_eq_true,
-    decide_eq_true_eq, ite_true] at hallowed
-  aesop
-
-theorem east_present_of_allowedFor {component : Thick} {quadrant : Quadrant}
-    {state : State} (hallowed : allowedFor component quadrant state = true)
-    (heast : hasEast component quadrant = true) :
-    state.east.isSome = true := by
-  simp only [allowedFor, heast, Bool.and_eq_true,
-    decide_eq_true_eq] at hallowed
-  aesop
-
-theorem west_present_of_allowedFor {component : Thick} {quadrant : Quadrant}
-    {state : State} (hallowed : allowedFor component quadrant state = true)
-    (hwest : hasWest component quadrant = true) :
-    state.west.isSome = true := by
-  simp only [allowedFor, hwest, Bool.and_eq_true,
-    decide_eq_true_eq] at hallowed
-  aesop
-
-theorem south_present_of_allowedFor {component : Thick} {quadrant : Quadrant}
-    {state : State} (hallowed : allowedFor component quadrant state = true)
-    (hsouth : hasSouth component quadrant = true) :
-    state.south.isSome = true := by
-  simp only [allowedFor, hsouth, Bool.and_eq_true,
-    decide_eq_true_eq] at hallowed
-  aesop
-
-theorem west_north_corner_eq_of_allowedFor {component : Thick}
-    {quadrant : Quadrant} {state : State}
-    (hallowed : allowedFor component quadrant state = true)
-    (hwest : cornerWest component quadrant = true)
-    (hnorth : cornerNorth component quadrant = true) :
-    state.west = state.north := by
-  cases component <;> cases quadrant <;>
-    simp_all [allowedFor, cornerWest, cornerNorth]
-
-theorem west_south_corner_eq_of_allowedFor {component : Thick}
-    {quadrant : Quadrant} {state : State}
-    (hallowed : allowedFor component quadrant state = true)
-    (hwest : cornerWest component quadrant = true)
-    (hsouth : cornerSouth component quadrant = true) :
-    state.west = state.south := by
-  cases component <;> cases quadrant <;>
-    simp_all [allowedFor, cornerWest, cornerSouth]
-
-theorem east_north_corner_eq_of_allowedFor {component : Thick}
-    {quadrant : Quadrant} {state : State}
-    (hallowed : allowedFor component quadrant state = true)
-    (heast : cornerEast component quadrant = true)
-    (hnorth : cornerNorth component quadrant = true) :
-    state.east = state.north := by
-  cases component <;> cases quadrant <;>
-    simp_all [allowedFor, cornerEast, cornerNorth]
-
-theorem crossing_opposite_of_allowedFor {component : Thick}
-    {quadrant : Quadrant} {state : State}
-    (hallowed : allowedFor component quadrant state = true)
-    (hhorizontal : hasHorizontal component quadrant = true)
-    (hvertical : hasVertical component quadrant = true) :
-    state.west ≠ state.south := by
-  simp only [allowedFor, hhorizontal, hvertical, Bool.and_eq_true,
-    decide_eq_true_eq, Bool.true_and, ite_true] at hallowed
-  aesop
-
-/-- Equality of the two edges of a southeast corner. -/
-theorem east_south_corner_eq_of_allowedFor {component : Thick}
-    {quadrant : Quadrant} {state : State}
-    (hallowed : allowedFor component quadrant state = true)
-    (heast : cornerEast component quadrant = true)
-    (hsouth : cornerSouth component quadrant = true) :
-    state.east = state.south := by
-  cases component <;> cases quadrant <;>
-    simp_all [allowedFor, cornerEast, cornerSouth]
 
 end RedShades
 
@@ -283,111 +216,12 @@ structure ValidShadeGrid (indexGrid : Nat → Nat → Index)
   /-- Adjacent quarters agree on vertical shared edges. -/
   vmatch : ∀ x y, (stateGrid x y).north = (stateGrid x (y + 1)).south
 
-theorem ValidShadeGrid.horizontal_eq
+/-- Read the named local shading conditions at any quarter of a valid grid. -/
+theorem ValidShadeGrid.rules
     {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hpath : hasHorizontal
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).west = (stateGrid x y).east :=
-  RedShades.horizontal_eq_of_allowedFor (valid.allowed x y) hpath
-
-theorem ValidShadeGrid.vertical_eq
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hpath : hasVertical
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).south = (stateGrid x y).north :=
-  RedShades.vertical_eq_of_allowedFor (valid.allowed x y) hpath
-
-theorem ValidShadeGrid.east_present
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hpath : hasEast
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).east.isSome = true :=
-  RedShades.east_present_of_allowedFor (valid.allowed x y) hpath
-
-theorem ValidShadeGrid.west_present
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hpath : hasWest
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).west.isSome = true :=
-  RedShades.west_present_of_allowedFor (valid.allowed x y) hpath
-
-theorem ValidShadeGrid.south_present
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hpath : hasSouth
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).south.isSome = true :=
-  RedShades.south_present_of_allowedFor (valid.allowed x y) hpath
-
-theorem ValidShadeGrid.west_north_corner_eq
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hwest : cornerWest
-      (componentAt indexGrid x y) (quadrantAt x y) = true)
-    (hnorth : cornerNorth
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).west = (stateGrid x y).north :=
-  RedShades.west_north_corner_eq_of_allowedFor
-    (valid.allowed x y) hwest hnorth
-
-theorem ValidShadeGrid.west_south_corner_eq
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hwest : cornerWest
-      (componentAt indexGrid x y) (quadrantAt x y) = true)
-    (hsouth : cornerSouth
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).west = (stateGrid x y).south :=
-  RedShades.west_south_corner_eq_of_allowedFor
-    (valid.allowed x y) hwest hsouth
-
-theorem ValidShadeGrid.east_north_corner_eq
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (heast : cornerEast
-      (componentAt indexGrid x y) (quadrantAt x y) = true)
-    (hnorth : cornerNorth
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).east = (stateGrid x y).north :=
-  RedShades.east_north_corner_eq_of_allowedFor
-    (valid.allowed x y) heast hnorth
-
-theorem ValidShadeGrid.crossing_opposite
-    {indexGrid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
-    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat)
-    (hhorizontal : hasHorizontal
-      (componentAt indexGrid x y) (quadrantAt x y) = true)
-    (hvertical : hasVertical
-      (componentAt indexGrid x y) (quadrantAt x y) = true) :
-    (stateGrid x y).west ≠ (stateGrid x y).south :=
-  RedShades.crossing_opposite_of_allowedFor
-    (valid.allowed x y) hhorizontal hvertical
-
-/-- Matching edges and transmitting intermediate cells preserve any value
-across a one-dimensional corridor. -/
-theorem value_across {α β : Type*}
-    (state : Nat → α) (outgoing incoming : α → β) (start count : Nat)
-    (hmatch : ∀ i, i ≤ count →
-      outgoing (state (start + i)) = incoming (state (start + i + 1)))
-    (htransmit : ∀ i, i < count →
-      incoming (state (start + i + 1)) = outgoing (state (start + i + 1))) :
-    outgoing (state start) = incoming (state (start + count + 1)) := by
-  induction count with
-  | zero => simpa using hmatch 0 (by omega)
-  | succ count ih =>
-      have hprefix := ih
-        (fun i hi => hmatch i (by omega))
-        (fun i hi => htransmit i (by omega))
-      calc
-        outgoing (state start) = incoming (state (start + count + 1)) := hprefix
-        _ = outgoing (state (start + count + 1)) := htransmit count (by omega)
-        _ = incoming (state (start + (count + 1) + 1)) := by
-          simpa [Nat.add_assoc] using hmatch (count + 1) (by omega)
-
+    (valid : ValidShadeGrid indexGrid stateGrid) (x y : Nat) :
+    RedShades.Allowed (componentAt indexGrid x y) (quadrantAt x y) (stateGrid x y) :=
+  RedShades.allowedFor_iff.mp (valid.allowed x y)
 
 /-- Matching and transmission on an interval identify its two boundary values. -/
 theorem value_between {α β : Type*}
@@ -398,12 +232,15 @@ theorem value_between {α β : Type*}
     (htransmit : ∀ position, start < position → position < finish →
       incoming (state position) = outgoing (state position)) :
     outgoing (state start) = incoming (state finish) := by
-  have flow := value_across state outgoing incoming start (finish - start - 1)
-    (fun offset _ => hmatch (start + offset) (by omega) (by omega))
-    (fun offset _ => htransmit (start + offset + 1) (by omega) (by omega))
-  have end_eq : start + (finish - start - 1) + 1 = finish := by omega
-  simpa only [end_eq] using flow
-
+  induction finish with
+  | zero => omega
+  | succ finish ih =>
+      by_cases h : start = finish
+      · subst finish
+        exact hmatch start (by omega) (by omega)
+      · exact (ih (by omega) (fun x hx hy => hmatch x hx (by omega))
+          (fun x hx hy => htransmit x hx (by omega))).trans
+          ((htransmit finish (by omega) (by omega)).trans (hmatch finish (by omega) (by omega)))
 
 end RedShadePaths
 
@@ -415,11 +252,16 @@ open RedCycles QuarterGeometry RedShadePaths
 coordinates select the inward side of each boundary tile, where the shade
 layer actually carries the cycle. -/
 
+/-- Inward quarter coordinate of the west boundary. -/
 @[expose] def quarterWest (west : Nat) : Nat := 2 * west + 1
+/-- Inward quarter coordinate of the east boundary. -/
 @[expose] def quarterEast (east : Nat) : Nat := 2 * east
+/-- Inward quarter coordinate of the south boundary. -/
 @[expose] def quarterSouth (south : Nat) : Nat := 2 * south + 1
+/-- Inward quarter coordinate of the north boundary. -/
 @[expose] def quarterNorth (north : Nat) : Nat := 2 * north
 
+/-- Every quarter of a parent has that parent’s thick component. -/
 theorem componentAt_double_add (grid : Nat → Nat → Index)
     (x y dx dy : Nat) (hdx : dx < 2) (hdy : dy < 2) :
     componentAt grid (2 * x + dx) (2 * y + dy) =
@@ -429,26 +271,31 @@ theorem componentAt_double_add (grid : Nat → Nat → Index)
   have hy : (2 * y + dy) / 2 = y := by omega
   rw [hx, hy]
 
+/-- The inward south quarter has its north-facing bit set. -/
 @[simp] theorem quadrantAt_quarterSouth_yBit (x south : Nat) :
     (quadrantAt x (quarterSouth south)).yBit = true := by
   cases hbit : (x % 2 == 1) <;>
     simp [quadrantAt, quarterSouth, Quadrant.ofBits, Quadrant.yBit, hbit]
 
+/-- The inward north quarter has its south-facing bit set. -/
 @[simp] theorem quadrantAt_quarterNorth_yBit (x north : Nat) :
     (quadrantAt x (quarterNorth north)).yBit = false := by
   cases hbit : (x % 2 == 1) <;>
     simp [quadrantAt, quarterNorth, Quadrant.ofBits, Quadrant.yBit, hbit]
 
+/-- The inward west quarter has its east-facing bit set. -/
 @[simp] theorem quadrantAt_quarterWest_xBit (west y : Nat) :
     (quadrantAt (quarterWest west) y).xBit = true := by
   cases hbit : (y % 2 == 1) <;>
     simp [quadrantAt, quarterWest, Quadrant.ofBits, Quadrant.xBit, hbit]
 
+/-- The inward east quarter has its west-facing bit set. -/
 @[simp] theorem quadrantAt_quarterEast_xBit (east y : Nat) :
     (quadrantAt (quarterEast east) y).xBit = false := by
   cases hbit : (y % 2 == 1) <;>
     simp [quadrantAt, quarterEast, Quadrant.ofBits, Quadrant.xBit, hbit]
 
+/-- The inward southwest quarter joins the east and north red edges. -/
 theorem CycleOn.southwest_corner
     {grid : Nat → Nat → Index} {west east south north : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north) :
@@ -464,6 +311,7 @@ theorem CycleOn.southwest_corner
   simp [quadrantAt, Quadrant.ofBits,
     cornerEast, cornerNorth]
 
+/-- The inward southeast quarter joins the west and north red edges. -/
 theorem CycleOn.southeast_corner
     {grid : Nat → Nat → Index} {west east south north : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north) :
@@ -480,6 +328,7 @@ theorem CycleOn.southeast_corner
   simp [quadrantAt, Quadrant.ofBits,
     cornerWest, cornerNorth]
 
+/-- The inward northeast quarter joins the west and south red edges. -/
 theorem CycleOn.northeast_corner
     {grid : Nat → Nat → Index} {west east south north : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north) :
@@ -497,6 +346,7 @@ theorem CycleOn.northeast_corner
   simp [quadrantAt, Quadrant.ofBits,
     cornerWest, cornerSouth]
 
+/-- The inward northwest quarter joins the east and south red edges. -/
 theorem CycleOn.northwest_corner
     {grid : Nat → Nat → Index} {west east south north : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north) :
@@ -513,6 +363,7 @@ theorem CycleOn.northwest_corner
   simp [quadrantAt, Quadrant.ofBits,
     cornerEast, cornerSouth]
 
+/-- Every strict interior quarter on the south side carries a horizontal wire. -/
 theorem CycleOn.south_path
     {grid : Nat → Nat → Index} {west east south north qx : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north)
@@ -520,23 +371,13 @@ theorem CycleOn.south_path
     hasHorizontal
       (componentAt grid qx (quarterSouth south))
       (quadrantAt qx (quarterSouth south)) = true := by
-  have hparentWest : west < qx / 2 := by
-    unfold quarterWest at hwest
-    omega
-  have hparentEast : qx / 2 < east := by
-    unfold quarterEast at heast
-    omega
-  have hline := cycle.southLane (qx / 2) hparentWest hparentEast
-  unfold hasHorizontal
-  rw [quadrantAt_quarterSouth_yBit]
-  simp only [redHorizontalAt]
-  unfold componentAt
-  have hdivY : quarterSouth south / 2 = south := by
-    unfold quarterSouth
-    omega
-  rw [hdivY]
-  exact hline
+  have hline := cycle.southLane (qx / 2)
+    (by dsimp only [quarterWest, quarterEast] at hwest heast; omega)
+    (by dsimp only [quarterWest, quarterEast] at hwest heast; omega)
+  simp only [hasHorizontal, quadrantAt_quarterSouth_yBit]
+  simpa [redHorizontalAt, componentAt, quarterSouth, Nat.add_div] using hline
 
+/-- Every strict interior quarter on the north side carries a horizontal wire. -/
 theorem CycleOn.north_path
     {grid : Nat → Nat → Index} {west east south north qx : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north)
@@ -544,23 +385,13 @@ theorem CycleOn.north_path
     hasHorizontal
       (componentAt grid qx (quarterNorth north))
       (quadrantAt qx (quarterNorth north)) = true := by
-  have hparentWest : west < qx / 2 := by
-    unfold quarterWest at hwest
-    omega
-  have hparentEast : qx / 2 < east := by
-    unfold quarterEast at heast
-    omega
-  have hline := cycle.northLane (qx / 2) hparentWest hparentEast
-  unfold hasHorizontal
-  rw [quadrantAt_quarterNorth_yBit]
-  simp only [redHorizontalAt]
-  unfold componentAt
-  have hdivY : quarterNorth north / 2 = north := by
-    unfold quarterNorth
-    omega
-  rw [hdivY]
-  exact hline
+  have hline := cycle.northLane (qx / 2)
+    (by dsimp only [quarterWest, quarterEast] at hwest heast; omega)
+    (by dsimp only [quarterWest, quarterEast] at hwest heast; omega)
+  simp only [hasHorizontal, quadrantAt_quarterNorth_yBit]
+  simpa [redHorizontalAt, componentAt, quarterNorth, Nat.add_div] using hline
 
+/-- Every strict interior quarter on the west side carries a vertical wire. -/
 theorem CycleOn.west_path
     {grid : Nat → Nat → Index} {west east south north qy : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north)
@@ -568,23 +399,13 @@ theorem CycleOn.west_path
     hasVertical
       (componentAt grid (quarterWest west) qy)
       (quadrantAt (quarterWest west) qy) = true := by
-  have hparentSouth : south < qy / 2 := by
-    unfold quarterSouth at hsouth
-    omega
-  have hparentNorth : qy / 2 < north := by
-    unfold quarterNorth at hnorth
-    omega
-  have hline := cycle.westLane (qy / 2) hparentSouth hparentNorth
-  unfold hasVertical
-  rw [quadrantAt_quarterWest_xBit]
-  simp only [redVerticalAt]
-  unfold componentAt
-  have hdivX : quarterWest west / 2 = west := by
-    unfold quarterWest
-    omega
-  rw [hdivX]
-  exact hline
+  have hline := cycle.westLane (qy / 2)
+    (by dsimp only [quarterSouth, quarterNorth] at hsouth hnorth; omega)
+    (by dsimp only [quarterSouth, quarterNorth] at hsouth hnorth; omega)
+  simp only [hasVertical, quadrantAt_quarterWest_xBit]
+  simpa [redVerticalAt, componentAt, quarterWest, Nat.add_div] using hline
 
+/-- Every strict interior quarter on the east side carries a vertical wire. -/
 theorem CycleOn.east_path
     {grid : Nat → Nat → Index} {west east south north qy : Nat}
     (cycle : OrientedRedCycles.CycleOn grid west east south north)
@@ -592,22 +413,11 @@ theorem CycleOn.east_path
     hasVertical
       (componentAt grid (quarterEast east) qy)
       (quadrantAt (quarterEast east) qy) = true := by
-  have hparentSouth : south < qy / 2 := by
-    unfold quarterSouth at hsouth
-    omega
-  have hparentNorth : qy / 2 < north := by
-    unfold quarterNorth at hnorth
-    omega
-  have hline := cycle.eastLane (qy / 2) hparentSouth hparentNorth
-  unfold hasVertical
-  rw [quadrantAt_quarterEast_xBit]
-  simp only [redVerticalAt]
-  unfold componentAt
-  have hdivX : quarterEast east / 2 = east := by
-    unfold quarterEast
-    omega
-  rw [hdivX]
-  exact hline
+  have hline := cycle.eastLane (qy / 2)
+    (by dsimp only [quarterSouth, quarterNorth] at hsouth hnorth; omega)
+    (by dsimp only [quarterSouth, quarterNorth] at hsouth hnorth; omega)
+  simp only [hasVertical, quadrantAt_quarterEast_xBit]
+  simpa [redVerticalAt, componentAt, quarterEast, Nat.add_div] using hline
 
 /- The four path lemmas turn geometric cycle lanes into transmissive
 quarter-level red lines.  Starting from one present corner shade, edge matching
@@ -616,12 +426,16 @@ and corner equalities carry it counterclockwise to all four corners. -/
 /-- Uniform shade at the four inward quarter corners of an arbitrary board. -/
 structure CycleShade (stateGrid : Nat → Nat → RedShades.State)
     (west east south north : Nat) (shade : RedShades.Shade) : Prop where
+  /-- East shade at the southwest inward corner. -/
   southwest : (stateGrid (quarterWest west) (quarterSouth south)).east =
     some shade
+  /-- West shade at the southeast inward corner. -/
   southeast : (stateGrid (quarterEast east) (quarterSouth south)).west =
     some shade
+  /-- West shade at the northeast inward corner. -/
   northeast : (stateGrid (quarterEast east) (quarterNorth north)).west =
     some shade
+  /-- East shade at the northwest inward corner. -/
   northwest : (stateGrid (quarterWest west) (quarterNorth north)).east =
     some shade
 
@@ -648,11 +462,10 @@ theorem CycleOn.cycleShade
     exact value_between (fun x => stateGrid x (quarterSouth south))
       RedShades.State.east RedShades.State.west hquarterWestEast
       (fun x _ _ => valid.hmatch x (quarterSouth south))
-      (fun x hw he => valid.horizontal_eq x (quarterSouth south) (CycleOn.south_path cycle hw he))
+      (fun x hw he => (valid.rules x (quarterSouth south)).horizontal_eq (CycleOn.south_path cycle hw he))
   have hseNorth :
       (stateGrid (quarterEast east) (quarterSouth south)).north = some shade := by
-    rw [← valid.west_north_corner_eq
-      (quarterEast east) (quarterSouth south)
+    rw [← (valid.rules (quarterEast east) (quarterSouth south)).west_north_corner_eq
       (CycleOn.southeast_corner cycle).1 (CycleOn.southeast_corner cycle).2]
     exact hsouth.symm.trans hshade
   have heast :
@@ -661,11 +474,10 @@ theorem CycleOn.cycleShade
     exact value_between (fun y => stateGrid (quarterEast east) y)
       RedShades.State.north RedShades.State.south hquarterSouthNorth
       (fun y _ _ => valid.vmatch (quarterEast east) y)
-      (fun y hs hn => valid.vertical_eq (quarterEast east) y (CycleOn.east_path cycle hs hn))
+      (fun y hs hn => (valid.rules (quarterEast east) y).vertical_eq (CycleOn.east_path cycle hs hn))
   have hneWest :
       (stateGrid (quarterEast east) (quarterNorth north)).west = some shade := by
-    rw [valid.west_south_corner_eq
-      (quarterEast east) (quarterNorth north)
+    rw [(valid.rules (quarterEast east) (quarterNorth north)).west_south_corner_eq
       (CycleOn.northeast_corner cycle).1 (CycleOn.northeast_corner cycle).2]
     exact heast.symm.trans hseNorth
   have hnorth :
@@ -674,7 +486,7 @@ theorem CycleOn.cycleShade
     exact value_between (fun x => stateGrid x (quarterNorth north))
       RedShades.State.east RedShades.State.west hquarterWestEast
       (fun x _ _ => valid.hmatch x (quarterNorth north))
-      (fun x hw he => valid.horizontal_eq x (quarterNorth north) (CycleOn.north_path cycle hw he))
+      (fun x hw he => (valid.rules x (quarterNorth north)).horizontal_eq (CycleOn.north_path cycle hw he))
   exact {
     southwest := hshade
     southeast := hsouth.symm.trans hshade
@@ -693,13 +505,28 @@ theorem CycleOn.exists_cycleShade
       (componentAt grid (quarterWest west) (quarterSouth south))
       (quadrantAt (quarterWest west) (quarterSouth south)) = true := by
     simp [hasEast, (CycleOn.southwest_corner cycle).1]
-  have hpresent := valid.east_present
-    (quarterWest west) (quarterSouth south) heast
+  have hpresent := ((valid.rules (quarterWest west) (quarterSouth south)).east_present).trans heast
   rcases hshade :
       (stateGrid (quarterWest west) (quarterSouth south)).east with _ | shade
   · simp [hshade] at hpresent
   · exact ⟨shade, CycleOn.cycleShade cycle valid shade hshade⟩
 
+private theorem value_inside {α β : Type*}
+    (state : Nat → α) (outgoing incoming : α → β) {start finish position : Nat}
+    (hstart : start < position) (hfinish : position < finish)
+    (hmatch : ∀ x, start ≤ x → x < finish →
+      outgoing (state x) = incoming (state (x + 1)))
+    (htransmit : ∀ x, start < x → x < finish →
+      incoming (state x) = outgoing (state x)) {value : β}
+    (hvalue : outgoing (state start) = value) :
+    incoming (state position) = value ∧ outgoing (state position) = value := by
+  have flow := value_between state outgoing incoming hstart
+    (fun x hx hy => hmatch x hx (lt_trans hy hfinish))
+    (fun x hx hy => htransmit x hx (lt_trans hy hfinish))
+  have hin := flow.symm.trans hvalue
+  exact ⟨hin, (htransmit position hstart hfinish).symm.trans hin⟩
+
+/-- The south side of a uniformly shaded cycle carries its corner shade. -/
 theorem CycleShade.south_at
     {grid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
     {west east south north : Nat} {shade : RedShades.Shade}
@@ -709,16 +536,13 @@ theorem CycleShade.south_at
     (hwest : quarterWest west < qx) (heast : qx < quarterEast east) :
     (stateGrid qx (quarterSouth south)).west = some shade ∧
       (stateGrid qx (quarterSouth south)).east = some shade := by
-  have hflow := value_between (fun x => stateGrid x (quarterSouth south))
-    RedShades.State.east RedShades.State.west hwest
+  exact value_inside (fun x => stateGrid x (quarterSouth south))
+    RedShades.State.east RedShades.State.west hwest heast
     (fun x _ _ => valid.hmatch x (quarterSouth south))
-    (fun x hw hx => valid.horizontal_eq x (quarterSouth south)
-      (CycleOn.south_path cycle hw (lt_trans hx heast)))
-  have hwestShade := hflow.symm.trans shaded.southwest
-  exact ⟨hwestShade,
-    (valid.horizontal_eq qx (quarterSouth south)
-      (CycleOn.south_path cycle hwest heast)).symm.trans hwestShade⟩
+    (fun x hw he => (valid.rules x (quarterSouth south)).horizontal_eq
+      (CycleOn.south_path cycle hw he)) shaded.southwest
 
+/-- The north side of a uniformly shaded cycle carries its corner shade. -/
 theorem CycleShade.north_at
     {grid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
     {west east south north : Nat} {shade : RedShades.Shade}
@@ -728,16 +552,13 @@ theorem CycleShade.north_at
     (hwest : quarterWest west < qx) (heast : qx < quarterEast east) :
     (stateGrid qx (quarterNorth north)).west = some shade ∧
       (stateGrid qx (quarterNorth north)).east = some shade := by
-  have hflow := value_between (fun x => stateGrid x (quarterNorth north))
-    RedShades.State.east RedShades.State.west hwest
+  exact value_inside (fun x => stateGrid x (quarterNorth north))
+    RedShades.State.east RedShades.State.west hwest heast
     (fun x _ _ => valid.hmatch x (quarterNorth north))
-    (fun x hw hx => valid.horizontal_eq x (quarterNorth north)
-      (CycleOn.north_path cycle hw (lt_trans hx heast)))
-  have hwestShade := hflow.symm.trans shaded.northwest
-  exact ⟨hwestShade,
-    (valid.horizontal_eq qx (quarterNorth north)
-      (CycleOn.north_path cycle hwest heast)).symm.trans hwestShade⟩
+    (fun x hw he => (valid.rules x (quarterNorth north)).horizontal_eq
+      (CycleOn.north_path cycle hw he)) shaded.northwest
 
+/-- The west side of a uniformly shaded cycle carries its corner shade. -/
 theorem CycleShade.west_at
     {grid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
     {west east south north : Nat} {shade : RedShades.Shade}
@@ -747,21 +568,15 @@ theorem CycleShade.west_at
     (hsouth : quarterSouth south < qy) (hnorth : qy < quarterNorth north) :
     (stateGrid (quarterWest west) qy).south = some shade ∧
       (stateGrid (quarterWest west) qy).north = some shade := by
-  have hstart :
-      (stateGrid (quarterWest west) (quarterSouth south)).north = some shade := by
-    rw [← valid.east_north_corner_eq (quarterWest west) (quarterSouth south)
-      (CycleOn.southwest_corner cycle).1 (CycleOn.southwest_corner cycle).2]
-    exact shaded.southwest
-  have hflow := value_between (fun y => stateGrid (quarterWest west) y)
-    RedShades.State.north RedShades.State.south hsouth
+  apply value_inside (fun y => stateGrid (quarterWest west) y)
+    RedShades.State.north RedShades.State.south hsouth hnorth
     (fun y _ _ => valid.vmatch (quarterWest west) y)
-    (fun y hs hy => valid.vertical_eq (quarterWest west) y
-      (CycleOn.west_path cycle hs (lt_trans hy hnorth)))
-  have hsouthShade := hflow.symm.trans hstart
-  exact ⟨hsouthShade,
-    (valid.vertical_eq (quarterWest west) qy
-      (CycleOn.west_path cycle hsouth hnorth)).symm.trans hsouthShade⟩
+    (fun y hs hn => (valid.rules (quarterWest west) y).vertical_eq
+      (CycleOn.west_path cycle hs hn))
+  exact ((valid.rules (quarterWest west) (quarterSouth south)).east_north_corner_eq
+    (CycleOn.southwest_corner cycle).1 (CycleOn.southwest_corner cycle).2).symm.trans shaded.southwest
 
+/-- The east side of a uniformly shaded cycle carries its corner shade. -/
 theorem CycleShade.east_at
     {grid : Nat → Nat → Index} {stateGrid : Nat → Nat → RedShades.State}
     {west east south north : Nat} {shade : RedShades.Shade}
@@ -771,21 +586,13 @@ theorem CycleShade.east_at
     (hsouth : quarterSouth south < qy) (hnorth : qy < quarterNorth north) :
     (stateGrid (quarterEast east) qy).south = some shade ∧
       (stateGrid (quarterEast east) qy).north = some shade := by
-  have hstart :
-      (stateGrid (quarterEast east) (quarterSouth south)).north = some shade := by
-    rw [← valid.west_north_corner_eq (quarterEast east) (quarterSouth south)
-      (CycleOn.southeast_corner cycle).1 (CycleOn.southeast_corner cycle).2]
-    exact shaded.southeast
-  have hflow := value_between (fun y => stateGrid (quarterEast east) y)
-    RedShades.State.north RedShades.State.south hsouth
+  apply value_inside (fun y => stateGrid (quarterEast east) y)
+    RedShades.State.north RedShades.State.south hsouth hnorth
     (fun y _ _ => valid.vmatch (quarterEast east) y)
-    (fun y hs hy => valid.vertical_eq (quarterEast east) y
-      (CycleOn.east_path cycle hs (lt_trans hy hnorth)))
-  have hsouthShade := hflow.symm.trans hstart
-  exact ⟨hsouthShade,
-    (valid.vertical_eq (quarterEast east) qy
-      (CycleOn.east_path cycle hsouth hnorth)).symm.trans hsouthShade⟩
-
+    (fun y hs hn => (valid.rules (quarterEast east) y).vertical_eq
+      (CycleOn.east_path cycle hs hn))
+  exact ((valid.rules (quarterEast east) (quarterSouth south)).west_north_corner_eq
+    (CycleOn.southeast_corner cycle).1 (CycleOn.southeast_corner cycle).2).symm.trans shaded.southeast
 
 end RedShadeCycles
 
@@ -808,15 +615,12 @@ theorem value_isSome_eq_portPresent
     (valid : ValidShadeGrid grid shadeGrid) (port : Port) :
     (value shadeGrid port).isSome = portPresent grid port := by
   rcases port with ⟨x, y, side⟩
-  have allowed := valid.allowed x y
-  simp only [RedShades.locallyAllowed, RedShades.allowedFor, Bool.and_eq_true,
-    decide_eq_true_eq] at allowed
-  rcases allowed.1.1.1.1.1.1.1 with ⟨⟨⟨hw, he⟩, hs⟩, hn⟩
+  have allowed := valid.rules x y
   cases side
-  · exact hw
-  · exact he
-  · exact hs
-  · exact hn
+  · exact allowed.west_present
+  · exact allowed.east_present
+  · exact allowed.south_present
+  · exact allowed.north_present
 
 /-- Even parity means equal shades; odd parity means opposite present shades. -/
 @[expose] def Related (parity : Bool) (first second : Option RedShades.Shade) : Prop :=
@@ -824,13 +628,7 @@ theorem value_isSome_eq_portPresent
   | false => first = second
   | true => ∃ shade, first = some shade ∧ second = some shade.opposite
 
-@[simp] theorem related_false_iff {first second : Option RedShades.Shade} :
-    Related false first second ↔ first = second := Iff.rfl
-
-@[simp] theorem related_true_iff {first second : Option RedShades.Shade} :
-    Related true first second ↔
-      ∃ shade, first = some shade ∧ second = some shade.opposite := Iff.rfl
-
+/-- Equality or opposition of present shades is symmetric. -/
 theorem Related.symm {parity : Bool} {first second : Option RedShades.Shade}
     (relation : Related parity first second) : Related parity second first := by
   cases parity
@@ -838,6 +636,7 @@ theorem Related.symm {parity : Bool} {first second : Option RedShades.Shade}
   · rcases relation with ⟨shade, rfl, rfl⟩
     exact ⟨shade.opposite, rfl, by simp⟩
 
+/-- Shade relations compose by taking the exclusive-or of their parities. -/
 theorem Related.trans {first second third : Option RedShades.Shade}
     {firstParity secondParity : Bool}
     (firstRelation : Related firstParity first second)
@@ -853,7 +652,7 @@ theorem Related.trans {first second third : Option RedShades.Shade}
     rcases secondRelation with ⟨secondShade, heq, hthird⟩
     simp only [Option.some.injEq] at heq
     subst secondShade
-    simpa using Eq.symm hthird
+    simpa [Related] using Eq.symm hthird
 
 private theorem related_true_of_ne_of_present
     {first second : Option RedShades.Shade}
@@ -869,6 +668,7 @@ private theorem related_true_of_ne_of_present
     apply hne
     exact congrArg some heq)
 
+/-- Each graph link enforces the corresponding shade parity in a valid grid. -/
 theorem Link.sound {indexGrid : Nat → Nat → Index}
     {stateGrid : Nat → Nat → RedShades.State}
     (valid : ValidShadeGrid indexGrid stateGrid)
@@ -878,23 +678,23 @@ theorem Link.sound {indexGrid : Nat → Nat → Index}
   induction link with
   | horizontalMatch x y => exact valid.hmatch x y
   | verticalMatch x y => exact valid.vmatch x y
-  | horizontal x y hpath => exact valid.horizontal_eq x y hpath
-  | vertical x y hpath => exact valid.vertical_eq x y hpath
+  | horizontal x y hpath => exact (valid.rules x y).horizontal_eq hpath
+  | vertical x y hpath => exact (valid.rules x y).vertical_eq hpath
   | westNorth x y hwest hnorth =>
-      exact valid.west_north_corner_eq x y hwest hnorth
+      exact (valid.rules x y).west_north_corner_eq hwest hnorth
   | westSouth x y hwest hsouth =>
-      exact valid.west_south_corner_eq x y hwest hsouth
+      exact (valid.rules x y).west_south_corner_eq hwest hsouth
   | eastNorth x y heast hnorth =>
-      exact valid.east_north_corner_eq x y heast hnorth
+      exact (valid.rules x y).east_north_corner_eq heast hnorth
   | eastSouth x y heast hsouth =>
-      exact RedShades.east_south_corner_eq_of_allowedFor (valid.allowed x y) heast hsouth
+      exact (valid.rules x y).east_south_corner_eq heast hsouth
   | crossing x y hhorizontal hvertical =>
       apply related_true_of_ne_of_present
-      · exact valid.west_present x y (by
+      · exact (valid.rules x y).west_present.trans (by
           simp only [hasWest, hhorizontal, Bool.true_or])
-      · exact valid.south_present x y (by
+      · exact (valid.rules x y).south_present.trans (by
           simp only [hasSouth, hvertical, Bool.true_or])
-      · exact valid.crossing_opposite x y hhorizontal hvertical
+      · exact (valid.rules x y).crossing_opposite hhorizontal hvertical
   | symm link ih => exact Related.symm ih
 
 /-- A parity-consistent assignment to all red-graph ports.  Incidence is part
@@ -936,7 +736,8 @@ theorem validShadeGrid {indexGrid : Nat → Nat → Index}
   constructor
   · intro x y
     simp only [RedShades.locallyAllowed]
-    apply RedShades.allowedFor_of
+    apply RedShades.allowedFor_iff.mpr
+    constructor
     · simpa only [stateGrid, portPresent, componentAt] using
         labeling.present ⟨x, y, .west⟩
     · simpa only [stateGrid, portPresent, componentAt] using
@@ -985,6 +786,7 @@ theorem validShadeGrid {indexGrid : Nat → Nat → Index}
 
 end ValidPortLabeling
 
+/-- The parity of a red-graph path determines the relation between its endpoint shades. -/
 theorem Path.sound {indexGrid : Nat → Nat → Index}
     {stateGrid : Nat → Nat → RedShades.State}
     (valid : ValidShadeGrid indexGrid stateGrid)
@@ -996,7 +798,6 @@ theorem Path.sound {indexGrid : Nat → Nat → Index}
   | ofLink link => exact link.sound valid
   | trans firstPath secondPath firstIH secondIH =>
       exact Related.trans firstIH secondIH
-
 
 end RedShadeGraph
 namespace Signals
@@ -1071,7 +872,6 @@ namespace ShadedSignals
   else none
 
 end ShadedSignals
-
 
 namespace RedShadeGraphCoarsening
 open QuarterGeometry RedCycles RedShadePaths RedShadeCycles RedShadeGraph
