@@ -1073,6 +1073,12 @@ border-refinement witnesses replace repeated searches through the source tables.
 Canonical patches assign nearest-border obstruction signals to matching decorated
 substitutions and establish that the resulting finite scaffold tiles the plane.
 The concrete forcing/realization obligations and Theorem 10 remain outstanding.
+The red-path and shading modules are after §3.3, Figures 17–18, manuscript
+pp. 24, 26–28, read directly on 2026-11-16: light red wires cross dark ones, and squares
+emit signals on their exterior borders. The exact opposite-shade crossing rule (also
+forbidding dark–dark crossings), quarter-port connectivity, and nearest outward-facing
+light-boundary invariant come from lean-wang's red-graph and oriented-light modules at
+the same pinned revision; the discrete-height argument is not attributed to the manuscript. These are scaffold ingredients, not Theorem 10's endpoint.
 This source check is authoring evidence, not independent review.
 
 <a id="johnsonlindenstrauss84"></a>

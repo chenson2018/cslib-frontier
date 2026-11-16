@@ -19,22 +19,23 @@ A bounded walk keeps every intermediate port inside its stated rectangle.
 
 ## Main definitions
 
-* `Quarters.QuarterIndex`: a tile index and its named quadrant.
-* `OrientedRedCycles.CycleOn`: rectangular cycles with their exact inward-facing red lanes.
-* `RedShadeGraph.Path`, `RedShadeGraphBoundedPath.BoundedPath`: parity-labelled red walks.
+* `QuarterIndex`: a tile index and its named quadrant.
+* `CycleOn`: rectangular cycles with their exact inward-facing red lanes.
+* `Path`, `BoundedPath`: parity-labelled red walks.
 
 ## Main results
 
-* `TileSubdivision.horizontal_iff`, `TileSubdivision.vertical_iff`: exact quarter matching.
-* `OrientedRedCycles.CycleOn.refine`: substitution preserves oriented cycles and doubles them.
-* `OrientedRedCycles.fixed_cycle`: every twice-substituted tile contains an oriented cycle.
+* `subdivideTileAt_horizontal_iff`, `subdivideTileAt_vertical_iff`: exact quarter matching.
+* `CycleOn.refine`: substitution preserves oriented cycles and doubles them.
+* `fixed_cycle`: every twice-substituted tile contains an oriented cycle.
 
 ## References
 
-The red-wire construction follows [JeandelVanier2020], §§3.2–3.3, Figures 16–18
+The red-wire construction is after [JeandelVanier2020], §§3.2–3.3, Figures 16–18
 (manuscript pp. 26–28).
 Prior formalization: [lean-wang](https://github.com/edemaine/lean-wang/tree/64268a3),
 revision `64268a3`, modules `Closed104.TileSubdivision`, `QuarterGeometry`,
+`Quarters`, `RedCycleExpansion`, `RedCycleScaling`, `RedBoards`,
 `OrientedRedCycles`, `RedShadeGraph` and `RedShadeGraphBoundedPath`.
 The port and crossing parity semantics are unchanged; wire incidence is independent of shades.
 Internal seam colours use this library's `WangTile` code, in top/bottom/left/right order,
@@ -52,7 +53,7 @@ inductive Quadrant where
   | southeast
   | northwest
   | northeast
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
 
 namespace Quadrant
@@ -71,40 +72,24 @@ namespace Quadrant
   | northwest => true
   | northeast => true
 
-@[expose] def toBits (q : Quadrant) : Bool × Bool :=
-  (q.xBit, q.yBit)
-
+/-- The quadrant with the specified horizontal and vertical bits. -/
 @[expose] def ofBits : Bool × Bool → Quadrant
   | (false, false) => southwest
   | (true, false) => southeast
   | (false, true) => northwest
   | (true, true) => northeast
 
-@[expose] def equivBits : Quadrant ≃ Bool × Bool where
-  toFun := toBits
-  invFun := ofBits
-  left_inv := by
-    intro q
-    cases q <;> rfl
-  right_inv := by
-    intro bits
-    rcases bits with ⟨x, y⟩
-    cases x <;> cases y <;> rfl
-
-instance instPrimcodable : Primcodable Quadrant :=
-  Primcodable.ofEquiv (Bool × Bool) equivBits
-
+/-- All four quarter positions, in southwest/southeast/northwest/northeast order. -/
 @[expose] def all : List Quadrant :=
   [southwest, southeast, northwest, northeast]
 
+/-- Every quadrant occurs in the enumeration. -/
 theorem mem_all (q : Quadrant) : q ∈ all := by
   cases q <;> decide
 
 instance : Fintype Quadrant := Fintype.ofList all mem_all
 
 end Quadrant
-
-namespace TileSubdivision
 
 /-- Horizontal macro-edge colors are split by west/east half. -/
 @[expose] def horizontalEdgeColor (x : Bool) (color : Nat) : Nat :=
@@ -146,7 +131,7 @@ namespace TileSubdivision
         left := internalVerticalColor t true }
 
 /-- Matching quarter edges identify internal parents or matching external macro-edges. -/
-theorem horizontal_iff (left right : WangTile) (q r : Quadrant) :
+theorem subdivideTileAt_horizontal_iff (left right : WangTile) (q r : Quadrant) :
     (subdivideTileAt left q).right = (subdivideTileAt right r).left ↔
       match q, r with
       | .southwest, .southeast | .northwest, .northeast => left = right
@@ -157,7 +142,7 @@ theorem horizontal_iff (left right : WangTile) (q r : Quadrant) :
       Nat.pair_eq_pair]
 
 /-- The vertical counterpart of quarter-edge matching. -/
-theorem vertical_iff (lower upper : WangTile) (q r : Quadrant) :
+theorem subdivideTileAt_vertical_iff (lower upper : WangTile) (q r : Quadrant) :
     (subdivideTileAt lower q).top = (subdivideTileAt upper r).bottom ↔
       match q, r with
       | .southwest, .northwest | .southeast, .northeast => lower = upper
@@ -166,10 +151,6 @@ theorem vertical_iff (lower upper : WangTile) (q r : Quadrant) :
   cases q <;> cases r <;>
     simp [subdivideTileAt, horizontalEdgeColor, internalHorizontalColor,
       Nat.pair_eq_pair]
-
-end TileSubdivision
-
-namespace Quarters
 
 @[expose] public section
 /-- A quarter of one indexed tile of the corrected Robinson alphabet. -/
@@ -183,9 +164,7 @@ end
 
 /-- The ordinary Wang tile encoding a quarter and its internal seams. -/
 @[expose] def quarterTile (site : QuarterIndex) : WangTile :=
-  TileSubdivision.subdivideTileAt (tile (components site.index)) site.quadrant
-
-end Quarters
+  subdivideTileAt (tile (components site.index)) site.quadrant
 
 @[expose] public section
 /-- The four red lane atoms: east vertical, north horizontal, west vertical, south horizontal. -/
@@ -193,8 +172,6 @@ inductive ThickLine where
   | r0 | r1 | r2 | r3
   deriving DecidableEq
 end
-
-namespace QuarterGeometry
 
 /-- Membership of a red lane in a thick component; green lanes are omitted. -/
 @[expose] def containsLine (component : Thick) (line : ThickLine) : Bool :=
@@ -212,20 +189,6 @@ namespace QuarterGeometry
 @[expose] def redHorizontalAt (component : Thick) (north : Bool) : Bool :=
   if north then containsLine component .r1 else containsLine component .r3
 
-/-- The quarter occupied by the red turn of a thick corner component. -/
-@[expose] def redCorner? : Thick → Option Quadrant
-  | .a => some .southeast
-  | .b => some .northeast
-  | .c => some .northwest
-  | .d => some .southwest
-  | _ => none
-
-/-- Whether the thick red path occupies a given tile quarter. -/
-@[expose] def redAt (component : Thick) (quadrant : Quadrant) : Bool :=
-  decide (redCorner? component = some quadrant) ||
-    redVerticalAt component quadrant.xBit ||
-    redHorizontalAt component quadrant.yBit
-
 /-- Red corner path entering the west edge of this quarter. -/
 @[expose] def cornerWest (component : Thick) (quadrant : Quadrant) : Bool :=
   (component, quadrant) matches (.c, .northwest) | (.d, .southwest)
@@ -242,21 +205,27 @@ namespace QuarterGeometry
 @[expose] def cornerNorth (component : Thick) (quadrant : Quadrant) : Bool :=
   (component, quadrant) matches (.b, .northeast) | (.c, .northwest)
 
+/-- A horizontal red wire crosses this quarter. -/
 @[expose] def hasHorizontal (component : Thick) (quadrant : Quadrant) : Bool :=
   redHorizontalAt component quadrant.yBit
 
+/-- A vertical red wire crosses this quarter. -/
 @[expose] def hasVertical (component : Thick) (quadrant : Quadrant) : Bool :=
   redVerticalAt component quadrant.xBit
 
+/-- A red wire meets the west edge of this quarter. -/
 @[expose] def hasWest (component : Thick) (quadrant : Quadrant) : Bool :=
   hasHorizontal component quadrant || cornerWest component quadrant
 
+/-- A red wire meets the east edge of this quarter. -/
 @[expose] def hasEast (component : Thick) (quadrant : Quadrant) : Bool :=
   hasHorizontal component quadrant || cornerEast component quadrant
 
+/-- A red wire meets the south edge of this quarter. -/
 @[expose] def hasSouth (component : Thick) (quadrant : Quadrant) : Bool :=
   hasVertical component quadrant || cornerSouth component quadrant
 
+/-- A red wire meets the north edge of this quarter. -/
 @[expose] def hasNorth (component : Thick) (quadrant : Quadrant) : Bool :=
   hasVertical component quadrant || cornerNorth component quadrant
 
@@ -264,13 +233,21 @@ namespace QuarterGeometry
 @[expose] def quadrantAt (x y : Nat) : Quadrant :=
   Quadrant.ofBits (x % 2 == 1, y % 2 == 1)
 
+/-- The horizontal bit of a quarter is the parity of its horizontal coordinate. -/
+@[simp] theorem quadrantAt_xBit (x y : Nat) :
+    (quadrantAt x y).xBit = (x % 2 == 1) := by
+  cases hx : (x % 2 == 1) <;> cases hy : (y % 2 == 1) <;>
+    simp [quadrantAt, hx, hy, Quadrant.ofBits, Quadrant.xBit]
+
+/-- The vertical bit of a quarter is the parity of its vertical coordinate. -/
+@[simp] theorem quadrantAt_yBit (x y : Nat) :
+    (quadrantAt x y).yBit = (y % 2 == 1) := by
+  cases hx : (x % 2 == 1) <;> cases hy : (y % 2 == 1) <;>
+    simp [quadrantAt, hx, hy, Quadrant.ofBits, Quadrant.yBit]
+
 /-- Thick component at quarter coordinates, grouped by pairs in each direction. -/
 @[expose] def componentAt (grid : Nat → Nat → Index) (x y : Nat) : Thick :=
   (components (grid (x / 2) (y / 2))).thick
-
-end QuarterGeometry
-
-namespace RedCycles
 
 /-- Thick component of an indexed tile. -/
 abbrev indexThick (index : Index) : Thick := (components index).thick
@@ -279,21 +256,6 @@ abbrev indexThick (index : Index) : Thick := (components index).thick
 theorem childBlock_thick_southwest (parent : Index) :
     indexThick (childBlock parent 0 0) = indexThick parent := by
   fin_cases parent <;> rfl
-
-/-- Simultaneous substitution of an index grid at the quotient and parity coordinates. -/
-@[expose] def refineIndexGrid (grid : Nat → Nat → Index) (x y : Nat) : Index :=
-  childBlock (grid (x / 2) (y / 2))
-    ⟨x % 2, Nat.mod_lt _ (by decide)⟩ ⟨y % 2, Nat.mod_lt _ (by decide)⟩
-
-/-- Substitution at an arbitrary child position. -/
-@[simp] theorem refineIndexGrid_child (grid : Nat → Nat → Index) (x y : Nat)
-    (dx dy : Fin 2) :
-    refineIndexGrid grid (2 * x + dx) (2 * y + dy) = childBlock (grid x y) dx dy := by
-  have hx : (2 * x + dx) / 2 = x := by omega
-  have hy : (2 * y + dy) / 2 = y := by omega
-  have hdx : (2 * x + dx) % 2 = dx := by omega
-  have hdy : (2 * y + dy) % 2 = dy := by omega
-  simp only [refineIndexGrid, hx, hy, hdx, hdy]
 
 @[simp] private theorem refineIndexGrid_even_even (grid : Nat → Nat → Index) (x y : Nat) :
     refineIndexGrid grid (2 * x) (2 * y) = childBlock (grid x y) 0 0 := by
@@ -306,16 +268,6 @@ theorem childBlock_thick_southwest (parent : Index) :
 @[simp] private theorem refineIndexGrid_even_odd (grid : Nat → Nat → Index) (x y : Nat) :
     refineIndexGrid grid (2 * x) (2 * y + 1) = childBlock (grid x y) 0 1 := by
   simpa using refineIndexGrid_child grid x y 0 1
-
-/-- Iterate simultaneous substitution. -/
-@[expose] def iterateRefine : Nat → (Nat → Nat → Index) → Nat → Nat → Index
-  | 0, grid => grid
-  | level + 1, grid => refineIndexGrid (iterateRefine level grid)
-
-end RedCycles
-
-namespace OrientedRedCycles
-open RedCycles QuarterGeometry
 
 /-- A rectangular red cycle with the four inward-facing lane orientations. -/
 structure CycleOn (grid : Nat → Nat → Index) (west east south north : Nat) : Prop where
@@ -344,74 +296,57 @@ structure CycleOn (grid : Nat → Nat → Index) (west east south north : Nat) :
   eastLane : ∀ y, south < y → y < north →
     containsLine (indexThick (grid east y)) .r2 = true
 
-/- Finite audit of exact red-lane preservation under substitution. -/
-private theorem expansionRules (parent : Index) :
-    (containsLine (indexThick parent) .r1 = true →
-      containsLine (indexThick ((childBlock parent 0 0))) .r1 = true ∧
-      containsLine (indexThick ((childBlock parent 1 0))) .r1 = true) ∧
-    (containsLine (indexThick parent) .r3 = true →
-      containsLine (indexThick ((childBlock parent 0 0))) .r3 = true ∧
-      containsLine (indexThick ((childBlock parent 1 0))) .r3 = true) ∧
-    (containsLine (indexThick parent) .r0 = true →
-      containsLine (indexThick ((childBlock parent 0 0))) .r0 = true ∧
-      containsLine (indexThick ((childBlock parent 0 1))) .r0 = true) ∧
-    (containsLine (indexThick parent) .r2 = true →
-      containsLine (indexThick ((childBlock parent 0 0))) .r2 = true ∧
-      containsLine (indexThick ((childBlock parent 0 1))) .r2 = true) ∧
-    (indexThick parent = .b →
-      containsLine (indexThick ((childBlock parent 1 0))) .r1 = true) ∧
-    (indexThick parent = .a →
-      containsLine (indexThick ((childBlock parent 1 0))) .r3 = true) ∧
-    (indexThick parent = .b →
-      containsLine (indexThick ((childBlock parent 0 1))) .r0 = true) ∧
-    (indexThick parent = .c →
-      containsLine (indexThick ((childBlock parent 0 1))) .r2 = true) := by
-  revert parent
-  decide
-
 private theorem r1_children {parent : Index}
     (h : containsLine (indexThick parent) .r1 = true) :
     containsLine (indexThick ((childBlock parent 0 0))) .r1 = true ∧
-      containsLine (indexThick ((childBlock parent 1 0))) .r1 = true :=
-  (expansionRules parent).1 h
+      containsLine (indexThick ((childBlock parent 1 0))) .r1 = true := by
+  revert parent
+  decide +kernel
 
 private theorem r3_children {parent : Index}
     (h : containsLine (indexThick parent) .r3 = true) :
     containsLine (indexThick ((childBlock parent 0 0))) .r3 = true ∧
-      containsLine (indexThick ((childBlock parent 1 0))) .r3 = true :=
-  (expansionRules parent).2.1 h
+      containsLine (indexThick ((childBlock parent 1 0))) .r3 = true := by
+  revert parent
+  decide +kernel
 
 private theorem r0_children {parent : Index}
     (h : containsLine (indexThick parent) .r0 = true) :
     containsLine (indexThick ((childBlock parent 0 0))) .r0 = true ∧
-      containsLine (indexThick ((childBlock parent 0 1))) .r0 = true :=
-  (expansionRules parent).2.2.1 h
+      containsLine (indexThick ((childBlock parent 0 1))) .r0 = true := by
+  revert parent
+  decide +kernel
 
 private theorem r2_children {parent : Index}
     (h : containsLine (indexThick parent) .r2 = true) :
     containsLine (indexThick ((childBlock parent 0 0))) .r2 = true ∧
-      containsLine (indexThick ((childBlock parent 0 1))) .r2 = true :=
-  (expansionRules parent).2.2.2.1 h
+      containsLine (indexThick ((childBlock parent 0 1))) .r2 = true := by
+  revert parent
+  decide +kernel
 
 private theorem southeastChild_r1_of_b {parent : Index}
     (h : indexThick parent = .b) :
-    containsLine (indexThick ((childBlock parent 1 0))) .r1 = true :=
-  (expansionRules parent).2.2.2.2.1 h
+    containsLine (indexThick ((childBlock parent 1 0))) .r1 = true := by
+  revert parent
+  decide +kernel
 
 private theorem southeastChild_r3_of_a {parent : Index}
     (h : indexThick parent = .a) :
-    containsLine (indexThick ((childBlock parent 1 0))) .r3 = true :=
-  (expansionRules parent).2.2.2.2.2.1 h
+    containsLine (indexThick ((childBlock parent 1 0))) .r3 = true := by
+  revert parent
+  decide +kernel
 
 private theorem northwestChild_r0_of_b {parent : Index}
     (h : indexThick parent = .b) :
-    containsLine (indexThick ((childBlock parent 0 1))) .r0 = true :=
-  (expansionRules parent).2.2.2.2.2.2.1 h
+    containsLine (indexThick ((childBlock parent 0 1))) .r0 = true := by
+  revert parent
+  decide +kernel
 
 private theorem northwestChild_r2_of_c {parent : Index}
     (h : indexThick parent = .c) :
-    containsLine (indexThick ((childBlock parent 0 1))) .r2 = true :=
-  (expansionRules parent).2.2.2.2.2.2.2 h
+    containsLine (indexThick ((childBlock parent 0 1))) .r2 = true := by
+  revert parent
+  decide +kernel
 
 /-- The parity split used by both horizontal and vertical lane refinement. -/
 private theorem refinedLane {coarse fine : Nat → Index} {lower upper : Nat}
@@ -515,18 +450,13 @@ theorem fixed_cycle (parent : Index) :
 /-- Every further substitution preserves the board and scales its coordinates by two. -/
 theorem CycleOn.iterateRefine {grid : Nat → Nat → Index} {w e s n : Nat}
     (cycle : CycleOn grid w e s n) (level : Nat) :
-    CycleOn (RedCycles.iterateRefine level grid)
+    CycleOn (Robinson.iterateRefine level grid)
       (2 ^ level * w) (2 ^ level * e) (2 ^ level * s) (2 ^ level * n) := by
   induction level with
-  | zero => simpa only [RedCycles.iterateRefine, pow_zero, Nat.one_mul] using cycle
+  | zero => simpa only [Robinson.iterateRefine, pow_zero, Nat.one_mul] using cycle
   | succ level ih =>
-    simpa only [RedCycles.iterateRefine, pow_succ, Nat.mul_comm, Nat.mul_left_comm,
+    simpa only [Robinson.iterateRefine, pow_succ, Nat.mul_comm, Nat.mul_left_comm,
       Nat.mul_assoc] using ih.refine
-
-end OrientedRedCycles
-
-namespace RedShadeGraph
-open QuarterGeometry
 
 @[expose] public section
 /-- A quarter-tile edge at an absolute coordinate. -/
@@ -535,8 +465,12 @@ inductive Side where
   | east
   | south
   | north
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
+
+/-- The four possible port sides form a finite alphabet. -/
+instance : Fintype Side :=
+  Fintype.ofList [.west, .east, .south, .north] (by intro side; cases side <;> simp)
 
 @[expose] public section
 /-- A side of a quarter at a nonnegative coordinate. -/
@@ -547,7 +481,7 @@ structure Port where
   y : Nat
   /-- The edge of the quarter. -/
   side : Side
-deriving DecidableEq, Repr
+deriving DecidableEq
 end
 
 /-- Whether the unshaded quarter geometry carries a red wire at a port. -/
@@ -625,14 +559,11 @@ theorem Path.symm {grid : Nat → Nat → Index} {first second : Port} {parity :
   | ofLink link => exact .ofLink (.symm link)
   | trans _ _ ih₁ ih₂ => simpa only [Bool.xor_comm] using Path.trans ih₂ ih₁
 
-end RedShadeGraph
-
-namespace RedShadeGraphBoundedPath
-open RedShadeGraph
-
+/-- A port lies in the quarter rectangle with the specified width and height. -/
 @[expose] def PortInBounds (port : Port) (width height : Nat) : Prop :=
   port.x < width ∧ port.y < height
 
+/-- A parity-labelled red walk whose every endpoint stays in a fixed rectangle. -/
 inductive BoundedPath (indexGrid : Nat → Nat → Index)
     (width height : Nat) : Port → Port → Bool → Prop where
   | refl (port : Port) (hport : PortInBounds port width height) :
@@ -650,6 +581,7 @@ inductive BoundedPath (indexGrid : Nat → Nat → Index)
       BoundedPath indexGrid width height first third
         (Bool.xor firstParity secondParity)
 
+/-- Forgetting the rectangle bounds gives an ordinary red walk. -/
 theorem BoundedPath.path
     {indexGrid : Nat → Nat → Index} {width height : Nat}
     {first second : Port} {parity : Bool}
@@ -660,25 +592,4 @@ theorem BoundedPath.path
   | ofLink link _ _ => exact Path.ofLink link
   | trans _ _ firstIH secondIH => exact Path.trans firstIH secondIH
 
-theorem BoundedPath.first_inBounds
-    {indexGrid : Nat → Nat → Index} {width height : Nat}
-    {first second : Port} {parity : Bool}
-    (path : BoundedPath indexGrid width height first second parity) :
-    PortInBounds first width height := by
-  induction path with
-  | refl _ hport => exact hport
-  | ofLink _ hfirst _ => exact hfirst
-  | trans _ _ firstIH _ => exact firstIH
-
-theorem BoundedPath.second_inBounds
-    {indexGrid : Nat → Nat → Index} {width height : Nat}
-    {first second : Port} {parity : Bool}
-    (path : BoundedPath indexGrid width height first second parity) :
-    PortInBounds second width height := by
-  induction path with
-  | refl _ hport => exact hport
-  | ofLink _ _ hsecond => exact hsecond
-  | trans _ _ _ secondIH => exact secondIH
-
-end RedShadeGraphBoundedPath
 end Cslib.WangTile.Robinson
