@@ -1175,13 +1175,9 @@ private theorem intervalEdge_pair_of_horizontalCarrier
       have successorAtMostClosing : coordinate + 1 ≤
           frameClosing depth coordinate := by omega
       have depth_lt_level : depth < level := by
-        have depthBound := depthAt_le owner
-        have levelPositive : 0 < level := by
-          by_contra levelZero
-          have : level = 0 := Nat.eq_zero_of_not_pos levelZero
-          subst level
-          simp at owner
-        exact depthBound.trans_lt (Nat.sub_lt levelPositive (by decide))
+        have := depthAt_le owner
+        have := depthAt_pos owner
+        omega
       have closingBeforeEnd := frameClosing_lt_two_mul_scale
         depth_lt_level coordinate_lt
       have openingBorder := selectedBorder_frameOpening
@@ -1231,13 +1227,9 @@ private theorem horizontalCarrier_of_intervalEdge_pair
         selected).elim
   | some depth =>
       have depth_lt_level : depth < level := by
-        have depthBound := depthAt_le owner
-        have levelPositive : 0 < level := by
-          by_contra levelZero
-          have : level = 0 := Nat.eq_zero_of_not_pos levelZero
-          subst level
-          simp at owner
-        exact depthBound.trans_lt (Nat.sub_lt levelPositive (by decide))
+        have := depthAt_le owner
+        have := depthAt_pos owner
+        omega
       have closingBeforeEnd := frameClosing_lt_two_mul_scale
         depth_lt_level coordinate_lt
       have openingBorder := selectedBorder_frameOpening
