@@ -24,9 +24,6 @@ tile must occur, through the reduction `everyTileOccurs_manyOneReducible_isRepre
 that decides the domino problem by a search over sublists
 (`Cslib.WangTile.computablePred_tilesPlane_of_computablePred_everyTileOccurs`).
 
-**The reduction rests on `hasWinningStrategy_tilingFrame`, Theorem 4 of the source, whose proof is
-not written yet**, and so does the result of this file.
-
 ## Main results
 
 * `Cslib.RelationAlgebra.not_computablePred_isRepresentable_of_not_computablePred_tilesPlane`:
@@ -44,13 +41,11 @@ namespace Cslib.RelationAlgebra
 
 open WangTile
 
-/-- A step towards Theorem 8 of [HirschHodkinson2001], conditional on the domino problem, and not
-that theorem: **if** no algorithm decides whether a list of Wang tiles tiles the plane, then none
-decides whether a table presents an atom structure whose complex algebra is representable. The
-hypothesis is Berger's theorem, which the source cites and this library does not prove; it is
-milestone 4 of cslib-frontier issue #5920.
-
-**This rests on `hasWinningStrategy_tilingFrame`, Theorem 4, which is not yet proved.** -/
+/-- A step towards Theorem 8 of [HirschHodkinson2001], conditional on the undecidability of the
+domino problem, and not that theorem: **if** no algorithm decides whether a list of Wang tiles
+tiles the plane, then none decides whether a table presents an atom structure whose complex
+algebra is representable. The hypothesis is Berger's theorem, which the source cites and this
+library does not prove; it is milestone 4 of cslib-frontier issue #5920. -/
 theorem not_computablePred_isRepresentable_of_not_computablePred_tilesPlane
     (h : ¬ComputablePred TilesPlane) : ¬ComputablePred AtomTable.IsRepresentable := fun hrep =>
   h <| computablePred_tilesPlane_of_computablePred_everyTileOccurs <|
