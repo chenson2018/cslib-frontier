@@ -16,10 +16,63 @@ import Mathlib.Tactic.Module
 /-!
 # Tilings give a winning strategy
 
-Theorem 4 of [HirschHodkinson2001]: if every tile of a list is at the origin of a tiling by the
-list, and the first tile matches itself, then ∃ has a winning strategy in the game of `RA(τ)`.
+Theorem 4 of [HirschHodkinson2001], Section 6: if every tile of a list is at the origin of a
+tiling by the list, and the first tile matches itself, then ∃ has a winning strategy in the game
+of `RA(τ)`.
 
-**The proof is not written yet**: the statement below is a `sorry`, being proved separately.
+## The strategy
+
+By `AtomFrame.HasWinningStrategy.of_forall_exists_comap_castSucc` it is enough that ∃ answers the
+moves of ∀ that have no witness yet, each by adding one node. On the edges from the new node that
+∀ leaves unlabelled she puts the atoms of the source, Section 6.1:
+
+* a white atom between two nodes of one kind;
+* a tile atom between a `1`-node and a `2`-node that some `0`-node sees along green edges, and
+  a white atom between two that no `0`-node sees;
+* `u`, `v` or a white atom on an edge from a `0`-node.
+
+The conditions for `u` and `v`, and the bookkeeping behind the choice of tile atoms, are organized
+differently from the source. For each `0`-node `h` and each axis, ∃ divides the nodes that `h`
+sees along green edges into classes, and gives each of them an integer that increases by one
+along every step `+1` between two of them: a new node joins the class of the node to which a step
+joins it, and otherwise starts a class. She puts `u` on the edge from `h` to a node joined by
+steps to two distinct nodes of one class under `h`; the source asks for a cycle of steps through
+the node whose other nodes `h` sees. She puts `v` on the edge from `h` to a node joined by tile
+edges to two distinct nodes of one class under `h`; the source asks for a chain of steps between
+nodes that `h` sees, to the two ends of which tile edges join the node. For `v` the edges that
+count are those that are tile edges once the round is over, as in the correction to case II(2)(c)
+printed at the end of the authors' copy of the source under "Added after posting".
+
+Each tile edge is placed at a cell of one of the given tilings and is labelled by the tile there.
+A new tile edge is placed next to the tile edges that constrain it, and in the constant tiling by
+the tile at position `0` when none does. That the constraints agree (`Move.cand_unique`) takes the
+place of the source's Lemma 5 and of the choice of co-ordinates in its Section 6.5.
+
+## The invariant
+
+The source argues about the order in which the nodes of a play were added, and keeps conditions
+T1–T3 on the tile edges linked through triangles that ∀ did not build. Here the facts that those
+arguments give are instead part of an invariant `Good` of a single network with its bookkeeping,
+and no history of the play is kept:
+
+* `Good.u_class`: a node joined by steps to two distinct nodes of one class under `h` is seen by
+  `h` along a green edge or along `u`. With rule 3 it does the work of the source's Lemma 6.
+* `Good.v_class`: a node joined by tile edges to two distinct nodes of one class under `h` is seen
+  by `h` along a green edge or along `v`. With rule 4 it gives the claim in the source's proof of
+  Lemma 5(2), which is where the correction is needed.
+* `Good.apex_unique`: no second `0`-node sees two distinct nodes of one class under `h`. Its proof
+  uses Convention 1(2) of the source, that ∀ makes no move that has a witness.
+* `Good.cell_class`: the tile edges from the nodes of one class under `h` to a node that `h` sees
+  lie in one tiling, along a row or a column, at the places given by the integers of the class.
+  This takes the place of T1 and T2.
+
+Each is preserved because ∀ labels at most two edges from the new node (`Move.isPar_three`), and
+∃ puts no green atom and no step on an edge. The two axes are treated at once: rules 2–4 and
+their duals are the instances of `Rule.cases` for the two axes.
+
+## Main results
+
+* `Cslib.RelationAlgebra.hasWinningStrategy_tilingFrame`: Theorem 4 of the source.
 
 ## References
 
@@ -46,8 +99,6 @@ private def Axis.other : Axis → Axis
 
 @[simp]
 private theorem Axis.other_other (d : Axis) : d.other.other = d := by cases d <;> rfl
-
-private theorem Axis.other_ne (d : Axis) : d.other ≠ d := by cases d <;> simp [Axis.other]
 
 /-- The direction of the tile atoms on the edges that start at a `d`-node: `T₁₂ⁱ` starts at a
 `1`-node and its converse at a `2`-node. -/
@@ -101,12 +152,6 @@ private theorem Atom.isTile_conv {a : Atom ι} : a.conv.IsTile ↔ a.IsTile := b
   cases a <;> exact .rfl
 
 @[simp]
-private theorem Atom.sgn_conv (a : Atom ι) : a.conv.sgn = -a.sgn := by
-  cases a with
-  | step d o => cases o <;> simp [Atom.sgn, Atom.conv, Direction.flip]
-  | _ => simp [Atom.sgn, Atom.conv]
-
-@[simp]
 private theorem Atom.isUnit_unit (i : Kind) : (unit i : Atom ι).IsUnit := trivial
 
 private theorem Atom.IsUnit.eq_unit {a : Atom ι} (h : a.IsUnit) : a = unit a.src := by
@@ -127,25 +172,11 @@ private theorem Axis.zero_ne_kind (d : Axis) : Kind.zero ≠ d.kind := by
   cases d <;> simp [Axis.kind]
 
 @[simp]
-private theorem Axis.other_eq_iff {d e : Axis} : d.other = e.other ↔ d = e := by
-  cases d <;> cases e <;> simp [Axis.other]
-
-@[simp]
 private theorem Axis.other_ne_self (d : Axis) : d.other ≠ d := by cases d <;> simp [Axis.other]
 
 @[simp]
 private theorem Axis.self_ne_other (d : Axis) : d ≠ d.other := by cases d <;> simp [Axis.other]
 
-@[simp]
-private theorem Axis.tileDir_inj {d e : Axis} : d.tileDir = e.tileDir ↔ d = e := by
-  cases d <;> cases e <;> simp [Axis.tileDir]
-
-@[simp]
-private theorem Axis.tileDir_flip (d : Axis) : d.tileDir.flip = d.other.tileDir := by
-  cases d <;> rfl
-
-@[simp] private theorem Atom.src_unit (i : Kind) : (unit i : Atom ι).src = i := rfl
-@[simp] private theorem Atom.tgt_unit (i : Kind) : (unit i : Atom ι).tgt = i := rfl
 @[simp] private theorem Atom.src_white (i j : Kind) : (white i j : Atom ι).src = i := rfl
 @[simp] private theorem Atom.tgt_white (i j : Kind) : (white i j : Atom ι).tgt = j := rfl
 @[simp] private theorem Atom.src_green_forward (d : Axis) :
@@ -333,34 +364,33 @@ private structure Good [NeZero L.length] (T : Tilings L) (S : Ann L D) : Prop wh
       ((S.cell a y).seed ≠ 0 →
         (S.cell b y).pos = (S.cell a y).pos + (S.pot h b - S.pot h a) • d.vec)
 
-private theorem Good.sgn_self [NeZero L.length] {T : Tilings L} {S : Ann L D} (hS : Good T S)
-    (x : D) : (S.lab x x).sgn = 0 := by
+section
+
+variable [NeZero L.length] {T : Tilings L} {S : Ann L D}
+
+private theorem Good.sgn_self (hS : Good T S) (x : D) : (S.lab x x).sgn = 0 := by
   rw [((hS.isUnit_iff x x).mpr rfl).eq_unit]
   rfl
 
-private theorem Good.ne_of_isStep [NeZero L.length] {T : Tilings L} {S : Ann L D} (hS : Good T S)
-    {x y : D} (h : (S.lab x y).IsStep) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_isStep (hS : Good T S) {x y : D} (h : (S.lab x y).IsStep) : x ≠ y := fun hxy => by
   obtain ⟨d, o, hd⟩ := Atom.isStep_iff.mp h
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [hd] at h₁
   exact h₁
 
-private theorem Good.ne_of_isTile [NeZero L.length] {T : Tilings L} {S : Ann L D} (hS : Good T S)
-    {x y : D} (h : (S.lab x y).IsTile) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_isTile (hS : Good T S) {x y : D} (h : (S.lab x y).IsTile) : x ≠ y := fun hxy => by
   obtain ⟨d, o, hd⟩ := Atom.isTile_iff.mp h
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [hd] at h₁
   exact h₁
 
-private theorem Good.ne_of_green [NeZero L.length] {T : Tilings L} {S : Ann L D} (hS : Good T S)
-    {x y : D} {d : Axis} {o : Direction} (h : S.lab x y = green d o) : x ≠ y := fun hxy => by
+private theorem Good.ne_of_green (hS : Good T S) {x y : D} {d : Axis} {o : Direction} (h : S.lab x y = green d o) : x ≠ y := fun hxy => by
   have h₁ := (hS.isUnit_iff x y).mpr hxy
   rw [h] at h₁
   exact h₁
 
 /-- By rule 1, the edge between two nodes of different axes seen by one node is a tile edge. -/
-private theorem Good.isTile_of_green [NeZero L.length] {T : Tilings L} {S : Ann L D}
-    (hS : Good T S) {h x y : D} {d : Axis} (hx : S.lab h x = green d .forward)
+private theorem Good.isTile_of_green (hS : Good T S) {h x y : D} {d : Axis} (hx : S.lab h x = green d .forward)
     (hy : S.lab h y = green d.other .forward) : (S.lab x y).IsTile := by
   have h₁ : (S.lab x y).src = d.kind := by rw [hS.typed.src_eq, hS.typed.tgt_of_eq hx]; rfl
   have h₂ : (S.lab x y).tgt = d.other.kind := by
@@ -397,7 +427,7 @@ private theorem Good.isTile_of_green [NeZero L.length] {T : Tilings L} {S : Ann 
   · trivial
 
 /-- The tiles at two cells of one tiling that are adjacent along an axis match. -/
-private theorem Tilings.front_eq_back [NeZero L.length] (T : Tilings L) {m m' : Cell L}
+private theorem Tilings.front_eq_back (T : Tilings L) {m m' : Cell L}
     {d : Axis} (hs : m'.seed = m.seed) (hp : m.seed ≠ 0 → m'.pos = m.pos + d.vec) :
     d.front L[T.idx m] = d.back L[T.idx m'] := by
   have key (a b : Fin L.length) (ha : T.idx m = a) (hb : T.idx m' = b)
@@ -409,7 +439,93 @@ private theorem Tilings.front_eq_back [NeZero L.length] (T : Tilings L) {m m' : 
   · simp [Tilings.idx, hs, h0, T.til_zero]
   · simp [Tilings.idx, hs, hp h0]
 
-/-! ### The response to a move -/
+/-- The atomic network of a labelling that satisfies the invariant. -/
+private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D where
+  label := S.lab
+  label_mem_id {x y} := hS.isUnit_iff x y
+  conv_label := hS.typed.conv_lab
+  label_mem_cycles x y w := mem_cycles_tilingFrame.mpr
+    { tgt_eq_src := by rw [hS.typed.tgt_eq, hS.typed.src_eq y w]
+      src_eq_src := by rw [hS.typed.src_eq, hS.typed.src_eq x w]
+      tgt_eq_tgt := by rw [hS.typed.tgt_eq, hS.typed.tgt_eq x w]
+      eq_of_isUnit_left h := by rw [(hS.isUnit_iff _ _).mp h]
+      eq_of_isUnit_right h := by rw [(hS.isUnit_iff _ _).mp h]
+      eq_conv_of_isUnit h := by rw [(hS.isUnit_iff _ _).mp h, hS.typed.conv_lab]
+      not_forbidden := by
+        simp only [Forbidden, hS.typed.conv_lab]
+        rintro (h | h | h | h | h | h) <;> exact hS.rule_free _ _ _ h }
+
+/-! ### The opening positions -/
+
+/-- The labelling of two nodes joined by an edge with a given atom. -/
+private def Ann.pair (a : Atom (Fin L.length)) : Ann L Bool where
+  lab
+    | false, false => unit a.src
+    | false, true => a
+    | true, false => a.conv
+    | true, true => unit a.tgt
+  root _ y := y
+  pot _ _ := 0
+  cell _ _ :=
+    match a with
+    | tile j _ => ⟨j, 0⟩
+    | _ => ⟨0, 0⟩
+
+private theorem Ann.good_pair {a : Atom (Fin L.length)} (ha : ¬a.IsUnit) :
+    Good T (Ann.pair a) where
+  typed :=
+    { src_eq x y := by cases x <;> cases y <;> rfl
+      conv_lab x y := by cases x <;> cases y <;> first | rfl | exact conv_conv a }
+  isUnit_iff x y := by cases x <;> cases y <;> simp [Ann.pair, ha]
+  rule_free x y w h := by
+    obtain ⟨h₁, h₂, h₃⟩ := h.not_isUnit
+    cases x <;> cases y <;> cases w <;> simp [Ann.pair] at h₁ h₂ h₃
+  step_class {h x y} _ _ h₁ h₂ h₃ := by
+    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at h₁ h₂ h₃
+  u_class {h b} _ := by
+    rintro ⟨x, y, ⟨hne, h₁, h₂, -⟩, -, -⟩
+    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
+  v_class {h b} _ := by
+    rintro ⟨x, y, ⟨hne, h₁, h₂, -⟩, -, -⟩
+    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
+  apex_unique {h h' x y} _ := by
+    rintro ⟨hne, h₁, h₂, -⟩ - -
+    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
+  cell_symm _ _ := rfl
+  tile_idx {x y i o} h := by
+    cases x <;> cases y <;> cases a <;> cases o <;>
+      simp_all [Ann.pair, Atom.conv, Direction.flip, Tilings.idx, T.til_origin]
+  cell_class {h x y z} _ h₁ h₂ h₃ _ := by
+    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at h₁ h₂ ⊢
+
+/-- The labelling of a single node with a unit on its loop. -/
+private def Ann.single (i : Kind) : Ann L Unit where
+  lab _ _ := unit i
+  root _ y := y
+  pot _ _ := 0
+  cell _ _ := ⟨0, 0⟩
+
+private theorem Ann.good_single (i : Kind) : Good T (Ann.single i) where
+  typed := ⟨fun _ _ => rfl, fun _ _ => rfl⟩
+  isUnit_iff _ _ := by simp [Ann.single]
+  rule_free _ _ _ h := h.not_isUnit.1 trivial
+  step_class h := by simp [Ann.single] at h
+  u_class := by
+    rintro _ _ _ ⟨x, y, ⟨-, h, -, -⟩, -, -⟩
+    simp [Ann.single] at h
+  v_class := by
+    rintro _ _ _ ⟨x, y, ⟨-, h, -, -⟩, -, -⟩
+    simp [Ann.single] at h
+  apex_unique := by
+    rintro _ _ _ _ _ ⟨-, h, -, -⟩ - -
+    simp [Ann.single] at h
+  cell_symm _ _ := rfl
+  tile_idx h := by simp [Ann.single] at h
+  cell_class h := by simp [Ann.single] at h
+
+end
+
+/-! ### Moves -/
 
 variable (S : Ann L D) in
 /-- A move of ∀ that has no witness yet: two nodes `p`, `q` and two atoms `a`, `b` whose product
@@ -488,95 +604,9 @@ private theorem par_tgt (x : D) : (M.par x).tgt = M.kind := by
 
 end Move
 
-/-! ### The network of a labelling, and the opening positions -/
-
-variable [NeZero L.length] {T : Tilings L} {S : Ann L D}
-
-/-- The atomic network of a labelling that satisfies the invariant. -/
-private def Good.network (hS : Good T S) : AtomicNetwork (tilingFrame L) D where
-  label := S.lab
-  label_mem_id {x y} := hS.isUnit_iff x y
-  conv_label := hS.typed.conv_lab
-  label_mem_cycles x y w := mem_cycles_tilingFrame.mpr
-    { tgt_eq_src := by rw [hS.typed.tgt_eq, hS.typed.src_eq y w]
-      src_eq_src := by rw [hS.typed.src_eq, hS.typed.src_eq x w]
-      tgt_eq_tgt := by rw [hS.typed.tgt_eq, hS.typed.tgt_eq x w]
-      eq_of_isUnit_left h := by rw [(hS.isUnit_iff _ _).mp h]
-      eq_of_isUnit_right h := by rw [(hS.isUnit_iff _ _).mp h]
-      eq_conv_of_isUnit h := by rw [(hS.isUnit_iff _ _).mp h, hS.typed.conv_lab]
-      not_forbidden := by
-        simp only [Forbidden, hS.typed.conv_lab]
-        rintro (h | h | h | h | h | h) <;> exact hS.rule_free _ _ _ h }
-
-/-- The labelling of two nodes joined by an edge with a given atom. -/
-private def Ann.pair (a : Atom (Fin L.length)) : Ann L Bool where
-  lab
-    | false, false => unit a.src
-    | false, true => a
-    | true, false => a.conv
-    | true, true => unit a.tgt
-  root _ y := y
-  pot _ _ := 0
-  cell _ _ :=
-    match a with
-    | tile j _ => ⟨j, 0⟩
-    | _ => ⟨0, 0⟩
-
-private theorem Ann.good_pair {a : Atom (Fin L.length)} (ha : ¬a.IsUnit) :
-    Good T (Ann.pair a) where
-  typed :=
-    { src_eq x y := by cases x <;> cases y <;> rfl
-      conv_lab x y := by cases x <;> cases y <;> first | rfl | exact conv_conv a }
-  isUnit_iff x y := by cases x <;> cases y <;> simp [Ann.pair, ha]
-  rule_free x y w h := by
-    obtain ⟨h₁, h₂, h₃⟩ := h.not_isUnit
-    cases x <;> cases y <;> cases w <;> simp [Ann.pair] at h₁ h₂ h₃
-  step_class {h x y} _ _ h₁ h₂ h₃ := by
-    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at h₁ h₂ h₃
-  u_class {h b} _ := by
-    rintro ⟨x, y, ⟨hne, h₁, h₂, -⟩, -, -⟩
-    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
-  v_class {h b} _ := by
-    rintro ⟨x, y, ⟨hne, h₁, h₂, -⟩, -, -⟩
-    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
-  apex_unique {h h' x y} _ := by
-    rintro ⟨hne, h₁, h₂, -⟩ - -
-    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at hne h₁ h₂
-  cell_symm _ _ := rfl
-  tile_idx {x y i o} h := by
-    cases x <;> cases y <;> cases a <;> cases o <;>
-      simp_all [Ann.pair, Atom.conv, Direction.flip, Tilings.idx, T.til_origin]
-  cell_class {h x y z} _ h₁ h₂ h₃ _ := by
-    cases h <;> cases x <;> cases y <;> simp [Ann.pair] at h₁ h₂ ⊢
-
-/-- The labelling of a single node with a unit on its loop. -/
-private def Ann.single (i : Kind) : Ann L Unit where
-  lab _ _ := unit i
-  root _ y := y
-  pot _ _ := 0
-  cell _ _ := ⟨0, 0⟩
-
-private theorem Ann.good_single (i : Kind) : Good T (Ann.single i) where
-  typed := ⟨fun _ _ => rfl, fun _ _ => rfl⟩
-  isUnit_iff _ _ := by simp [Ann.single]
-  rule_free _ _ _ h := h.not_isUnit.1 trivial
-  step_class h := by simp [Ann.single] at h
-  u_class := by
-    rintro _ _ _ ⟨x, y, ⟨-, h, -, -⟩, -, -⟩
-    simp [Ann.single] at h
-  v_class := by
-    rintro _ _ _ ⟨x, y, ⟨-, h, -, -⟩, -, -⟩
-    simp [Ann.single] at h
-  apex_unique := by
-    rintro _ _ _ _ _ ⟨-, h, -, -⟩ - -
-    simp [Ann.single] at h
-  cell_symm _ _ := rfl
-  tile_idx h := by simp [Ann.single] at h
-  cell_class h := by simp [Ann.single] at h
-
 /-! ### The triangle of a move -/
 
-variable (hS : Good T S)
+variable [NeZero L.length] {T : Tilings L} {S : Ann L D} (hS : Good T S)
 
 namespace Move
 
@@ -725,14 +755,19 @@ private def WillTile : Option D → Option D → Prop
   | some x, none => (M.par x).IsTile ∨ M.Apex x
   | none, _ => False
 
-/-- The edge from `x₀`, a node of axis `d`, to the new node is constrained to lie at the cell
-`m`: either ∀ has labelled with a tile atom the edge from `x₀`, or from a node one step away
-from `x₀`, or the new node is one step away from a node joined to `x₀` by a tile edge. -/
-private def Anchor (d : Axis) (x₀ : D) (m : Cell L) : Prop :=
-  ∃ s, (∃ j o, M.par s = tile j o ∧ (x₀ = s ∨ (S.lab s x₀).IsStep) ∧
+/-- The node `s` picked by ∀ constrains the edge from `x₀`, a node of axis `d`, to the new node
+to lie at the cell `m`: either ∀ has labelled the edge from `s` with a tile atom, and `s` is `x₀`
+or one step away from it, or he has labelled it with a step, and a tile edge joins `x₀` to `s`. -/
+private def AnchorAt (d : Axis) (x₀ : D) (m : Cell L) (s : D) : Prop :=
+  (∃ j o, M.par s = tile j o ∧ (x₀ = s ∨ (S.lab s x₀).IsStep) ∧
       m = ⟨j, (S.lab s x₀).sgn • d.vec⟩) ∨
     ((M.par s).IsStep ∧ (S.lab x₀ s).IsTile ∧
       m = ⟨(S.cell x₀ s).seed, (S.cell x₀ s).pos + (M.par s).sgn • d.other.vec⟩)
+
+/-- The edge from `x₀`, a node of axis `d`, to the new node is constrained to lie at the cell
+`m`. -/
+private def Anchor (d : Axis) (x₀ : D) (m : Cell L) : Prop :=
+  ∃ s, M.AnchorAt d x₀ m s
 
 /-- The edge from `x` to the new node is constrained to lie at the cell `m`, by a constraint on a
 node of the class of `x` under a node that sees the new node. -/
@@ -912,6 +947,10 @@ private theorem par_of_ext_isStep {x : D} (h : (M.ext T x).IsStep) :
     obtain ⟨_, _, h'⟩ | ⟨_, h', -⟩ | ⟨_, h', -⟩ | ⟨_, h', -⟩ | ⟨_, h', -⟩ | ⟨_, h', -⟩ :=
       M.exLabel_cases (T := T) x <;> simp [h', Atom.IsStep] at h
 
+private theorem par_of_ext_step {x : D} {d : Axis} {o : Direction} (h : M.ext T x = step d o) :
+    M.par x = step d o :=
+  (M.par_of_ext_isStep (T := T) (x := x) (by simp [h, Atom.IsStep])).1 ▸ h
+
 /-- ∃ puts a tile atom only on an edge between two nodes seen by one node, and then the tile at
 the cell chosen for the edge. -/
 private theorem ext_tile {x : D} {i : Fin L.length} {o : Direction} (h : M.ext T x = tile i o) :
@@ -939,12 +978,18 @@ private theorem next_lab_q : (M.next T).lab none (some M.q) = M.b := by
 omit [NeZero L.length] in
 /-- A constraint on the cell of a new edge comes from a node picked by ∀ whose edge to the new
 node he labelled with a tile atom or a step. -/
-private theorem exists_par_of_anchor {d : Axis} {x₀ : D} {m : Cell L} (h : M.Anchor d x₀ m) :
-    ∃ s, M.IsPar s ∧ ((M.par s).IsTile ∨ (M.par s).IsStep) := by
-  obtain ⟨s, ⟨j, o, hs, -⟩ | ⟨hs, -⟩⟩ := h
+private theorem isPar_of_anchorAt {d : Axis} {x₀ s : D} {m : Cell L}
+    (h : M.AnchorAt d x₀ m s) : M.IsPar s ∧ ((M.par s).IsTile ∨ (M.par s).IsStep) := by
+  obtain ⟨j, o, hs, -⟩ | ⟨hs, -⟩ := h
   · have hs' : (M.par s).IsTile := by simp [hs, Atom.IsTile]
-    exact ⟨s, M.isPar_of_isTile hs', .inl hs'⟩
-  · exact ⟨s, M.isPar_of_isStep hs, .inr hs⟩
+    exact ⟨M.isPar_of_isTile hs', .inl hs'⟩
+  · exact ⟨M.isPar_of_isStep hs, .inr hs⟩
+
+omit [NeZero L.length] in
+private theorem exists_par_of_anchor {d : Axis} {x₀ : D} {m : Cell L} (h : M.Anchor d x₀ m) :
+    ∃ s, M.IsPar s ∧ ((M.par s).IsTile ∨ (M.par s).IsStep) :=
+  let ⟨s, hs⟩ := h
+  ⟨s, M.isPar_of_anchorAt hs⟩
 
 omit [NeZero L.length] in
 /-- When ∀ has labelled an edge to the new node with a tile atom or a step, at most one node sees
@@ -1010,16 +1055,8 @@ private theorem cand_unique {x : D} {m m' : Cell L} (hm : M.Cand x m) (hm' : M.C
   have hroot : S.root h x₀ = S.root h x₁ := hr.symm.trans hr'
   obtain ⟨s, hA⟩ := hA
   obtain ⟨s', hA'⟩ := hA'
-  have hs : M.IsPar s ∧ ((M.par s).IsTile ∨ (M.par s).IsStep) := by
-    rcases hA with ⟨j, o, h₁, -⟩ | ⟨h₁, -⟩
-    · have h₂ : (M.par s).IsTile := by simp [h₁, Atom.IsTile]
-      exact ⟨M.isPar_of_isTile h₂, .inl h₂⟩
-    · exact ⟨M.isPar_of_isStep h₁, .inr h₁⟩
-  have hs' : M.IsPar s' ∧ ((M.par s').IsTile ∨ (M.par s').IsStep) := by
-    rcases hA' with ⟨j, o, h₁, -⟩ | ⟨h₁, -⟩
-    · have h₂ : (M.par s').IsTile := by simp [h₁, Atom.IsTile]
-      exact ⟨M.isPar_of_isTile h₂, .inl h₂⟩
-    · exact ⟨M.isPar_of_isStep h₁, .inr h₁⟩
+  have hs := M.isPar_of_anchorAt hA
+  have hs' := M.isPar_of_anchorAt hA'
   obtain rfl : s = s' := by
     have hne : M.par h ≠ M.par s := fun heq => by
       simp [← heq, hh, Atom.IsTile, Atom.IsStep] at hs
@@ -1358,9 +1395,8 @@ include hS in
 private theorem rule_two_left {y w : D} {d : Axis} {i j : Fin L.length} {o o' : Direction}
     (hr : M.ext T y = tile i o) (hs : S.lab y w = tile j o') (ht : M.ext T w = step d .forward)
     (hnp : ¬(M.IsPar y ∧ M.IsPar w)) : d.front L[j] = d.back L[i] := by
-  obtain ⟨hw₁, hw₂⟩ := M.par_of_ext_isStep (T := T) (x := w) (by simp [ht, Atom.IsStep])
-  have hpw : M.par w = step d .forward := hw₁ ▸ ht
-  have hy : ¬M.IsPar y := fun hy => hnp ⟨hy, hw₂⟩
+  have hpw := M.par_of_ext_step ht
+  have hy : ¬M.IsPar y := fun hy => hnp ⟨hy, M.isPar_of_isStep (by simp [hpw, Atom.IsStep])⟩
   rcases M.ext_tile hr with hp | ⟨-, hA, -⟩
   · exact (hy (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))).elim
   obtain ⟨h₁, h₂⟩ := M.cellAt_of_step hS hpw (by simp [hs, Atom.IsTile]) hA
@@ -1375,9 +1411,8 @@ include hS in
 private theorem rule_two_right {x y : D} {d : Axis} {i j : Fin L.length} {o o' : Direction}
     (hr : S.lab x y = tile i o) (hs : M.ext T y = tile j o') (ht : M.ext T x = step d .reverse)
     (hnp : ¬(M.IsPar x ∧ M.IsPar y)) : d.front L[j] = d.back L[i] := by
-  obtain ⟨hx₁, hx₂⟩ := M.par_of_ext_isStep (T := T) (x := x) (by simp [ht, Atom.IsStep])
-  have hpx : M.par x = step d .reverse := hx₁ ▸ ht
-  have hy : ¬M.IsPar y := fun hy => hnp ⟨hx₂, hy⟩
+  have hpx := M.par_of_ext_step ht
+  have hy : ¬M.IsPar y := fun hy => hnp ⟨M.isPar_of_isStep (by simp [hpx, Atom.IsStep]), hy⟩
   rcases M.ext_tile hs with hp | ⟨-, hA, -⟩
   · exact (hy (M.isPar_of_isTile (by simp [hp, Atom.IsTile]))).elim
   have hyx : (S.lab y x).IsTile := by
@@ -1403,19 +1438,35 @@ private theorem not_isPar_of_twins {a a' w : D} (ha : M.IsPar a) (ha' : M.IsPar 
   · exact hw (h ▸ rfl)
   · exact hw' (h ▸ rfl)
 
+omit [NeZero L.length] in
+/-- Two distinct nodes that the new node sees along green edges of one axis are the nodes picked
+by ∀. -/
+private theorem twin_none {a a' : Option D} {d : Axis} (hne : a ≠ a')
+    (ha : M.preLab none a = green d .forward) (ha' : M.preLab none a' = green d .forward) :
+    ∃ x x', a = some x ∧ a' = some x' ∧ x ≠ x' ∧ M.par x = green d .reverse ∧
+      M.par x' = green d .reverse ∧ ∀ w, M.IsPar w → w = x ∨ w = x' := by
+  rcases a with _ | x
+  · cases ha
+  rcases a' with _ | x'
+  · cases ha'
+  have hx : M.par x = green d .reverse := Atom.conv_eq_iff.mp ha
+  have hx' : M.par x' = green d .reverse := Atom.conv_eq_iff.mp ha'
+  have hxx : x ≠ x' := fun h => hne (congrArg _ h)
+  refine ⟨x, x', rfl, rfl, hxx, hx, hx', fun w hw => ?_⟩
+  rcases M.isPar_three (M.isPar_of_green hx) (M.isPar_of_green hx') hw with h | h | h
+  · exact (hxx h).elim
+  · exact .inl h.symm
+  · exact .inr h.symm
+
 private theorem rule_three_mid {x w : D} {d : Axis} (hr : M.ext T x = u d .reverse)
     (hs : M.ext T w = green d.other .reverse) (hnp : ¬(M.IsPar x ∧ M.IsPar w)) : False := by
   have hw := M.par_of_ext_green hs
   have hx : ¬M.IsPar x := fun hx => hnp ⟨hx, M.isPar_of_green hw⟩
   obtain ⟨a, a', ⟨hne, ha, ha', -⟩, -, -⟩ := M.ucond_of_ext_u_reverse hr hx
-  rcases a with _ | a
-  · cases ha
-  rcases a' with _ | a'
-  · cases ha'
-  have ha₁ : M.par a = green d .reverse := Atom.conv_eq_iff.mp ha
-  have ha₂ : M.par a' = green d .reverse := Atom.conv_eq_iff.mp ha'
-  refine M.not_isPar_of_twins (M.isPar_of_green ha₁) (M.isPar_of_green ha₂)
-    (fun h => hne (congrArg _ h)) ?_ ?_ (M.isPar_of_green hw) <;> simp [hw, ha₁, ha₂]
+  obtain ⟨_, _, -, -, -, h₁, h₂, hall⟩ := M.twin_none hne ha ha'
+  rcases hall w (M.isPar_of_green hw) with rfl | rfl
+  · simp [hw] at h₁
+  · simp [hw] at h₂
 
 private theorem rule_three_left {y w : D} {d : Axis} {i : Fin L.length} {o : Direction}
     (hr : M.ext T y = u d .forward) (ht : M.ext T w = tile i o) (hi : i ≠ 0)
@@ -1468,14 +1519,10 @@ private theorem rule_four_mid {x w : D} {d : Axis} (hr : M.ext T x = v d .revers
   have hw := M.par_of_ext_green hs
   have hx : ¬M.IsPar x := fun hx => hnp ⟨hx, M.isPar_of_green hw⟩
   obtain ⟨a, a', ⟨hne, ha, ha', -⟩, -, -⟩ := M.vcond_of_ext_v_reverse hr hx
-  rcases a with _ | a
-  · cases ha
-  rcases a' with _ | a'
-  · cases ha'
-  have ha₁ : M.par a = green d.other .reverse := Atom.conv_eq_iff.mp ha
-  have ha₂ : M.par a' = green d.other .reverse := Atom.conv_eq_iff.mp ha'
-  refine M.not_isPar_of_twins (M.isPar_of_green ha₁) (M.isPar_of_green ha₂)
-    (fun h => hne (congrArg _ h)) ?_ ?_ (M.isPar_of_green hw) <;> simp [hw, ha₁, ha₂]
+  obtain ⟨_, _, -, -, -, h₁, h₂, hall⟩ := M.twin_none hne ha ha'
+  rcases hall w (M.isPar_of_green hw) with rfl | rfl
+  · simp [hw] at h₁
+  · simp [hw] at h₂
 
 include hS in
 private theorem rule_four_left {y w : D} {d : Axis} (hr : M.ext T y = v d .forward)
@@ -1575,17 +1622,24 @@ private theorem newRoot_step {h s : D} {d e : Axis} (hh : M.par h = green e .for
       M.newPot (some h) none = S.pot h s + (M.par s).sgn := by
   simp [newRoot, newPot, M.stepPar_eq hh hs hstep]
 
-omit [NeZero L.length] in
+include hS in
 /-- When the new node lies in the class of an old node under `h`, a step joins it to a node
 picked by ∀ that `h` sees. -/
-private theorem exists_step_of_newRoot {h a : D}
+private theorem exists_step_of_newRoot {h a : D} {d : Axis} (hh : M.par h = green d .forward)
     (hr : M.newRoot (some h) none = M.newRoot (some h) (some a)) :
-    ∃ s d, S.lab h s = green d .forward ∧ (M.par s).IsStep ∧ S.root h s = S.root h a ∧
+    ∃ s o, S.lab h s = green d .forward ∧ M.par s = step d o ∧ S.root h s = S.root h a ∧
       M.newPot (some h) none = S.pot h s + (M.par s).sgn := by
   simp only [newRoot, Option.map_eq_some_iff] at hr
   obtain ⟨s, hs, hroot⟩ := hr
-  obtain ⟨⟨d, hd⟩, hstep⟩ := M.stepPar_spec hs
-  exact ⟨s, d, hd, hstep, hroot, by simp [newPot, hs]⟩
+  obtain ⟨⟨d', hd⟩, hstep⟩ := M.stepPar_spec hs
+  obtain ⟨e, o, he⟩ := Atom.isStep_iff.mp hstep
+  have h₁ : (S.lab s s).src = e.kind := by rw [← M.par_src hS s, he, Atom.src_step]
+  have h₂ : M.kind = e.kind := by rw [← M.par_tgt s, he, Atom.tgt_step]
+  have h₃ : M.kind = d.kind := by rw [← M.par_tgt h, hh, Atom.tgt_green_forward]
+  have h₄ : (S.lab s s).src = d'.kind := hS.typed.tgt_of_eq hd
+  obtain rfl : d = e := Axis.kind_inj.mp (h₃.symm.trans h₂)
+  obtain rfl : d = d' := Axis.kind_inj.mp (h₁.symm.trans h₄)
+  exact ⟨s, o, hd, he, hroot, by simp [newPot, hs]⟩
 
 include hS in
 private theorem step_class_next {h a b : Option D} {d e : Axis}
@@ -1620,17 +1674,13 @@ private theorem step_class_next {h a b : Option D} {d e : Axis}
   · rcases a with _ | a <;> rcases b with _ | b
     · cases hab
     · have hh := M.par_of_ext_green ha
-      have hb' : M.ext T b = step e .reverse := Atom.conv_eq_iff.mp hab
-      have hpb : M.par b = step e .reverse :=
-        (M.par_of_ext_isStep (T := T) (x := b) (by simp [hb', Atom.IsStep])).1 ▸ hb'
+      have hpb : M.par b = step e .reverse := M.par_of_ext_step (Atom.conv_eq_iff.mp hab)
       obtain ⟨h₁, h₂⟩ := M.newRoot_step hh hb (by simp [hpb, Atom.IsStep])
       refine ⟨h₁, ?_⟩
       rw [h₂, hpb]
       simp [newPot, Atom.sgn]
     · have hh := M.par_of_ext_green hb
-      have ha' : M.ext T a = step e .forward := hab
-      have hpa : M.par a = step e .forward :=
-        (M.par_of_ext_isStep (T := T) (x := a) (by simp [ha', Atom.IsStep])).1 ▸ ha'
+      have hpa : M.par a = step e .forward := M.par_of_ext_step hab
       obtain ⟨h₁, h₂⟩ := M.newRoot_step hh ha (by simp [hpa, Atom.IsStep])
       refine ⟨h₁.symm, ?_⟩
       rw [h₂, hpa]
@@ -1714,17 +1764,12 @@ private theorem u_class_aux {h b a' : D} {d : Axis} (hh : M.ext T h = green d .f
   have hh' := M.par_of_ext_green hh
   obtain ⟨hb₁, hb⟩ := M.par_of_ext_isStep hst
   rw [hb₁] at hst
-  obtain ⟨s, d', hs, hstep, -, -⟩ := M.exists_step_of_newRoot hroot
-  have hne : M.par h ≠ M.par s := fun heq => by simp [← heq, hh', Atom.IsStep] at hstep
-  rcases M.eq_of_isPar (M.isPar_of_green hh') (M.isPar_of_isStep hstep) hb hne with rfl | rfl
+  obtain ⟨s, o, hs, hstep, -, -⟩ := M.exists_step_of_newRoot hS hh' hroot
+  have hne : M.par h ≠ M.par s := by simp [hh', hstep]
+  rcases M.eq_of_isPar (M.isPar_of_green hh') (M.isPar_of_isStep (by simp [hstep, Atom.IsStep]))
+    hb hne with rfl | rfl
   · simp [hh', Atom.IsStep] at hst
-  · obtain ⟨e, o, he⟩ := Atom.isStep_iff.mp hst
-    have h₁ : (S.lab b b).src = e.kind := by rw [← M.par_src hS b, he, Atom.src_step]
-    have h₂ : M.kind = e.kind := by rw [← M.par_tgt b, he, Atom.tgt_step]
-    have h₃ : M.kind = d.kind := by rw [← M.par_tgt h, hh', Atom.tgt_green_forward]
-    have h₄ : (S.lab b b).src = d'.kind := hS.typed.tgt_of_eq hs
-    obtain rfl : d' = d := Axis.kind_inj.mp (h₄.symm.trans (h₁.trans (h₂.symm.trans h₃)))
-    exact hs
+  · exact hs
 
 include hS in
 private theorem u_class_next {h b : Option D} {d : Axis}
@@ -1739,22 +1784,14 @@ private theorem u_class_next {h b : Option D} {d : Axis}
       have hst₁ : (M.ext T a).IsStep := hst
       rw [(M.par_of_ext_isStep hst₁).1, h₁] at hst₁
       cases hst₁
-  · rcases a with _ | a
-    · cases ha
-    rcases a' with _ | a'
-    · cases ha'
-    have ha₁ : M.par a = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp ha)
-    have ha₂ : M.par a' = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp ha')
+  · obtain ⟨a, a', rfl, rfl, -, ha₁, ha₂, hall⟩ :=
+      M.twin_none hne (M.preLab_of_green ha) (M.preLab_of_green ha')
     have hst₁ : (S.lab a b).IsStep := hst
     have hst₂ : (S.lab a' b).IsStep := hst'
-    have hne' : a ≠ a' := fun h => hne (congrArg _ h)
-    have hab : a ≠ b := hS.ne_of_isStep hst₁
-    have hab' : a' ≠ b := hS.ne_of_isStep hst₂
     have hb : ¬M.IsPar b := fun hb => by
-      rcases M.isPar_three (M.isPar_of_green ha₁) (M.isPar_of_green ha₂) hb with h | h | h
-      · exact hne' h
-      · exact hab h
-      · exact hab' h
+      rcases hall b hb with rfl | rfl
+      · exact hS.ne_of_isStep hst₁ rfl
+      · exact hS.ne_of_isStep hst₂ rfl
     obtain ⟨e, o, he⟩ := Atom.isStep_iff.mp hst₁
     have h₁ : (S.lab a a).src = e.kind := hS.typed.src_of_eq he
     have h₂ : (S.lab b b).src = e.kind := by rw [hS.typed.tgt_of_eq he, Atom.tgt_step]
@@ -1798,13 +1835,15 @@ private theorem u_class_next {h b : Option D} {d : Axis}
     · exact hS.u_class ⟨a, a', ⟨fun h => hne (congrArg _ h), ha, ha', Option.some.inj hroot⟩,
         hst, hst'⟩
 
+include hS in
 /-- The case of `Good.v_class` for the response in which one of the two nodes of the class is
 the new node. -/
 private theorem v_class_aux {h y a' : D} {d : Axis} (hh : M.ext T h = green d .forward)
     (hroot : M.newRoot (some h) none = M.newRoot (some h) (some a'))
     (ht : (M.ext T y).IsTile) : S.lab h y = green d.other .forward := by
   have hh' := M.par_of_ext_green hh
-  obtain ⟨s, d', hs, hstep, -, -⟩ := M.exists_step_of_newRoot hroot
+  obtain ⟨s, o', -, hs, -, -⟩ := M.exists_step_of_newRoot hS hh' hroot
+  have hstep : (M.par s).IsStep := by simp [hs, Atom.IsStep]
   have hps := M.isPar_of_isStep hstep
   obtain ⟨i, o, hi⟩ := Atom.isTile_iff.mp ht
   rcases M.ext_tile hi with hp | ⟨-, ⟨h₁, d₁, hy₁, hh₁⟩, -⟩
@@ -1831,20 +1870,15 @@ private theorem v_class_next {h y : Option D} {d : Axis}
       have ht₁ : (M.ext T a).IsTile := ht
       rw [M.ext_of_isPar (M.isPar_of_green h₁), h₁] at ht₁
       cases ht₁
-  · rcases a with _ | a
-    · cases ha
-    rcases a' with _ | a'
-    · cases ha'
-    have ha₁ : M.par a = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp ha)
-    have ha₂ : M.par a' = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp ha')
+  · have hpa := M.preLab_of_green ha
+    have hpa' := M.preLab_of_green ha'
+    obtain ⟨a, a', rfl, rfl, -, ha₁, ha₂, hall⟩ := M.twin_none hne hpa hpa'
     have ht₁ : (S.lab a y).IsTile := ht
     have ht₂ : (S.lab a' y).IsTile := ht'
-    have hne' : a ≠ a' := fun h => hne (congrArg _ h)
     have hy : ¬M.IsPar y := fun hy => by
-      rcases M.isPar_three (M.isPar_of_green ha₁) (M.isPar_of_green ha₂) hy with h | h | h
-      · exact hne' h
-      · exact hS.ne_of_isTile ht₁ h
-      · exact hS.ne_of_isTile ht₂ h
+      rcases hall y hy with rfl | rfl
+      · exact hS.ne_of_isTile ht₁ rfl
+      · exact hS.ne_of_isTile ht₂ rfl
     obtain ⟨i, o, hi⟩ := Atom.isTile_iff.mp ht₁
     obtain ⟨d', rfl⟩ := o.exists_tileDir
     have h₁ : (S.lab a a).src = d'.kind := by rw [hS.typed.src_of_eq hi, Atom.src_tile]
@@ -1854,18 +1888,13 @@ private theorem v_class_next {h y : Option D} {d : Axis}
     obtain rfl : d = d' := Axis.kind_inj.mp (h₃.symm.trans h₁)
     have hnU : ¬UCond M.preLab M.newRoot d.other none (some y) := by
       rintro ⟨b, b', ⟨hbne, hb, hb', -⟩, -, -⟩
-      rcases b with _ | b
-      · cases hb
-      rcases b' with _ | b'
-      · cases hb'
-      have hb₁ : M.par b = green d.other .reverse := Atom.conv_eq_iff.mp hb
-      have hb₂ : M.par b' = green d.other .reverse := Atom.conv_eq_iff.mp hb'
-      refine M.not_isPar_of_twins (M.isPar_of_green hb₁) (M.isPar_of_green hb₂)
-        (fun h => hbne (congrArg _ h)) ?_ ?_ (M.isPar_of_green ha₁) <;> simp [ha₁, hb₁, hb₂]
+      obtain ⟨_, _, -, -, -, hb₁, hb₂, hall'⟩ := M.twin_none hbne hb hb'
+      rcases hall' a (M.isPar_of_green ha₁) with rfl | rfl
+      · simp [ha₁] at hb₁
+      · simp [ha₁] at hb₂
     have hVpre : VCond M.preLab M.newRoot M.WillTile d.other.other none (some y) := by
       rw [Axis.other_other]
-      exact ⟨some a, some a', ⟨hne, M.preLab_of_green ha, M.preLab_of_green ha', hroot⟩,
-        ht₁, ht₂⟩
+      exact ⟨some a, some a', ⟨hne, hpa, hpa', hroot⟩, ht₁, ht₂⟩
     right
     change (M.ext T y).conv = v d.other .forward
     rw [M.ext_of_not_isPar hy, M.exLabel_v_reverse h₂ h₄ hnU hVpre]
@@ -1955,8 +1984,8 @@ private theorem v_class_next {h y : Option D} {d : Axis}
       rw [M.ext_of_not_isPar hh, M.exLabel_v_forward k₄ k₂ hnU (by rwa [Axis.other_other])]
   · rcases a with _ | a <;> rcases a' with _ | a'
     · exact (hne rfl).elim
-    · exact .inl (M.v_class_aux ha hroot (Atom.isTile_conv.mp ht))
-    · exact .inl (M.v_class_aux ha' hroot.symm (Atom.isTile_conv.mp ht'))
+    · exact .inl (M.v_class_aux hS ha hroot (Atom.isTile_conv.mp ht))
+    · exact .inl (M.v_class_aux hS ha' hroot.symm (Atom.isTile_conv.mp ht'))
     · exact hS.v_class ⟨a, a', ⟨fun h => hne (congrArg _ h), ha, ha', Option.some.inj hroot⟩,
         ht, ht'⟩
 
@@ -1992,25 +2021,22 @@ private theorem apex_unique_next {h h' a a' : Option D} {d : Axis}
   rcases h with _ | h <;> rcases h' with _ | h'
   · rfl
   · exfalso
-    rcases a with _ | a
-    · cases ha
-    rcases a' with _ | a'
-    · cases ha'
-    exact M.not_green_green hS (M.par_of_ext_green (Atom.conv_eq_iff.mp ha))
-      (M.par_of_ext_green (Atom.conv_eq_iff.mp ha')) (fun h => hne (congrArg _ h)) hb hb'
+    obtain ⟨a, a', rfl, rfl, hne', h₁, h₂, -⟩ :=
+      M.twin_none hne (M.preLab_of_green ha) (M.preLab_of_green ha')
+    exact M.not_green_green hS h₁ h₂ hne' hb hb'
   · exfalso
-    rcases a with _ | a
-    · cases hb
-    rcases a' with _ | a'
-    · cases hb'
-    exact M.not_green_green hS (M.par_of_ext_green (Atom.conv_eq_iff.mp hb))
-      (M.par_of_ext_green (Atom.conv_eq_iff.mp hb')) (fun h => hne (congrArg _ h)) ha ha'
+    obtain ⟨a, a', rfl, rfl, hne', h₁, h₂, -⟩ :=
+      M.twin_none hne (M.preLab_of_green hb) (M.preLab_of_green hb')
+    exact M.not_green_green hS h₁ h₂ hne' ha ha'
   · rcases a with _ | a <;> rcases a' with _ | a'
     · exact (hne rfl).elim
-    · obtain ⟨s, d', -, hstep, -, -⟩ := M.exists_step_of_newRoot hroot
+    · obtain ⟨s, o, -, hs, -, -⟩ := M.exists_step_of_newRoot hS (M.par_of_ext_green ha) hroot
+      have hstep : (M.par s).IsStep := by simp [hs, Atom.IsStep]
       exact congrArg some (M.green_par_unique (M.isPar_of_isStep hstep) (.inr hstep)
         (M.par_of_ext_green ha) (M.par_of_ext_green hb))
-    · obtain ⟨s, d', -, hstep, -, -⟩ := M.exists_step_of_newRoot hroot.symm
+    · obtain ⟨s, o, -, hs, -, -⟩ :=
+        M.exists_step_of_newRoot hS (M.par_of_ext_green ha') hroot.symm
+      have hstep : (M.par s).IsStep := by simp [hs, Atom.IsStep]
       exact congrArg some (M.green_par_unique (M.isPar_of_isStep hstep) (.inr hstep)
         (M.par_of_ext_green ha') (M.par_of_ext_green hb'))
     · exact congrArg some (hS.apex_unique
@@ -2034,14 +2060,7 @@ private theorem cell_class_aux {h b y : D} {d : Axis} (hh : M.ext T h = green d 
     (S.cell b y).seed = (M.cellAt y).seed ∧ ((M.cellAt y).seed ≠ 0 →
       (S.cell b y).pos = (M.cellAt y).pos + (S.pot h b - M.newPot (some h) none) • d.vec) := by
   have hh' := M.par_of_ext_green hh
-  obtain ⟨s, d', hs, hstep, hroot, hpot⟩ := M.exists_step_of_newRoot hr
-  obtain ⟨e, o, he⟩ := Atom.isStep_iff.mp hstep
-  have k₁ : (S.lab s s).src = e.kind := by rw [← M.par_src hS s, he, Atom.src_step]
-  have k₂ : M.kind = e.kind := by rw [← M.par_tgt s, he, Atom.tgt_step]
-  have k₃ : M.kind = d.kind := by rw [← M.par_tgt h, hh', Atom.tgt_green_forward]
-  have k₄ : (S.lab s s).src = d'.kind := hS.typed.tgt_of_eq hs
-  obtain rfl : d = e := Axis.kind_inj.mp (k₃.symm.trans k₂)
-  obtain rfl : d = d' := Axis.kind_inj.mp (k₁.symm.trans k₄)
+  obtain ⟨s, o, hs, he, hroot, hpot⟩ := M.exists_step_of_newRoot hS hh' hr
   have hsy : (S.lab s y).IsTile := hS.isTile_of_green hs hy
   have hys : (S.lab y s).IsTile := by
     rw [← hS.typed.conv_lab]
@@ -2067,17 +2086,14 @@ private theorem cell_class_next {h a b y : Option D} {d : Axis}
     simp
   rcases h with _ | h
   · exfalso
-    rcases a with _ | a
-    · cases ha
-    rcases b with _ | b
-    · cases hb
+    obtain ⟨a, b, rfl, rfl, -, ha₁, hb₁, hall⟩ :=
+      M.twin_none hab (M.preLab_of_green ha) (M.preLab_of_green hb)
     rcases y with _ | y
     · cases hy
-    have ha₁ : M.par a = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp ha)
-    have hb₁ : M.par b = green d .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp hb)
     have hy₁ : M.par y = green d.other .reverse := M.par_of_ext_green (Atom.conv_eq_iff.mp hy)
-    refine M.not_isPar_of_twins (M.isPar_of_green ha₁) (M.isPar_of_green hb₁)
-      (fun h => hab (congrArg _ h)) ?_ ?_ (M.isPar_of_green hy₁) <;> simp [ha₁, hb₁, hy₁]
+    rcases hall y (M.isPar_of_green hy₁) with rfl | rfl
+    · simp [hy₁] at ha₁
+    · simp [hy₁] at hb₁
   rcases y with _ | y
   · have hh := M.par_of_ext_green hy
     rcases a with _ | a
