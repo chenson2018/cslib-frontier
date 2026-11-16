@@ -40,12 +40,15 @@ Theorem 1 of the source states that `A` is representable if and only if ∃ has 
   strategies that depend on the whole play: the networks arising when she follows a winning one
   form a set as in `hasWinningStrategy_iff`, which yields a winning strategy in the present sense.
 * The source's Convention 1 is not part of the definition: ∃ may add any number of nodes, and ∀
-  may make a move that already has a witness. That ∃ loses nothing by following parts (1) and (2)
-  of the convention is `HasWinningStrategy.of_forall_exists_comap_castSucc`.
+  may make a move that already has a witness. A family of networks closed under single-node
+  answers to the moves that have no witness yet gives a winning strategy
+  (`HasWinningStrategy.of_forall_exists_comap_castSucc`); the converse is not proved here.
 * `Representable` asks for an injective homomorphism into a product of algebras of all relations
   on a set. The source's representations are isomorphisms onto an algebra of relations on one set
   whose unit is an equivalence relation; restricting to the classes of the unit turns one into the
-  other [HirschHodkinson1997], Section 3.2.
+  other [HirschHodkinson1997], Section 3.2. The source's representations have non-empty domains;
+  here the index and base types may be empty, so the one-element algebra is representable and ∃
+  wins the game on no atoms, in which ∀ has no opening move.
 
 ## Main definitions
 
