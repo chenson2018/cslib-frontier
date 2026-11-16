@@ -142,7 +142,15 @@ private theorem primrec_payload (x y : Axis) : Primrec (payload x y) := by
     primrec_mk (.const 0) (.const 0) primrec_left primrec_left
   have hv : Primrec verticalWire :=
     primrec_mk primrec_bottom primrec_bottom (.const 0) (.const 0)
-  cases x <;> cases y <;> first | exact .const _ | exact hw | exact hv | exact Primrec.id
+  cases x with
+  | negative =>
+      cases y with
+      | negative => exact .const _
+      | origin | positive => exact hw
+  | origin | positive =>
+      cases y with
+      | negative => exact hv
+      | origin | positive => exact Primrec.id
 
 private theorem primrec_variants : Primrec variants := by
   have h (x y : Axis) : Primrec fun t => decorate x y (payload x y t) :=

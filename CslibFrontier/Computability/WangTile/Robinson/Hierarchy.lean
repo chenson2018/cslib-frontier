@@ -30,6 +30,7 @@ compactness.
 
 ## Main results
 
+* `exists_plane_eq`: a pointwise index-plane representation of any tiling by `tileSet`.
 * `nonempty_parent`: every matching plane has a matching substitution parent.
 * `tower`: every matching plane admits a parent tower.
 * `Tower.every_tile`: every tile type occurs at every level of any such tower.
@@ -60,19 +61,16 @@ structure Plane where
   vertical : ∀ x y, (tile (components (index x y))).top =
     (tile (components (index x (y + 1)))).bottom
 
-/-- Indexing by the finite alphabet gives precisely tilings by the concrete palette. -/
-theorem tilesPlane_iff_nonempty_plane : TilesPlane tileSet ↔ Nonempty Plane := by
-  classical
-  constructor
-  · rintro ⟨f, hf⟩
-    have hm : ∀ x y, ∃ p : Index, tile (components p) = f x y :=
-      fun x y => mem_tileSet.mp (hf x y).1
-    choose p hp using hm
-    exact ⟨⟨p, by simpa only [hp] using fun x y => (hf x y).2.1,
-      by simpa only [hp] using fun x y => (hf x y).2.2⟩⟩
-  · rintro ⟨p⟩
-    exact ⟨fun x y => tile (components (p.index x y)), fun x y =>
-      ⟨tile_components_mem _, p.horizontal x y, p.vertical x y⟩⟩
+/-- Every tiling by the concrete palette has a pointwise equal indexed matching plane. -/
+theorem exists_plane_eq {f : ℤ → ℤ → WangTile}
+    (hf : ∀ x y, f x y ∈ tileSet ∧ (f x y).right = (f (x + 1) y).left ∧
+      (f x y).top = (f x (y + 1)).bottom) :
+    ∃ P : Plane, ∀ x y, tile (components (P.index x y)) = f x y := by
+  have hm : ∀ x y, ∃ p : Index, tile (components p) = f x y :=
+    fun x y => mem_tileSet.mp (hf x y).1
+  choose p hp using hm
+  exact ⟨⟨p, by simpa only [hp] using fun x y => (hf x y).2.1,
+    by simpa only [hp] using fun x y => (hf x y).2.2⟩, hp⟩
 
 /-- A matching parent of a fine plane, including the alignment of its child blocks. -/
 structure Parent (fine : Plane) where
@@ -145,7 +143,6 @@ private def neighborhood (p : Plane) (x y : ℤ)
 
 /-- Every matching corrected Robinson plane is a substituted matching plane up to translation. -/
 theorem nonempty_parent (fine : Plane) : Nonempty (Parent fine) := by
-  classical
   obtain ⟨ox, oy, hphase⟩ := exists_phase_origin fine
   have hlocal (x y : ℤ) : ∃ p : Index, ∀ i j : Fin 2,
       childBlock p i j =
@@ -209,65 +206,37 @@ noncomputable def tower (base : Plane) : Tower base where
 
 private def bit (code : ℕ) : Fin 2 := ⟨code % 2, Nat.mod_lt _ (by decide)⟩
 
-private def walk : ℕ → Index → ℕ → Index
-  | 0, p, _ => p
-  | n + 1, p, code => walk n (childBlock p (bit code) (bit (code / 2))) (code / 4)
+private def expansion : ℕ → Index → ℕ → ℕ → Index
+  | 0, p, _, _ => p
+  | n + 1, p, x, y => childBlock (expansion n p (x / 2) (y / 2)) (bit x) (bit y)
 
-private def toZero (p : Index) : ℕ := (#[
-  0, 3, 3, 3, 0, 12, 12, 12, 12, 12, 12, 12, 12,
-  12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-  12, 12, 12, 12, 12, 12, 3, 3, 3, 3, 3, 3, 3,
-  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-  3, 3, 3, 3, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-  12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-  12, 12, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
-  ] : Array ℕ)[p.val]!
-
-private def fromZero (p : Index) : ℕ := (#[
-  0, 13, 14, 15, 768, 832, 896, 960, 335, 330, 334, 331, 384,
-  400, 416, 432, 464, 448, 496, 480, 269, 258, 256, 265, 271, 266,
-  270, 267, 333, 322, 320, 329, 95, 90, 94, 91, 6, 25, 26,
-  27, 29, 7, 31, 30, 77, 18, 1, 73, 79, 74, 78, 75,
-  93, 22, 5, 89, 518, 512, 608, 646, 640, 704, 519, 525, 624,
-  647, 653, 720, 513, 526, 576, 641, 654, 736, 517, 527, 592, 645,
-  655, 752, 134, 2, 38, 166, 10, 11, 135, 141, 39, 167, 173,
-  45, 33, 142, 9, 41, 174, 46, 133, 143, 37, 165, 175, 47
-  ] : Array ℕ)[p.val]!
-
-private theorem walk_toZero (p : Index) : walk 3 p (toZero p) = 0 := by
-  fin_cases p <;> decide
-
-private theorem walk_fromZero (p : Index) : walk 5 0 (fromZero p) = p := by
-  fin_cases p <;> decide
-
-private theorem walk_occurs {base : Plane} (t : Tower base) :
-    ∀ (depth level : ℕ) (x y : ℤ) (code : ℕ), ∃ u v : ℤ,
-      (t.plane level).index u v = walk depth ((t.plane (level + depth)).index x y) code := by
+private theorem expansion_occurs {base : Plane} (t : Tower base) :
+    ∀ (depth level : ℕ) (x y : ℤ) (i j : ℕ), ∃ u v : ℤ,
+      (t.plane level).index u v =
+        expansion depth ((t.plane (level + depth)).index x y) i j := by
   intro depth
   induction depth with
-  | zero => intro level x y code; exact ⟨x, y, rfl⟩
+  | zero => intro level x y i j; exact ⟨x, y, rfl⟩
   | succ depth ih =>
-    intro level x y code
-    obtain ⟨u, v, huv⟩ := ih level
-      (((t.offsetX (level + depth)).val : ℤ) + 2 * x + (bit code).val)
-      (((t.offsetY (level + depth)).val : ℤ) + 2 * y + (bit (code / 2)).val) (code / 4)
-    refine ⟨u, v, ?_⟩
-    rw [← t.children] at huv
-    simpa only [walk, Nat.add_assoc] using huv
+    intro level x y i j
+    obtain ⟨u, v, huv⟩ := ih (level + 1) x y (i / 2) (j / 2)
+    rw [Nat.add_right_comm] at huv
+    exact ⟨_, _, by rw [← t.children level u v (bit i) (bit j), huv]; rfl⟩
+
+private theorem zero_descends : ∀ p : Index, ∃ i j : Fin 8, expansion 3 p i j = 0 := by
+  decide +kernel
+
+private theorem descends_zero : ∀ p : Index, ∃ i j : Fin 32, expansion 5 0 i j = p := by
+  decide +kernel
 
 /-- Every corrected tile type occurs at every level of every parent tower. -/
 theorem Tower.every_tile {base : Plane} (t : Tower base) (level : ℕ) (target : Index) :
     ∃ x y : ℤ, (t.plane level).index x y = target := by
-  let p := (t.plane (level + 5 + 3)).index 0 0
-  obtain ⟨x, y, hxy⟩ := walk_occurs t 3 (level + 5) 0 0 (toZero p)
-  have hzero : (t.plane (level + 5)).index x y = 0 := hxy.trans (walk_toZero p)
-  obtain ⟨u, v, huv⟩ := walk_occurs t 5 level x y (fromZero target)
-  exact ⟨u, v, huv.trans (by rw [hzero, walk_fromZero])⟩
-
-private def expansion : ℕ → Index → ℕ → ℕ → Index
-  | 0, p, _, _ => p
-  | n + 1, p, x, y => childBlock (expansion n p (x / 2) (y / 2)) (bit x) (bit y)
+  obtain ⟨i, j, hij⟩ := zero_descends ((t.plane (level + 5 + 3)).index 0 0)
+  obtain ⟨x, y, hxy⟩ := expansion_occurs t 3 (level + 5) 0 0 i j
+  obtain ⟨i', j', hij'⟩ := descends_zero target
+  obtain ⟨u, v, huv⟩ := expansion_occurs t 5 level x y i' j'
+  exact ⟨u, v, by rw [huv, hxy, hij, hij']⟩
 
 private theorem bit_step (x : ℕ) :
     (bit x = 0 ∧ bit (x + 1) = 1 ∧ (x + 1) / 2 = x / 2) ∨
@@ -286,7 +255,7 @@ private theorem bit_step (x : ℕ) :
     · omega
 
 private theorem expansion_horizontal (n : ℕ) (p : Index) (x y : ℕ)
-    (hx : x + 1 < 2 ^ n) (hy : y < 2 ^ n) :
+    (hx : x + 1 < 2 ^ n) :
     (tile (components (expansion n p x y))).right =
       (tile (components (expansion n p (x + 1) y))).left := by
   induction n generalizing x y with
@@ -296,14 +265,12 @@ private theorem expansion_horizontal (n : ℕ) (p : Index) (x y : ℕ)
     · simp only [expansion, h.1, h.2.1, h.2.2]
       exact child_horizontal _ _
     · simp only [expansion, h.1, h.2.1, h.2.2]
-      apply (horizontal_iff_children _ _).mp (ih (x / 2) (y / 2) ?_ ?_) (bit y)
-      · rw [pow_succ] at hx
-        omega
-      · rw [pow_succ] at hy
-        omega
+      apply (horizontal_iff_children _ _).mp (ih (x / 2) (y / 2) ?_) (bit y)
+      rw [pow_succ] at hx
+      omega
 
 private theorem expansion_vertical (n : ℕ) (p : Index) (x y : ℕ)
-    (hx : x < 2 ^ n) (hy : y + 1 < 2 ^ n) :
+    (hy : y + 1 < 2 ^ n) :
     (tile (components (expansion n p x y))).top =
       (tile (components (expansion n p x (y + 1)))).bottom := by
   induction n generalizing x y with
@@ -313,11 +280,9 @@ private theorem expansion_vertical (n : ℕ) (p : Index) (x y : ℕ)
     · simp only [expansion, h.1, h.2.1, h.2.2]
       exact child_vertical _ _
     · simp only [expansion, h.1, h.2.1, h.2.2]
-      apply (vertical_iff_children _ _).mp (ih (x / 2) (y / 2) ?_ ?_) (bit x)
-      · rw [pow_succ] at hx
-        omega
-      · rw [pow_succ] at hy
-        omega
+      apply (vertical_iff_children _ _).mp (ih (x / 2) (y / 2) ?_) (bit x)
+      rw [pow_succ] at hy
+      omega
 
 private theorem square_bound {n x : ℕ} (h : x < n + 1) : x < 2 ^ n :=
   lt_of_lt_of_le h (Nat.succ_le_of_lt (show n < 2 ^ n from Nat.lt_two_pow_self))
@@ -326,15 +291,10 @@ private def square (n : ℕ) : Rectangle tileSet (n + 1) (n + 1) where
   tile i j := tile (components (expansion n 0 i.val j.val))
   mem _i _j := tile_components_mem _
   horizontal i j hi := expansion_horizontal n 0 i.val j.val (square_bound hi)
-    (square_bound j.isLt)
-  vertical i j hj := expansion_vertical n 0 i.val j.val (square_bound i.isLt)
-    (square_bound hj)
+  vertical i j hj := expansion_vertical n 0 i.val j.val (square_bound hj)
 
 /-- The corrected Robinson tile set tiles the whole integer plane. -/
 theorem tilesPlane_tileSet : TilesPlane tileSet :=
   (tilesPlane_iff_squares tileSet).mpr fun n => ⟨square n⟩
-
-/-- The indexed matching-plane model is inhabited by the compactness construction. -/
-instance : Nonempty Plane := tilesPlane_iff_nonempty_plane.mp tilesPlane_tileSet
 
 end Cslib.WangTile.Robinson
