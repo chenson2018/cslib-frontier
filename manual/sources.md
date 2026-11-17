@@ -1056,9 +1056,9 @@ whose southeast extension uses `R1` rather than `R3`
 ([plan, lines 94–98](https://github.com/edemaine/lean-wang/blob/64268a3/plan.md#L94-L98)).
 Both thick-layer boundary lanes are retained. This records lean-wang's correction, not a
 verified erratum to the printed figures; historical correction: locator not verified.
-Full agreement with those figures is not checked in Lean. The hierarchy modules establish matching
-substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
-it does not include Proposition 8's aperiodicity conclusion or domino undecidability.
+Full agreement with those figures is not checked in Lean. The hierarchy modules formalize
+matching substitution, local recognition, parent towers, recurrence and nonempty plane tilings;
+they do not include Proposition 8's aperiodicity conclusion or domino undecidability.
 The routing worker additionally read §3.3, pp. 26–29, on 2026-11-16: light/dark separation,
 obstruction signals, free-grid transmission and the two directions of seed removal.
 Routing formalizes the generic conditional step, including its finite-grid/addressed-patch
@@ -1095,6 +1095,38 @@ forbidding dark–dark crossings), quarter-port connectivity, and nearest outwar
 light-boundary invariant come from lean-wang's red-graph and oriented-light modules at
 the same pinned revision; the discrete-height argument is not attributed to the manuscript. These are scaffold ingredients, not Theorem 10's endpoint.
 This source check is authoring evidence, not independent review.
+
+FreeGrid proves that every decoded scaffold plane contains a light consecutive marked grid
+for each requested number of rows and columns. Its
+canonical free-line inductions follow `coordinate_free_lines` in
+[CanonicalEvenFreeLines, line 417](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalEvenFreeLines.lean#L417)
+and [CanonicalOddFreeLines, line 449](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalOddFreeLines.lean#L449).
+Transfer to arbitrary shades follows `freeCoordinates` in
+[CanonicalShadeComparison, line 284](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalShadeComparison.lean#L284)
+and [CanonicalOddShadeComparison, line 361](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalOddShadeComparison.lean#L361),
+sharing one comparison proof and using closed coordinate formulas instead of branch lists.
+Marker transport follows
+[ShadedMarkedFreeGrid, line 64](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedMarkedFreeGrid.lean#L64);
+the arbitrary-plane assembly and gap filling follow
+[SparseFreeLineDecodedMarkedGrid, line 43](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/SparseFreeLineDecodedMarkedGrid.lean#L43)
+and [ShadedConsecutiveFreeGrid, line 220](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedConsecutiveFreeGrid.lean#L220).
+The `RedPaths/Certificates` module supplies the odd-phase finite base after
+[CanonicalOddShadeBase.exists_boundedPath, line 22](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/CanonicalOddShadeBase.lean#L22),
+using the [oddNodes witnesses, line 5412](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/RedShadeGraphPathWitnesses.lean#L5412)
+with shared path prefixes and semantic-side certificates.
+
+FreeGrid/Obstruction turns these grids into routed grids: the outward-facing light boundary
+rules out extra crossings. It retains the signal-corridor argument and
+[ShadedObstructionGeometry.Geometry.crossingObstruction, line 252](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedObstructionGeometry.lean#L252),
+while separating the payload propagation of
+[ShadedPayloadCorridors.tileableFixedCornerSquare_of_consecutive, line 229](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/ShadedPayloadCorridors.lean#L229)
+into generic Routing. Forcing then proves `scaffold_forces : Forces scaffold`, after
+[OrientedLightForward.closed104_forcesRoutedFixedCornerSquares, line 32](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/OrientedLightForward.lean#L32):
+for every seeded payload and every combined plane tiling, there is a seeded payload square
+of each positive side length. There is no extra premise about the scaffold. The concrete
+reverse realization obligation and Theorem 10's undecidability endpoint remain outstanding.
+The lean-wang declarations and locators above were checked against the pinned source by an
+authoring Codex worker on 2026-11-16; this is authoring evidence, not independent review.
 
 <a id="johnsonlindenstrauss84"></a>
 ## johnsonlindenstrauss84

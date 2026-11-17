@@ -823,8 +823,8 @@ private theorem arithmeticState_succ (level x y : ℕ) (i j : Fin 4) :
       (arithmeticState level x y).refine i j := by
   have node : supertileNodeGrid (level + 1) seedNode (4 * x + i.val) (4 * y + j.val) =
       (supertileNodeGrid level seedNode x y).child (blockPosition i j) := by
-    simp only [supertileNodeGrid, childPosition, blockPosition]
-    congr 2 <;> omega
+    have node := supertileNodeGrid_block level seedNode x y i.val j.val i.isLt j.isLt
+    simpa only [childPosition, Nat.mod_eq_of_lt i.isLt, Nat.mod_eq_of_lt j.isLt] using node
   unfold arithmeticState BorderState.refine
   simp only [node]
   congr 1

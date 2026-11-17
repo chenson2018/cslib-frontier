@@ -4330,6 +4330,9 @@ public import CslibFrontier.Computability.WangTile.Robinson.Carrier.Addresses
 public import CslibFrontier.Computability.WangTile.Robinson.Carrier.BorderCertificates
 public import CslibFrontier.Computability.WangTile.Robinson.Carrier.Borders
 public import CslibFrontier.Computability.WangTile.Robinson.Carrier.Corners
+public import CslibFrontier.Computability.WangTile.Robinson.Forcing
+public import CslibFrontier.Computability.WangTile.Robinson.FreeGrid.Basic
+public import CslibFrontier.Computability.WangTile.Robinson.FreeGrid.Obstruction
 public import CslibFrontier.Computability.WangTile.Robinson.Hierarchy
 public import CslibFrontier.Computability.WangTile.Robinson.Realization
 public import CslibFrontier.Computability.WangTile.Robinson.Recognizability
