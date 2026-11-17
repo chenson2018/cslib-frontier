@@ -533,16 +533,19 @@ shade/signal allowance proved from the closed decorated substitution. -/
       ⟨quarter_vmatch level root i.val j.val i.isLt hj,
         (supertile_validShadeRectangle level root).vmatch i.val j.val i.isLt hj, rfl⟩
 
+/-- Canonical patch sides grow beyond their substitution level. -/
+theorem lt_side (level : ℕ) : level < side level := by
+  have := (Nat.lt_two_pow_self : level < 2 ^ level)
+  have := Nat.pow_le_pow_left (show 2 ≤ 4 by decide) level
+  dsimp [side]
+  omega
+
 /-- The concrete decorated Robinson scaffold has a plane tiling, by compactness of its
 canonical finite squares. This proves scaffold nonemptiness, not payload realization. -/
 theorem scaffold_tilesPlane : TilesPlane scaffold.tiles := by
   apply (tilesPlane_iff_squares _).mpr
   intro n
-  have growth : n + 1 ≤ side (n + 1) := by
-    have := (Nat.lt_two_pow_self : n + 1 < 2 ^ (n + 1))
-    have := Nat.pow_le_pow_left (show 2 ≤ 4 by decide) (n + 1)
-    dsimp [side]
-    omega
+  have growth := (lt_side (n + 1)).le
   exact ⟨(canonicalPatch (n + 1) seedNode).crop growth growth⟩
 
 end Cslib.WangTile.Robinson.Canonical
