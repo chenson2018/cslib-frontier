@@ -1123,8 +1123,9 @@ while separating the payload propagation of
 into generic Routing. Forcing then proves `scaffold_forces : Forces scaffold`, after
 [OrientedLightForward.closed104_forcesRoutedFixedCornerSquares, line 32](https://github.com/edemaine/lean-wang/blob/64268a3/LeanWang/Robinson/Closed104/OrientedLightForward.lean#L32):
 for every seeded payload and every combined plane tiling, there is a seeded payload square
-of each positive side length. There is no extra premise about the scaffold. The concrete
-reverse realization obligation and Theorem 10's undecidability endpoint remain outstanding.
+of each positive side length. There is no extra premise about the scaffold. The carrier modules
+above prove the concrete reverse realization obligation; Theorem 10's undecidability endpoint
+remains outstanding.
 The lean-wang declarations and locators above were checked against the pinned source by an
 authoring Codex worker on 2026-11-16; this is authoring evidence, not independent review.
 
